@@ -2,6 +2,7 @@ import { Vector3 } from "@babylonjs/core";
 import type { ItemUse, MessageKind, Presenter } from "../core/interfaces";
 import type { GameState } from "../core/types";
 import { BOARD } from "../data/board";
+import { tilePosition } from "../scene/layout";
 import { ITEMS, SEASON_ROUNDS, type Card, type ChaosEvent, type FunFx, type SeasonDef } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
 import { seasonSfx, sfx } from "../scene/sfx";
@@ -11,6 +12,9 @@ import type { Hud } from "./Hud";
 
 /** Menjembatani event game logic → animasi 3D + HUD. */
 export class ScenePresenter implements Presenter {
+  /** Petak tempat Pesta Pejabat terakhir digelar (supaya suara pesta tidak diputar ulang). */
+  private partyTile: number | null = null;
+
   constructor(
     private view: GameScene,
     private hud: Hud,
@@ -56,7 +60,17 @@ export class ScenePresenter implements Presenter {
 
   async tileChanged(state: GameState, tile: number) {
     const ts = state.tiles[tile];
-    if (ts.level > 0) sfx.build();
+    if (ts.festival && this.partyTile !== tile) {
+      // Pesta Pejabat baru digelar di properti ini
+      this.partyTile = tile;
+      sfx.pejabat();
+      const at = tilePosition(tile).add(new Vector3(0, 1.5, 0));
+      this.view.effects.emojiBurst(at, "🥂", 6);
+      this.view.effects.confetti(at);
+    } else {
+      if (!ts.festival && this.partyTile === tile) this.partyTile = null;
+      if (ts.level > 0) sfx.build();
+    }
     await this.view.board.updateTile(state, tile, true);
     this.hud.refresh();
   }

@@ -227,6 +227,14 @@ export class GameScene {
           await Promise.all(pawns.map((p) => p.dizzy()));
         });
         return;
+      case "party":
+        sfx.pejabat();
+        for (const p of pawns) {
+          this.effects.emojiBurst(p.root.position.add(new Vector3(0, 1.8, 0)), "🥂", 5);
+          this.effects.confetti(p.root.position.add(new Vector3(0, 1.2, 0)));
+        }
+        await Promise.all(pawns.map((p) => p.dance()));
+        return;
       case "dance":
         sfx.dangdut();
         for (const p of pawns) this.effects.emojiBurst(p.root.position.add(new Vector3(0, 1.8, 0)), "🎵", 6);

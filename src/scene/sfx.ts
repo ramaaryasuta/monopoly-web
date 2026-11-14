@@ -257,6 +257,18 @@ export const sfx = {
     wobble(330, 0.25, "square", 0.07, 30, 15);
     wobble(330, 0.35, "square", 0.07, 30, 15, undefined, 0.32);
   },
+  /** Pesta pejabat: denting gelas "ting-ting" lalu fanfare kecil yang mewah. */
+  pejabat: () => {
+    // Dua kali bersulang: nada tinggi bening dengan sedikit "shimmer"
+    for (const d of [0, 0.22]) {
+      tone(2093, 0.5, "sine", 0.07, undefined, d);
+      tone(2637, 0.4, "sine", 0.045, undefined, d + 0.005);
+      tone(3136, 0.25, "sine", 0.025, undefined, d + 0.01);
+    }
+    // Fanfare: arpeggio naik lalu akor tahan
+    [523, 659, 784].forEach((f, i) => tone(f, 0.16, "triangle", 0.07, undefined, 0.5 + i * 0.11));
+    chord([523, 659, 784, 1047], 0.7, "triangle", 0.18, 0.85);
+  },
   dangdut: () => {
     // Tak-dung-tak-dung ala gendang
     [0, 0.18, 0.3, 0.48, 0.6, 0.78].forEach((d, i) => tone(i % 2 ? 260 : 110, 0.12, "triangle", 0.1, i % 2 ? 180 : 70, d));

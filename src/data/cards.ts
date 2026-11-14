@@ -23,7 +23,7 @@ export type CardEffect =
   | { type: "item"; item: ItemId };
 
 /** Efek visual tambahan saat kartu/event muncul. */
-export type FunFx = "fart" | "heli" | "dance" | "cry" | "rain" | "shake" | "duck" | "dizzy";
+export type FunFx = "fart" | "heli" | "dance" | "party" | "cry" | "rain" | "shake" | "duck" | "dizzy";
 
 export interface Card {
   id: string;
@@ -44,7 +44,7 @@ export const CARDS: Card[] = [
   { id: "toIsland", title: "Digrebek Polisi", text: "Ketahuan main judi online. Langsung digiring ke Nusakambangan!", icon: "🚓", effect: { type: "island" }, fx: "cry" },
   { id: "birthday", title: "Ultah Dadakan", text: "Ngaku ulang tahun (padahal bukan). Setiap pemain memberimu Rp50 jt.", icon: "🎂", effect: { type: "collectFromAll", amount: 50 }, fx: "dance" },
   { id: "back3", title: "Kunci Motor Ketinggalan", text: "Balik lagi! Mundur 3 petak.", icon: "🔑", effect: { type: "back", steps: 3 }, fx: "dizzy" },
-  { id: "toFestival", title: "Dapat Undangan VIP", text: "Namamu nyelip di daftar tamu. Berangkat ke Pesta Pejabat!", icon: "🥂", effect: { type: "goto", tile: 16 }, fx: "dance" },
+  { id: "toFestival", title: "Dapat Undangan VIP", text: "Namamu nyelip di daftar tamu. Berangkat ke Pesta Pejabat!", icon: "🥂", effect: { type: "goto", tile: 16 }, fx: "party" },
   { id: "fart", title: "Kentut Nuklir", text: "BRRRT! Semua pemain lain terpental mundur 2 petak.", icon: "💨", effect: { type: "pushOthers", steps: 2 }, fx: "fart" },
   { id: "heli", title: "Nebeng Heli Pejabat", text: "Disangka ajudan, kamu ikut terbang lalu diturunkan di petak acak.", icon: "🚁", effect: { type: "randomTile" }, fx: "heli" },
   { id: "swap", title: "Tukar Jiwa", text: "Kesamber petir bareng pemain lain. Kalian tukar posisi!", icon: "⚡", effect: { type: "swap" }, fx: "shake" },
