@@ -133,6 +133,63 @@ export const tvSfx = {
   whoosh: () => noise(0.4, 0.08, "bandpass", 400, 2500, 0, 1.5),
 };
 
+/** Suara-suara kartu 3D (ambil dari tumpukan, buka, simpan, lempar). */
+export const cardSfx = {
+  /** Kartu digeser dari tumpukan: "srek" kertas + tik. */
+  slide: () => {
+    noise(0.14, 0.09, "highpass", 3500, 7000);
+    tone(2400, 0.02, "square", 0.025, undefined, 0.01);
+  },
+  /** Kartu berputar di udara: kepak kertas yang makin melambat. */
+  flutter: (dur: number) => {
+    let t = 0;
+    let gap = 0.035;
+    while (t < dur) {
+      noise(0.03, 0.05 * (1 - (t / dur) * 0.6), "bandpass", 2600 + Math.random() * 800, undefined, t, 3);
+      t += gap;
+      gap *= 1.12;
+    }
+  },
+  /** Kartu dibalik: "fwip" + pop. */
+  flip: () => {
+    noise(0.12, 0.08, "bandpass", 1200, 5000, 0, 2);
+    tone(520, 0.08, "sine", 0.1, 1100, 0.06);
+  },
+  /** Muka kartu terlihat: denting ceria (kartu biasa) atau kilau ajaib (kartu simpanan). */
+  reveal: (kind: "card" | "item") => {
+    if (kind === "card") {
+      [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.18, "triangle", 0.06, undefined, 0.05 + i * 0.06));
+    } else {
+      [1047, 1319, 1568, 2093, 2637].forEach((f, i) => tone(f, 0.3, "sine", 0.05, undefined, 0.04 + i * 0.05));
+      wobble(1568, 0.6, "sine", 0.03, 9, 40, undefined, 0.3);
+    }
+  },
+  /** Kartu biasa terbang ke atas & menghilang: whoosh naik + poof. */
+  vanish: () => {
+    noise(0.35, 0.07, "bandpass", 500, 3500, 0, 1.5);
+    tone(600, 0.25, "sine", 0.04, 2000);
+    noise(0.12, 0.06, "lowpass", 1500, 300, 0.3);
+  },
+  /** Kartu simpanan mengecil masuk kantong pion: "sluurp" naik + pop. */
+  pocket: (dur: number) => {
+    wobble(300, dur, "triangle", 0.06, 20, 30, 1300);
+    tone(880, 0.07, "square", 0.04, 1760, dur);
+  },
+  /** Kartu simpanan muncul di atas pion: "bloop". */
+  appear: () => tone(300, 0.18, "sine", 0.1, 900),
+  /** Kartu dilempar berputar seperti frisbee: dengung "wuung" yang naik-turun. */
+  whirl: (dur: number) => {
+    wobble(420, dur, "sawtooth", 0.035, 22, 120, 260);
+    noise(dur, 0.05, "bandpass", 900, 2400, 0, 2);
+  },
+  /** Kartu menghantam sasaran: "plak!" */
+  hit: () => {
+    noise(0.12, 0.2, "lowpass", 2500, 400);
+    tone(180, 0.15, "square", 0.08, 60);
+    tone(1400, 0.05, "square", 0.03, undefined, 0.02);
+  },
+};
+
 export const sfx = {
   fart: () => {
     wobble(95, 0.7, "sawtooth", 0.14, 28, 30, 60);
@@ -165,7 +222,6 @@ export const sfx = {
     for (let i = 0; i < 6; i++) tone(200 + Math.random() * 300, 0.04, "square", 0.03, undefined, i * 0.07);
   },
   build: () => [523, 659, 784].forEach((f, i) => tone(f, 0.12, "square", 0.05, undefined, i * 0.07)),
-  card: () => tone(660, 0.3, "triangle", 0.07, 1320),
   fly: () => tone(300, 0.9, "sine", 0.06, 1200),
   bad: () => [392, 330, 262].forEach((f, i) => tone(f, 0.2, "triangle", 0.07, undefined, i * 0.15)),
   win: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.18, "square", 0.06, undefined, i * 0.12)),

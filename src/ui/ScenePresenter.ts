@@ -66,12 +66,10 @@ export class ScenePresenter implements Presenter {
   }
 
   async showCard(player: number, card: Card) {
-    sfx.card();
     const bot = !this.isLocalHuman(player);
     const isItem = card.effect.type === "item";
     // Kartu 3D diambil dari tumpukan, terbang ke depan kamera, lalu dibuka
     await this.view.cards.draw({ icon: card.icon, title: card.title, text: card.text, kind: isItem ? "item" : "card" });
-    sfx.boing();
     await modal({
       title: card.title,
       className: "comic card-reveal",
@@ -124,7 +122,6 @@ export class ScenePresenter implements Presenter {
   }
 
   async itemUsed(player: number, use: ItemUse) {
-    sfx.card();
     const def = ITEMS[use.item];
     this.hud.speech(player, `${def.icon} ${pick(ITEM_SHOUT)}`, true);
     // Kartu 3D muncul di atas pion lalu dilempar ke sasaran
@@ -133,7 +130,6 @@ export class ScenePresenter implements Presenter {
     if (def.target === "player" && use.target !== null) to = this.view.pawns[use.target].root.position;
     if (def.target === "tile" && use.target !== null) to = this.view.board.tileCenter(use.target);
     await this.view.cards.throwItem({ icon: def.icon, title: def.name, text: def.text, kind: "item" }, from, to);
-    sfx.zap();
     const fx: Record<string, FunFx> = { sandal: "dizzy", utang: "cry", turbo: "duck", kecoak: "shake" };
     let targets = [player];
     if (def.target === "player" && use.target !== null) targets = [use.target];

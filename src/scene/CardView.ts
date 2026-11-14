@@ -15,7 +15,8 @@ import { TILE } from "./layout";
 import { cameraFacing, inFrontOfCamera, roundRect, unlitMaterial, viewDistance, wrapText } from "./screenSpace";
 import { FONT } from "./tileArt";
 import { outline, toon } from "./toon";
-import { Ease, lerp, tween } from "./tween";
+import { cardSfx } from "./sfx";
+import { Ease, lerp, Speed, tween } from "./tween";
 
 /** Ukuran kartu (unit dunia). Rasio mirip kartu remi. */
 const W = 1.5;
@@ -235,6 +236,8 @@ export class CardView {
     card.scaling.setAll(1);
 
     // 1) Lompat dari tumpukan & terbang ke depan kamera (punggung menghadap kamera), berputar
+    cardSfx.slide();
+    cardSfx.flutter(0.65 / Speed.factor);
     await tween(
       this.scene,
       0.7,
@@ -251,7 +254,10 @@ export class CardView {
       Ease.linear,
     );
 
-    // 2) Balik kartu dengan efek "pop"
+    // 2) Balik kartu dengan efek "pop", lalu denting saat muka kartu terlihat
+    cardSfx.flip();
+    // Muka kartu mulai terlihat sekitar separuh animasi balik
+    setTimeout(() => cardSfx.reveal(face.kind), 220 / Speed.factor);
     await tween(
       this.scene,
       0.5,
@@ -298,6 +304,7 @@ export class CardView {
     const q0 = card.rotationQuaternion!.clone();
     const s0 = card.scaling.x;
     if (to) {
+      cardSfx.pocket(0.55 / Speed.factor);
       const end = to.add(new Vector3(0, 1.6, 0));
       await tween(this.scene, 0.55, (t) => {
         const p = Vector3.Lerp(start, end, Ease.inOutQuad(t));
@@ -307,6 +314,7 @@ export class CardView {
         card.scaling.setAll(lerp(s0, 0.05, Ease.inOutQuad(t)));
       });
     } else {
+      cardSfx.vanish();
       await tween(this.scene, 0.45, (t) => {
         card.position.copyFrom(start.add(new Vector3(0, Ease.inOutQuad(t) * 3, 0)));
         card.rotationQuaternion = q0.multiply(Quaternion.RotationAxis(Vector3.Forward(), t * Math.PI * 3));
@@ -325,6 +333,7 @@ export class CardView {
     card.position.copyFrom(a);
 
     // Muncul & tunjukkan muka kartu ke kamera
+    cardSfx.appear();
     await tween(this.scene, 0.45, (t) => {
       card.position.copyFrom(a);
       card.rotationQuaternion = cameraFacing(this.camera).multiply(Quaternion.RotationAxis(Vector3.Up(), lerp(Math.PI, 0, Ease.outBack(t))));
@@ -336,6 +345,7 @@ export class CardView {
     // Lempar melengkung sambil berputar seperti frisbee
     const q0 = cameraFacing(this.camera);
     const dist = Vector3.Distance(a, b);
+    cardSfx.whirl(0.6 / Speed.factor);
     await tween(this.scene, 0.6, (t) => {
       const p = Vector3.Lerp(a, b, t);
       p.y += Math.sin(t * Math.PI) * Math.min(4, 1 + dist * 0.25);
@@ -343,6 +353,7 @@ export class CardView {
       card.rotationQuaternion = q0.multiply(Quaternion.RotationAxis(Vector3.Forward(), t * Math.PI * 6));
       card.scaling.setAll(lerp(1.2, 0.5, t));
     });
+    cardSfx.hit();
     this.disposeCard(card);
   }
 }
