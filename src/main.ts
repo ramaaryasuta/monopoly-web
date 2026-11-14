@@ -47,7 +47,8 @@ async function boot() {
   } else {
     // Lockstep: setiap peer menjalankan Game yang sama (seed sama); hanya keputusan yang dikirim.
     // Pemilik keputusan: manusia = perangkatnya sendiri, bot = host.
-    const { room, seats } = online;
+    const { room, seats, voice, voicePanel } = online;
+    voicePanel.onSpeaking = (id, on) => seats.forEach((s, pid) => s.id === id && s.kind !== "bot" && hud.setSpeaking(pid, on));
     const remotes: (RemoteDecider | null)[] = [];
     const broadcastBot = (pid: number) => new BroadcastDecider(bot, (k, v) => room.sendAct(pid, k, v));
     game.deciders = seats.map((s, pid): Decider => {
@@ -73,17 +74,22 @@ async function boot() {
     };
     room.onClosed = (reason) => {
       game.stop();
+      voice.destroy();
+      voicePanel.destroy();
       void modal({
         title: "📡 Koneksi terputus",
         body: `<p>${reason}</p>`,
         buttons: [{ label: "Kembali ke menu", value: 0, class: "green" }],
       }).then(() => location.reload());
     };
-    window.addEventListener("beforeunload", () => room.leave());
+    window.addEventListener("beforeunload", () => {
+      voice.leave();
+      room.leave();
+    });
   }
 
   // Akses dari DevTools untuk QA
-  Object.assign(window as object, { __game: game, __view: view, __room: online?.room });
+  Object.assign(window as object, { __game: game, __view: view, __room: online?.room, __voice: online?.voice });
   view.setupPlayers(game.state, setup.characters);
   await view.goHome(1);
 

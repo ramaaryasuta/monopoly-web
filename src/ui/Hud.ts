@@ -89,6 +89,11 @@ export class Hud {
 
   // ------------------------------------------------------------------ player cards
 
+  /** Lingkaran hijau di avatar saat pemain berbicara di voice chat. */
+  setSpeaking(pid: number, on: boolean) {
+    this.cards[pid]?.classList.toggle("speaking", on);
+  }
+
   refresh() {
     const s = this.state;
     this.round.textContent = `Ronde ${s.round} / ${CONFIG.roundLimit}`;

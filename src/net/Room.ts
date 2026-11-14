@@ -1,4 +1,4 @@
-import Peer, { type DataConnection } from "peerjs";
+import Peer, { type DataConnection, type MediaConnection } from "peerjs";
 
 /**
  * Room online peer-to-peer (WebRTC via PeerJS).
@@ -27,6 +27,13 @@ export interface Seat {
   kind: SeatKind;
 }
 
+/** Status voice chat satu peer (disiarkan ke semua lewat host). */
+export interface VoiceState {
+  on: boolean;
+  mute: boolean;
+  deaf: boolean;
+}
+
 export interface StartInfo {
   seed: number;
   seats: Seat[];
@@ -40,6 +47,7 @@ type Msg =
   | { t: "start"; seed: number; seats: Seat[] }
   | { t: "act"; p: number; k: string; v: unknown }
   | { t: "left"; p: number }
+  | { t: "voice"; id: string; on: boolean; mute: boolean; deaf: boolean }
   | { t: "ping" }
   | { t: "pong" };
 
@@ -115,15 +123,18 @@ function openPeer(id?: string): Promise<Peer> {
       peer.destroy();
       reject(new Error("Server penghubung tidak merespons. Cek koneksi internet."));
     }, 12000);
-    peer.once("open", () => {
-      clearTimeout(timer);
-      resolve(peer);
-    });
-    peer.once("error", (e) => {
+    const onError = (e: Error) => {
       clearTimeout(timer);
       peer.destroy();
       reject(e);
+    };
+    peer.once("open", () => {
+      clearTimeout(timer);
+      // Error setelah terbuka (mis. panggilan suara ke peer yang sudah pergi) tidak boleh menghancurkan peer
+      peer.off("error", onError);
+      resolve(peer);
     });
+    peer.once("error", onError);
   });
 }
 
@@ -135,6 +146,11 @@ export class Room {
   private actBuffer: { p: number; k: string; v: unknown }[] = [];
   private _onAct: ((p: number, k: string, v: unknown) => void) | null = null;
   private closed = false;
+  private seatListeners = new Set<(seats: Seat[]) => void>();
+  /** Status voice per peer id (tidak termasuk diri sendiri). */
+  readonly voice = new Map<string, VoiceState>();
+  /** Dipanggil saat status voice peer lain berubah. */
+  onVoice: (() => void) | null = null;
 
   onLobby: ((seats: Seat[]) => void) | null = null;
   onStart: ((info: StartInfo) => void) | null = null;
@@ -149,7 +165,8 @@ export class Room {
   ) {
     peer.on("disconnected", () => {
       // Putus dari server signaling; koneksi P2P yang sudah ada tetap jalan.
-      if (!this.closed && !this.started) peer.reconnect();
+      // Tetap sambung ulang selama game: panggilan suara baru butuh signaling.
+      if (!this.closed && !peer.destroyed) peer.reconnect();
     });
   }
 
@@ -192,10 +209,11 @@ export class Room {
         reject(new Error(msg));
       };
       const timer = setTimeout(() => fail("Tidak bisa tersambung ke host. Mungkin jaringan memblokir koneksi P2P."), 15000);
-      peer.once("error", (e) => {
+      const onError = (e: Error) => {
         const t = (e as { type?: string }).type;
         fail(t === "peer-unavailable" ? `Room ${code} tidak ditemukan. Cek kodenya ya!` : String(e.message ?? e));
-      });
+      };
+      peer.once("error", onError);
       const conn = peer.connect(PREFIX + code, { reliable: true, serialization: "json" });
       room.hostConn = conn;
       let heartbeat: ((m: Msg) => boolean) | null = null;
@@ -216,6 +234,7 @@ export class Room {
         }
         if (m.t === "lobby" && !room.seats.length) {
           clearTimeout(timer);
+          peer.off("error", onError);
           room.seats = m.seats;
           resolve();
         }
@@ -252,10 +271,17 @@ export class Room {
         this.conns.set(conn.peer, conn);
         this.seats.push({ id: conn.peer, name: cleanName(m.name), char: this.freeChar(), kind: "guest" });
         this.broadcastLobby();
+        // Kabari tamu baru siapa saja yang sedang di voice
+        if (this.myVoice.on) conn.send({ t: "voice", id: this.me, ...this.myVoice } satisfies Msg);
+        for (const [id, v] of this.voice) conn.send({ t: "voice", id, ...v } satisfies Msg);
         return;
       }
       if (!this.conns.has(conn.peer)) return;
-      if (m.t === "setMe" && !this.started) {
+      if (m.t === "voice") {
+        if (m.id !== conn.peer) return;
+        this.storeVoice(m);
+        for (const [id, c] of this.conns) if (id !== conn.peer && c.open) c.send(m);
+      } else if (m.t === "setMe" && !this.started) {
         const seat = this.seats.find((s) => s.id === conn.peer);
         if (seat) this.applySetMe(seat, m);
       } else if (m.t === "act" && this.started) {
@@ -271,6 +297,7 @@ export class Room {
 
   private guestGone(id: string) {
     if (!this.conns.delete(id)) return;
+    this.dropVoice(id);
     const idx = this.seats.findIndex((s) => s.id === id);
     if (idx < 0) return;
     if (!this.started) {
@@ -280,6 +307,7 @@ export class Room {
       this.seats[idx] = { ...this.seats[idx], kind: "bot", id: `${this.me}#left${idx}` };
       this.broadcast({ t: "left", p: idx });
       this.onPlayerLeft?.(idx);
+      this.emitSeats();
     }
   }
 
@@ -304,6 +332,17 @@ export class Room {
   private broadcastLobby() {
     this.broadcast({ t: "lobby", seats: this.seats });
     this.onLobby?.(this.seats);
+    this.emitSeats();
+  }
+
+  private emitSeats() {
+    for (const fn of this.seatListeners) fn(this.seats);
+  }
+
+  /** Dengarkan perubahan daftar kursi (lobi, mulai, pemain keluar). Return: fungsi untuk berhenti. */
+  watchSeats(fn: (seats: Seat[]) => void): () => void {
+    this.seatListeners.add(fn);
+    return () => this.seatListeners.delete(fn);
   }
 
   addBot() {
@@ -322,6 +361,7 @@ export class Room {
       const c = this.conns.get(s.id);
       c?.send({ t: "reject", reason: "Kamu dikeluarkan dari room oleh host." } satisfies Msg);
       this.conns.delete(s.id);
+      this.dropVoice(s.id);
       setTimeout(() => c?.close(), 300);
     }
     this.seats.splice(i, 1);
@@ -355,22 +395,72 @@ export class Room {
       case "lobby":
         this.seats = m.seats;
         this.onLobby?.(m.seats);
+        this.emitSeats();
         break;
       case "start":
         this.started = true;
         this.seats = m.seats;
         this.onStart?.({ seed: m.seed, seats: m.seats });
+        this.emitSeats();
+        break;
+      case "voice":
+        if (m.id !== this.me) this.storeVoice(m);
         break;
       case "act":
         this.emitAct(m.p, m.k, m.v);
         break;
       case "left":
+        if (this.seats[m.p]) this.seats[m.p] = { ...this.seats[m.p], kind: "bot", id: `${this.hostId}#left${m.p}` };
         this.onPlayerLeft?.(m.p);
+        this.emitSeats();
         break;
       case "reject":
         this.close(m.reason);
         break;
     }
+  }
+
+  // ------------------------------------------------------------------ voice
+
+  private myVoice: VoiceState = { on: false, mute: false, deaf: false };
+
+  private storeVoice(m: { id: string } & VoiceState) {
+    const v: VoiceState = { on: !!m.on, mute: !!m.mute, deaf: !!m.deaf };
+    if (v.on) this.voice.set(m.id, v);
+    else this.voice.delete(m.id);
+    this.onVoice?.();
+  }
+
+  /** Host: peer pergi → beri tahu semua bahwa ia keluar dari voice. */
+  private dropVoice(id: string) {
+    if (!this.voice.has(id)) return;
+    this.voice.delete(id);
+    this.broadcast({ t: "voice", id, on: false, mute: false, deaf: false });
+    this.onVoice?.();
+  }
+
+  /** Umumkan status voice diri sendiri ke semua peer. */
+  setMyVoice(v: VoiceState) {
+    this.myVoice = { ...v };
+    const m: Msg = { t: "voice", id: this.me, ...v };
+    if (this.isHost) this.broadcast(m);
+    else if (this.hostConn?.open) this.hostConn.send(m);
+  }
+
+  /** Panggil peer lain dengan stream audio (voice chat mesh antar semua peer). */
+  call(id: string, stream: MediaStream): MediaConnection | null {
+    if (this.closed || this.peer.destroyed) return null;
+    return this.peer.call(id, stream);
+  }
+
+  /** Terima panggilan suara masuk. */
+  set onCall(fn: ((c: MediaConnection) => void) | null) {
+    this.peer.removeAllListeners("call");
+    if (fn) this.peer.on("call", fn);
+  }
+
+  get isClosed(): boolean {
+    return this.closed;
   }
 
   // ------------------------------------------------------------------ dalam game

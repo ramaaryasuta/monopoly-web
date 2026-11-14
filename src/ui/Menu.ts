@@ -1,18 +1,20 @@
 import { CONFIG } from "../core/rules";
 import { CODE_LEN, MAX_SEATS, normalizeCode, Room, type Seat } from "../net/Room";
+import { Voice } from "../net/Voice";
 import type { PlayerSetup } from "../core/types";
 import { CRITTERS } from "../scene/Pawn";
 import { sfx, Sound } from "../scene/sfx";
 import { Speed } from "../scene/tween";
 import { h, uiRoot } from "./dom";
 import { AVATARS } from "./Hud";
+import { VoicePanel } from "./VoicePanel";
 
 export interface MenuResult {
   players: PlayerSetup[];
   characters: number[];
   seed?: number;
   /** Ada bila permainan online. */
-  online?: { room: Room; seats: Seat[] };
+  online?: { room: Room; seats: Seat[]; voice: Voice; voicePanel: VoicePanel };
 }
 
 type SlotType = "human" | "bot" | "off";
@@ -307,9 +309,16 @@ export function showMenu(): Promise<MenuResult> {
     // ---------------------------------------------------------------- online
 
     let room: Room | null = null;
+    let voiceUi: { voice: Voice; panel: VoicePanel } | null = null;
+    const dropVoice = () => {
+      voiceUi?.voice.destroy();
+      voiceUi?.panel.destroy();
+      voiceUi = null;
+    };
 
     /** Layar awal online: isi nama, lalu buat room atau gabung pakai kode. */
     const online = (prefillCode = "", errorText = "") => {
+      dropVoice();
       room?.leave();
       room = null;
       const me = slots[0];
@@ -383,6 +392,11 @@ export function showMenu(): Promise<MenuResult> {
       const status = h("div", { class: "hint", "data-testid": "lobby-status" });
       const startBtn = h("button", { class: "btn green start-btn", "data-testid": "online-start" }, "▶ Mulai Main!");
       const addBotBtn = h("button", { class: "btn small white", "data-testid": "add-bot" }, "＋ Tambah Bot 🤖");
+      dropVoice();
+      const voice = new Voice(r);
+      const voicePanel = new VoicePanel(voice);
+      voiceUi = { voice, panel: voicePanel };
+      Object.assign(window as object, { __voice: voice }); // untuk QA di DevTools
       const link = `${location.origin}${location.pathname}?room=${r.code}`;
 
       const copyBtn = h("button", { class: "btn small white", title: "Salin link undangan" }, "📋 Salin link");
@@ -474,12 +488,13 @@ export function showMenu(): Promise<MenuResult> {
       r.onStart = ({ seed, seats }) => {
         r.onLobby = null;
         r.onClosed = null;
+        voiceUi = null; // pindah ke layar game
         root.remove();
         resolve({
           players: seats.map((s) => ({ name: s.name, color: CRITTERS[s.char].color, isBot: s.kind === "bot" })),
           characters: seats.map((s) => s.char),
           seed,
-          online: { room: r, seats },
+          online: { room: r, seats, voice, voicePanel },
         });
       };
       render(r.seats);
