@@ -2,7 +2,7 @@ import { Color4, DynamicTexture, MeshBuilder, ParticleSystem, TransformNode, Vec
 import { outline, toon } from "./toon";
 import { Ease, tween, wait } from "./tween";
 
-/** Efek partikel & properti konyol: koin, confetti, kentut, air mata, UFO, bebek raksasa. */
+/** Efek partikel & properti konyol: koin, confetti, kentut, air mata, helikopter, bebek raksasa. */
 export class Effects {
   private coinTex: DynamicTexture;
   private dotTex: DynamicTexture;
@@ -203,62 +203,105 @@ export class Effects {
 
   // ------------------------------------------------------------------ props
 
-  private buildUfo(): TransformNode {
+  /** Helikopter pejabat kartun: badan, kokpit, ekor, baling-baling, skid & lampu sorot. */
+  private buildHeli(): TransformNode {
     const s = this.scene;
-    const root = new TransformNode("ufoFx", s);
-    const add = (m: Mesh, hex: string, w = 0.04) => {
+    const root = new TransformNode("heliFx", s);
+    const add = (m: Mesh, hex: string, w = 0.04, parent: TransformNode = root) => {
       m.material = toon(s, hex);
-      m.parent = root;
+      m.parent = parent;
       if (w) outline(m, w);
       return m;
     };
-    const disc = add(MeshBuilder.CreateSphere("ufoDisc", { diameter: 3.2, segments: 16 }, s), "#b8c4d6");
-    disc.scaling.y = 0.28;
-    const dome = add(MeshBuilder.CreateSphere("ufoDome", { diameter: 1.4, segments: 14, slice: 0.5 }, s), "#7ef0ff");
-    dome.position.y = 0.2;
-    const alien = add(MeshBuilder.CreateSphere("ufoAlien", { diameter: 0.6, segments: 10 }, s), "#7ee06b", 0.02);
-    alien.position.y = 0.45;
-    for (const sx of [-0.12, 0.12]) {
-      const eye = add(MeshBuilder.CreateSphere("ufoEye", { diameter: 0.2, segments: 8 }, s), "#111122", 0);
-      eye.position.set(sx, 0.5, 0.25);
-      eye.scaling.set(0.8, 1.3, 0.5);
+    // Badan menghadap +X (arah terbang masuk)
+    const body = add(MeshBuilder.CreateSphere("heliBody", { diameter: 2.2, segments: 16 }, s), "#2f3a4a");
+    body.scaling.set(1.35, 0.9, 0.95);
+    const stripe = add(MeshBuilder.CreateSphere("heliStripe", { diameter: 2.24, segments: 16 }, s), "#e8343a", 0);
+    stripe.scaling.set(1.36, 0.25, 0.97);
+    stripe.position.y = -0.1;
+    const glass = add(MeshBuilder.CreateSphere("heliGlass", { diameter: 1.3, segments: 14 }, s), "#7ef0ff", 0.02);
+    glass.position.set(0.85, 0.2, 0);
+    glass.scaling.set(0.8, 0.75, 1.15);
+    const tail = add(MeshBuilder.CreateCylinder("heliTail", { diameterTop: 0.22, diameterBottom: 0.5, height: 2.6, tessellation: 10 }, s), "#2f3a4a");
+    tail.rotation.z = Math.PI / 2;
+    tail.position.set(-2.2, 0.25, 0);
+    const fin = add(MeshBuilder.CreateBox("heliFin", { width: 0.5, height: 0.8, depth: 0.08 }, s), "#e8343a", 0.02);
+    fin.position.set(-3.4, 0.6, 0);
+    // Rotor ekor
+    const tailRotor = new TransformNode("heliTailRotor", s);
+    tailRotor.parent = root;
+    tailRotor.position.set(-3.4, 0.5, 0.12);
+    add(MeshBuilder.CreateBox("heliTailBlade", { width: 0.1, height: 1.0, depth: 0.04 }, s), "#dfe6ee", 0, tailRotor);
+    // Rotor utama
+    const mast = add(MeshBuilder.CreateCylinder("heliMast", { diameter: 0.18, height: 0.5, tessellation: 8 }, s), "#555f6d", 0.02);
+    mast.position.y = 1.05;
+    const rotor = new TransformNode("heliRotor", s);
+    rotor.parent = root;
+    rotor.position.y = 1.3;
+    for (const r of [0, Math.PI / 2]) {
+      const blade = add(MeshBuilder.CreateBox("heliBlade", { width: 5.2, height: 0.06, depth: 0.28 }, s), "#dfe6ee", 0.02, rotor);
+      blade.rotation.y = r;
     }
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      const l = add(MeshBuilder.CreateSphere("ufoLight", { diameter: 0.25, segments: 6 }, s), i % 2 ? "#ffe14d" : "#ff6b9a", 0);
-      l.position.set(Math.cos(a) * 1.4, -0.05, Math.sin(a) * 1.4);
+    // Skid
+    for (const z of [-0.6, 0.6]) {
+      const skid = add(MeshBuilder.CreateCylinder("heliSkid", { diameter: 0.12, height: 2.4, tessellation: 8 }, s), "#555f6d", 0.02);
+      skid.rotation.z = Math.PI / 2;
+      skid.position.set(0.1, -1.0, z);
+      for (const x of [-0.5, 0.6]) {
+        const leg = add(MeshBuilder.CreateCylinder("heliLeg", { diameter: 0.08, height: 0.45, tessellation: 6 }, s), "#555f6d", 0);
+        leg.position.set(x, -0.8, z * 0.85);
+      }
     }
-    const beam = MeshBuilder.CreateCylinder("ufoBeam", { diameterTop: 0.9, diameterBottom: 2.6, height: 6, tessellation: 20 }, s);
-    const bm = toon(s, "#fff7a8").clone("ufoBeamMat");
-    bm.alpha = 0.45;
+    // Lampu sirene di atas
+    const siren = add(MeshBuilder.CreateSphere("heliSiren", { diameter: 0.3, segments: 8 }, s), "#ff3b3b", 0.02);
+    siren.position.set(0.3, 0.95, 0);
+    // Lampu sorot (pengganti sinar UFO)
+    const beam = MeshBuilder.CreateCylinder("heliBeam", { diameterTop: 0.5, diameterBottom: 2.6, height: 6, tessellation: 20 }, s);
+    const bm = toon(s, "#fff7a8").clone("heliBeamMat");
+    bm.alpha = 0.4;
     beam.material = bm;
     beam.parent = root;
-    beam.position.y = -3;
+    beam.position.y = -3.6;
     beam.setEnabled(false);
-    root.metadata = { beam };
+    root.metadata = { beam, rotor, tailRotor, siren };
     return root;
   }
 
-  /** UFO datang, menyorot target, lalu kabur. `during` dijalankan saat sorotan aktif. */
-  async ufoVisit(target: Vector3, during?: () => Promise<void>) {
-    const ufo = this.buildUfo();
-    const beam = (ufo.metadata as { beam: Mesh }).beam;
-    const spin = this.scene.onBeforeRenderObservable.add(() => (ufo.rotation.y += 0.08));
+  /** Helikopter datang, menyorot target, lalu pergi. `during` dijalankan saat lampu sorot aktif. */
+  async heliVisit(target: Vector3, during?: () => Promise<void>) {
+    const heli = this.buildHeli();
+    const { beam, rotor, tailRotor, siren } = heli.metadata as { beam: Mesh; rotor: TransformNode; tailRotor: TransformNode; siren: Mesh };
+    let time = 0;
+    const spin = this.scene.onBeforeRenderObservable.add(() => {
+      const dt = this.scene.getEngine().getDeltaTime() / 1000;
+      time += dt;
+      rotor.rotation.y += dt * 28;
+      tailRotor.rotation.z += dt * 40;
+      siren.visibility = Math.sin(time * 14) > 0 ? 1 : 0.35;
+      // Goyang halus saat melayang
+      heli.rotation.x = Math.sin(time * 2.2) * 0.04;
+    });
     const hover = target.add(new Vector3(0, 6.5, 0));
     const from = hover.add(new Vector3(-30, 8, 10));
     try {
-      await tween(this.scene, 0.9, (t) => ufo.position.copyFrom(Vector3.Lerp(from, hover, t)), Ease.outBack);
+      heli.rotation.y = -Math.atan2(hover.z - from.z, hover.x - from.x);
+      heli.rotation.z = -0.18; // menunduk saat maju
+      await tween(this.scene, 1.0, (t) => heli.position.copyFrom(Vector3.Lerp(from, hover, t)), Ease.outBack);
+      heli.rotation.z = 0;
       beam.setEnabled(true);
       if (during) await during();
       else await wait(this.scene, 0.8);
       beam.setEnabled(false);
       const away = hover.add(new Vector3(30, 12, -5));
-      await tween(this.scene, 0.7, (t) => ufo.position.copyFrom(Vector3.Lerp(hover, away, t)), Ease.inOutQuad);
+      heli.rotation.y = -Math.atan2(away.z - hover.z, away.x - hover.x);
+      heli.rotation.z = -0.22;
+      await tween(this.scene, 0.8, (t) => heli.position.copyFrom(Vector3.Lerp(hover, away, t)), Ease.inOutQuad);
     } finally {
       this.scene.onBeforeRenderObservable.remove(spin);
-      ufo.dispose();
+      heli.dispose();
     }
   }
+
 
   /** Bebek karet raksasa muncul dari bawah tanah lalu tenggelam lagi. */
   async giantDuck(at: Vector3) {

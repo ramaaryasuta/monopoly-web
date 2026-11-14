@@ -538,7 +538,7 @@ export function showMenu(): Promise<MenuResult> {
             item("🎯", "Dadu kembar = lempar lagi. Kembar 3x = dijebloskan ke <b>Nusakambangan</b> (keluar dengan dadu kembar atau sogok sipir)."),
             item("🏁", `Lewat Mulai: +${rp(CONFIG.salary)}. <b>Pesta Pejabat</b>: sewa x${CONFIG.festivalMultiplier}. <b>Naik Pesawat Negara</b>: terbang ke petak mana saja.`),
             item("📦", "<b>Paket Shopee, Tokopedia, Blibli & Lazada</b>: paket misterius berisi kartu konyol — bisa dapat duit, bisa kena kentut nuklir."),
-            item("📢", "<b>Berita Heboh</b>: UFO nyasar, gempa kentut, maling budiman bisa muncul tiap ronde!"),
+            item("📢", "<b>Berita Heboh</b>: heli pejabat salah jemput, gempa kentut, maling budiman bisa muncul tiap ronde!"),
           ),
           h("h3", {}, "🏆 Cara Menang"),
           h(

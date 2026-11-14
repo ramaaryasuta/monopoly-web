@@ -520,7 +520,7 @@ export class Game {
       }
       case "randomTile": {
         const dest = Math.floor(this.rng() * BOARD_SIZE);
-        this.presenter.message(`Alien menjatuhkan ${p.name} di ${BOARD[dest].name}.`);
+        this.presenter.message(`Helikopter menurunkan ${p.name} di ${BOARD[dest].name}.`);
         if (dest !== p.position) {
           await this.presenter.movePawn(pid, [dest], "fly");
           p.position = dest;
@@ -669,7 +669,7 @@ export class Game {
     const money = (i: number) => this.state.players[i].money;
     const e = ev.effect;
     let targets: number[] = alive;
-    if (e.type === "randomGain" || e.type === "randomPay" || e.type === "ufoAbduct")
+    if (e.type === "randomGain" || e.type === "randomPay" || e.type === "heliAbduct")
       targets = [alive[Math.floor(this.rng() * alive.length)]];
     else if (e.type === "poorestGain") targets = [alive.reduce((a, b) => (money(b) < money(a) ? b : a))];
     else if (e.type === "robinHood") targets = [alive.reduce((a, b) => (money(b) > money(a) ? b : a))];
@@ -706,15 +706,15 @@ export class Game {
         for (const o of others) this.addMoney(o, share);
         return;
       }
-      case "ufoAbduct": {
+      case "heliAbduct": {
         const v = this.state.players[targets[0]];
         // Yang sedang di pulau tetap di pulau supaya aturan pulau konsisten
         if (v.islandTurns > 0) {
-          this.presenter.message(`UFO mau culik ${v.name}, tapi penjagaan Nusakambangan terlalu ketat. Batal!`);
+          this.presenter.message(`Helikopter mau jemput ${v.name}, tapi penjagaan Nusakambangan terlalu ketat. Batal!`);
           return;
         }
         const dest = Math.floor(this.rng() * BOARD_SIZE);
-        this.presenter.message(`${v.name} diculik UFO ke ${BOARD[dest].name}!`);
+        this.presenter.message(`${v.name} diangkut helikopter pejabat ke ${BOARD[dest].name}!`);
         if (dest !== v.position) {
           await this.presenter.movePawn(v.id, [dest], "fly");
           v.position = dest;

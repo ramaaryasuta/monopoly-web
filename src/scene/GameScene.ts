@@ -221,9 +221,9 @@ export class GameScene {
         void this.shakeCamera(0.8, 0.8);
         await Promise.all(this.pawns.filter((p) => !p.isOut).map((p) => p.blasted()));
         return;
-      case "ufo":
-        sfx.ufo();
-        await this.effects.ufoVisit(center, async () => {
+      case "heli":
+        sfx.heli();
+        await this.effects.heliVisit(center, async () => {
           await Promise.all(pawns.map((p) => p.dizzy()));
         });
         return;

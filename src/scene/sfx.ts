@@ -239,7 +239,16 @@ export const sfx = {
     wobble(70, 0.35, "square", 0.06, 40, 20, 50, 0.55);
   },
   sadTrombone: () => [392, 370, 349].forEach((f, i) => wobble(f / 2, i === 2 ? 0.9 : 0.35, "sawtooth", 0.06, i === 2 ? 6 : 0.1, i === 2 ? 8 : 0, undefined, i * 0.38)),
-  ufo: () => wobble(600, 1.4, "sine", 0.06, 8, 200, 900),
+  /** Baling-baling helikopter: "dug-dug-dug" naik lalu menjauh. */
+  heli: () => {
+    const n = 26;
+    for (let i = 0; i < n; i++) {
+      const env = Math.sin((i / (n - 1)) * Math.PI); // pelan → keras → pelan
+      const vol = 0.03 + env * 0.11;
+      noise(0.07, vol, "lowpass", 380, 140, i * 0.075);
+      tone(58, 0.06, "sine", vol * 0.8, 45, i * 0.075);
+    }
+  },
   zap: () => {
     for (let i = 0; i < 5; i++) tone(1200 - i * 180, 0.06, "sawtooth", 0.05, 200, i * 0.05);
   },

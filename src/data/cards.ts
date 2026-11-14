@@ -23,7 +23,7 @@ export type CardEffect =
   | { type: "item"; item: ItemId };
 
 /** Efek visual tambahan saat kartu/event muncul. */
-export type FunFx = "fart" | "ufo" | "dance" | "cry" | "rain" | "shake" | "duck" | "dizzy";
+export type FunFx = "fart" | "heli" | "dance" | "cry" | "rain" | "shake" | "duck" | "dizzy";
 
 export interface Card {
   id: string;
@@ -46,7 +46,7 @@ export const CARDS: Card[] = [
   { id: "back3", title: "Kunci Motor Ketinggalan", text: "Balik lagi! Mundur 3 petak.", icon: "🔑", effect: { type: "back", steps: 3 }, fx: "dizzy" },
   { id: "toFestival", title: "Dapat Undangan VIP", text: "Namamu nyelip di daftar tamu. Berangkat ke Pesta Pejabat!", icon: "🥂", effect: { type: "goto", tile: 16 }, fx: "dance" },
   { id: "fart", title: "Kentut Nuklir", text: "BRRRT! Semua pemain lain terpental mundur 2 petak.", icon: "💨", effect: { type: "pushOthers", steps: 2 }, fx: "fart" },
-  { id: "ufo", title: "Diculik Alien", text: "Alien penasaran sama kumismu. Kamu dilepas di petak acak.", icon: "🛸", effect: { type: "randomTile" }, fx: "ufo" },
+  { id: "heli", title: "Nebeng Heli Pejabat", text: "Disangka ajudan, kamu ikut terbang lalu diturunkan di petak acak.", icon: "🚁", effect: { type: "randomTile" }, fx: "heli" },
   { id: "swap", title: "Tukar Jiwa", text: "Kesamber petir bareng pemain lain. Kalian tukar posisi!", icon: "⚡", effect: { type: "swap" }, fx: "shake" },
   { id: "treat", title: "Kalah Taruhan Bola", text: "Timmu kalah 7-0. Traktir semua pemain, masing-masing Rp50 jt.", icon: "⚽", effect: { type: "payAll", amount: 50 }, fx: "cry" },
   { id: "steal", title: "Pinjam Dulu Seratus", text: "Kamu pinjam ke pemain terkaya. Nggak bakal dibalikin. Ambil Rp120 jt.", icon: "🤝", effect: { type: "stealRichest", amount: 120 }, fx: "dance" },
@@ -82,8 +82,8 @@ export type ChaosEffect =
   | { type: "poorestGain"; amount: number }
   /** Pemain terkaya kena "pajak" dibagi rata ke yang lain. */
   | { type: "robinHood"; amount: number }
-  /** Pemain acak dipindah ke petak acak (tanpa efek petak). */
-  | { type: "ufoAbduct" }
+  /** Pemain acak diangkut helikopter ke petak acak (tanpa efek petak). */
+  | { type: "heliAbduct" }
   /** Tidak ada efek uang, cuma heboh. */
   | { type: "nothing" };
 
@@ -103,7 +103,7 @@ export const CHAOS_EVENTS: ChaosEvent[] = [
   { id: "lottery", headline: "Nemu Koper Misterius", text: "Isinya duit mainan... eh ternyata asli! Satu pemain +Rp150 jt.", icon: "🧳", effect: { type: "randomGain", amount: 150 }, fx: "dance" },
   { id: "pity", headline: "Donasi Kasihan", text: "Warga iba. Pemain paling miskin dapat Rp120 jt.", icon: "🥺", effect: { type: "poorestGain", amount: 120 }, fx: "cry" },
   { id: "robin", headline: "Maling Budiman Beraksi", text: "Pemain terkaya kehilangan Rp150 jt, dibagi ke yang lain.", icon: "🦹", effect: { type: "robinHood", amount: 150 }, fx: "shake" },
-  { id: "ufo", headline: "UFO Nyasar!", text: "Alien salah culik orang. Satu pemain dipindah ke petak acak.", icon: "👽", effect: { type: "ufoAbduct" }, fx: "ufo" },
+  { id: "heli", headline: "Heli Pejabat Salah Jemput!", text: "Pilot salah orang. Satu pemain diangkut ke petak acak.", icon: "🚁", effect: { type: "heliAbduct" }, fx: "heli" },
   { id: "blackout", headline: "Mati Lampu Se-Pulau", text: "Semua panik lalu joget di kegelapan. Tidak terjadi apa-apa.", icon: "🔦", effect: { type: "nothing" }, fx: "dance" },
   { id: "fartquake", headline: "Gempa Kentut 6,9 SR", text: "Tanah bergetar dan bau. Semua pemain bayar Rp30 jt buat beli pengharum.", icon: "💨", effect: { type: "allPay", amount: 30 }, fx: "fart" },
   { id: "giantduck", headline: "Bebek Raksasa Mendarat", text: "Turis datang foto-foto. Satu pemain jualan es dan dapat Rp100 jt.", icon: "🦆", effect: { type: "randomGain", amount: 100 }, fx: "duck" },
