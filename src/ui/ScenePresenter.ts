@@ -3,7 +3,7 @@ import type { ItemUse, MessageKind, Presenter } from "../core/interfaces";
 import type { GameState } from "../core/types";
 import { ITEMS, SEASON_ROUNDS, type Card, type ChaosEvent, type FunFx, type SeasonDef } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
-import { sfx } from "../scene/sfx";
+import { seasonSfx, sfx } from "../scene/sfx";
 import { wait } from "../scene/tween";
 import { escapeHtml, modal } from "./dom";
 import type { Hud } from "./Hud";
@@ -104,12 +104,13 @@ export class ScenePresenter implements Presenter {
   async showSeason(season: SeasonDef, ended: boolean) {
     this.hud.refresh();
     if (ended) {
+      seasonSfx.end();
       this.message(`${season.icon} ${season.headline.replace(/!$/, "")} sudah selesai. Pulau kembali normal.`);
       return;
     }
     const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
     await this.view.goHome(0.5);
-    await this.view.events.show({ icon: season.icon, headline: season.headline, text: season.text, sub: `Berlaku ${SEASON_ROUNDS} ronde: ${season.badge}`, kind: "season" });
+    await this.view.events.show({ icon: season.icon, headline: season.headline, text: season.text, sub: `Berlaku ${SEASON_ROUNDS} ronde: ${season.badge}`, kind: "season", sting: seasonSfx[season.id] });
     await modal({
       title: season.headline,
       className: "comic breaking season card-reveal",

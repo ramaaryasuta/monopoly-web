@@ -1,3 +1,5 @@
+import type { SeasonId } from "../data/cards";
+
 /** Efek suara sintetis (WebAudio) — tanpa file aset, ceria ala game kartun. */
 let ctx: AudioContext | null = null;
 export const Sound = { muted: false };
@@ -187,6 +189,47 @@ export const cardSfx = {
     noise(0.12, 0.2, "lowpass", 2500, 400);
     tone(180, 0.15, "square", 0.08, 60);
     tone(1400, 0.05, "square", 0.03, undefined, 0.02);
+  },
+};
+
+/** Suara khas tiap event musiman (diputar setelah jingle TV) + suara saat musim berakhir. */
+export const seasonSfx: Record<SeasonId, () => void> & { end: () => void } = {
+  /** Musim Turis: jepretan kamera beruntun + "pyiing" lampu kilat. */
+  turis: () => {
+    [0, 0.28, 0.42].forEach((d) => {
+      noise(0.03, 0.14, "highpass", 3000, undefined, d);
+      noise(0.06, 0.1, "lowpass", 1800, 500, d + 0.05);
+      tone(2800, 0.15, "sine", 0.025, 4200, d + 0.02);
+    });
+    [784, 988].forEach((f, i) => tone(f, 0.18, "triangle", 0.05, undefined, 0.75 + i * 0.16));
+  },
+  /** Banjir: cipratan air, gelembung, lalu rintik hujan. */
+  banjir: () => {
+    noise(0.7, 0.16, "lowpass", 2200, 200);
+    for (let i = 0; i < 8; i++) tone(300 + Math.random() * 400, 0.07, "sine", 0.06, 900 + Math.random() * 600, 0.15 + i * 0.09);
+    for (let i = 0; i < 18; i++) noise(0.02, 0.05, "highpass", 5000, undefined, 0.6 + Math.random() * 1.1);
+  },
+  /** Harbolnas: "ka-ching" mesin kasir + fanfare diskon. */
+  diskon: () => {
+    noise(0.05, 0.12, "bandpass", 1500, undefined, 0, 4);
+    noise(0.05, 0.12, "bandpass", 1100, undefined, 0.08, 4);
+    tone(2637, 0.6, "sine", 0.06, undefined, 0.16);
+    tone(3520, 0.5, "sine", 0.04, undefined, 0.16);
+    noise(0.25, 0.06, "bandpass", 600, 1500, 0.2, 2);
+    [659, 784, 1047].forEach((f, i) => tone(f, 0.14, "square", 0.04, undefined, 0.55 + i * 0.1));
+  },
+  /** Musim THR: hujan koin bergemerincing. */
+  thr: () => {
+    for (let i = 0; i < 12; i++) {
+      const d = i * 0.08 + Math.random() * 0.04;
+      tone(988 + Math.random() * 200, 0.07, "square", 0.03, undefined, d);
+      tone(1319 + Math.random() * 300, 0.18, "square", 0.03, undefined, d + 0.06);
+    }
+  },
+  /** Musim selesai: denting turun pelan "tulalit" + whoosh lembut. */
+  end: () => {
+    [1047, 784, 659, 523].forEach((f, i) => tone(f, 0.3, "sine", 0.06, undefined, i * 0.13));
+    noise(0.5, 0.04, "bandpass", 2000, 400, 0.1, 1.2);
   },
 };
 

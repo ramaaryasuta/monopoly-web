@@ -26,6 +26,8 @@ export interface EventScreen {
   sub?: string;
   /** "event" = berita heboh (TV merah), "season" = event musiman (TV biru). */
   kind: "event" | "season";
+  /** Suara khas yang diputar setelah jingle, menggantikan bunyi sirene (dipakai event musiman). */
+  sting?: () => void;
 }
 
 /** Ukuran TV (unit dunia). Muka TV menghadap -z lokal. */
@@ -312,8 +314,9 @@ export class EventView {
     // 4) Tahan: sirene berkedip (dengan bunyi "wiu-wiu"), antena goyang, TV bergoyang pelan
     let time = 0;
     let lastOn: boolean | null = null;
-    // Sirene mulai berbunyi setelah jingle selesai supaya tidak bertabrakan
+    // Sirene (atau suara khas) mulai setelah jingle selesai supaya tidak bertabrakan
     const sirenFrom = 1.3;
+    let stingPlayed = false;
     this.holdObs = this.scene.onBeforeRenderObservable.add(() => {
       time += this.scene.getEngine().getDeltaTime() / 1000;
       const { pos, rot } = this.pose(Math.abs(Math.sin(time * 6)) * 0.04);
@@ -323,7 +326,12 @@ export class EventView {
       const on = Math.floor(time * 5) % 2 === 0;
       if (on !== lastOn) {
         lastOn = on;
-        if (time > sirenFrom && time < sirenFrom + 3) tvSfx.sirenBeep(on);
+        if (e.sting) {
+          if (time > sirenFrom && !stingPlayed) {
+            stingPlayed = true;
+            e.sting();
+          }
+        } else if (time > sirenFrom && time < sirenFrom + 3) tvSfx.sirenBeep(on);
       }
       sirens[0].emissiveColor = Color3.FromHexString(on ? "#ff2e4d" : "#5c1020");
       sirens[1].emissiveColor = Color3.FromHexString(on ? "#10305c" : "#2e8bff");
