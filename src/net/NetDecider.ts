@@ -1,6 +1,6 @@
-import type { AcquireChoice, BuildChoice, Decider, IslandChoice, TileChoice } from "../core/interfaces";
+import type { AcquireChoice, BuildChoice, Decider, IslandChoice, ItemChoice, ItemUse, TileChoice } from "../core/interfaces";
 
-type Kind = "roll" | "build" | "acq" | "island" | "tile";
+type Kind = "roll" | "build" | "acq" | "island" | "tile" | "item";
 
 /** Membungkus decider lokal (manusia/bot) dan menyiarkan setiap keputusannya ke jaringan. */
 export class BroadcastDecider implements Decider {
@@ -31,6 +31,11 @@ export class BroadcastDecider implements Decider {
   async chooseTile(c: TileChoice) {
     const v = await this.inner.chooseTile(c);
     this.send("tile", v);
+    return v;
+  }
+  async chooseItem(c: ItemChoice) {
+    const v = await this.inner.chooseItem(c);
+    this.send("item", v);
     return v;
   }
 }
@@ -108,5 +113,8 @@ export class RemoteDecider implements Decider {
   }
   chooseTile(c: TileChoice) {
     return this.next("tile", (d) => d.chooseTile(c));
+  }
+  chooseItem(c: ItemChoice) {
+    return this.next<ItemUse | null>("item", (d) => d.chooseItem(c));
   }
 }

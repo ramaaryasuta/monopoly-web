@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BotDecider } from "../src/core/bot";
 import { Game } from "../src/core/game";
 import { NullPresenter, type Decider } from "../src/core/interfaces";
-import { acquirePrice, checkMonopolyWin, CONFIG, createGame, rentFor, upgradeCost } from "../src/core/rules";
+import { acquirePrice, checkMonopolyWin, CONFIG, createGame, rentFor, salaryFor, seasonalCost, upgradeCost } from "../src/core/rules";
 import type { PlayerSetup } from "../src/core/types";
 import { BOARD, PROPERTY_GROUPS, RESORTS } from "../src/data/board";
 import { CARDS, CHAOS_EVENTS } from "../src/data/cards";
@@ -165,5 +165,70 @@ describe("game flow", () => {
       for (const p of s.players) expect(p.money, `seed ${seed}`).toBeGreaterThanOrEqual(0);
       for (const t of s.tiles) if (t.owner !== null) expect(s.players[t.owner].bankrupt).toBe(false);
     }
+  });
+});
+
+describe("kartu simpanan & event musiman", () => {
+  it("kartu item masuk kantong, maksimal 3 lalu dijual 50", async () => {
+    const g = botGame(2, 1);
+    const p = g.state.players[0];
+    for (let i = 0; i < 4; i++) {
+      g.forcedCard = "itemSandal";
+      await (g as unknown as { drawCard(pid: number): Promise<void> }).drawCard(0);
+    }
+    expect(p.items).toEqual(["sandal", "sandal", "sandal"]);
+    expect(p.money).toBe(CONFIG.startMoney + 50);
+  });
+
+  it("sendal memundurkan lawan, utang mengambil 100, kecoak menurunkan level", async () => {
+    const g = botGame(2, 1);
+    const [a, b] = g.state.players;
+    b.position = 10;
+    a.items = ["sandal", "utang", "kecoak"];
+    await g.applyItem(0, { item: "sandal", target: 1 });
+    expect(b.position).toBe(7);
+    await g.applyItem(0, { item: "utang", target: 1 });
+    expect(b.money).toBe(CONFIG.startMoney - 100);
+    expect(a.money).toBe(CONFIG.startMoney + 100);
+    g.state.tiles[1] = { owner: 1, level: 3, festival: false };
+    await g.applyItem(0, { item: "kecoak", target: 1 });
+    expect(g.state.tiles[1].level).toBe(2);
+    expect(a.items).toEqual([]);
+  });
+
+  it("kartu tidak bisa dipakai ke sasaran tidak sah", async () => {
+    const g = botGame(2, 1);
+    g.state.players[0].items = ["kecoak"];
+    g.state.tiles[1] = { owner: 1, level: 1, festival: false }; // tanah kebal
+    expect(g.usableItems(0)).toEqual([]);
+    await g.applyItem(0, { item: "kecoak", target: 1 });
+    expect(g.state.players[0].items).toEqual(["kecoak"]);
+  });
+
+  it("musim turis menggandakan sewa, harbolnas mendiskon, THR gaji x2", () => {
+    const s = createGame(setups(2));
+    s.tiles[1] = { owner: 0, level: 2, festival: false };
+    const normal = rentFor(s, 1);
+    s.season = { id: "turis", untilRound: 2 };
+    expect(rentFor(s, 1)).toBe(normal * 2);
+    s.season = { id: "diskon", untilRound: 2 };
+    expect(seasonalCost(s, 200)).toBe(100);
+    s.season = { id: "thr", untilRound: 2 };
+    expect(salaryFor(s)).toBe(CONFIG.salary * 2);
+  });
+
+  it("event musiman muncul lalu selesai setelah 2 ronde", async () => {
+    const g = botGame(2, 3);
+    const log: string[] = [];
+    g.presenter = Object.assign(new NullPresenter(), {
+      showSeason: async (d: { id: string }, ended: boolean) => void log.push(`${ended ? "end" : "start"}:${d.id}@${g.state.round}`),
+    });
+    g.forcedSeason = "banjir";
+    await g.playTurn();
+    expect(g.state.season).toEqual({ id: "banjir", untilRound: 2 });
+    while (g.state.round < 3 && g.state.winner === null) await g.playTurn();
+    await g.playTurn();
+    expect(log[0]).toBe("start:banjir@1");
+    expect(log).toContain("end:banjir@3");
   });
 });

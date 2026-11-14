@@ -1,5 +1,5 @@
 import type { Game } from "../core/game";
-import { CARDS, CHAOS_EVENTS } from "../data/cards";
+import { CARDS, CHAOS_EVENTS, ITEMS, MAX_ITEMS, SEASON_IDS, SEASONS, type ItemId, type SeasonId } from "../data/cards";
 import { h, uiRoot } from "./dom";
 import type { Hud } from "./Hud";
 
@@ -28,6 +28,22 @@ export function mountQaPanel(game: Game, hud: Hud) {
     chaos.value = "";
   });
 
+  const season = h("select", { "data-testid": "qa-season" }, h("option", { value: "" }, "(musim acak)"));
+  for (const id of SEASON_IDS) season.append(h("option", { value: id }, `${SEASONS[id].icon} ${SEASONS[id].headline}`));
+  season.addEventListener("change", () => {
+    game.forcedSeason = (season.value || null) as SeasonId | null;
+    season.value = "";
+  });
+
+  const item = h("select", { "data-testid": "qa-item" }, h("option", { value: "" }, "(beri kartu simpanan)"));
+  for (const it of Object.values(ITEMS)) item.append(h("option", { value: it.id }, `${it.icon} ${it.name}`));
+  item.addEventListener("change", () => {
+    const p = game.state.players[game.state.current];
+    if (item.value && p.items.length < MAX_ITEMS) p.items.push(item.value as ItemId);
+    item.value = "";
+    hud.refresh();
+  });
+
   const money = h("button", { class: "btn small" }, "+1000 pemain aktif");
   money.addEventListener("click", () => {
     const p = game.state.players[game.state.current];
@@ -44,6 +60,8 @@ export function mountQaPanel(game: Game, hud: Hud) {
     h("div", { class: "row" }, "Antrian:", queueLabel),
     h("div", { class: "row" }, "Kartu:", card),
     h("div", { class: "row" }, "Event giliran berikut:", chaos),
+    h("div", { class: "row" }, "Musim giliran berikut:", season),
+    h("div", { class: "row" }, "Kantong pemain aktif:", item),
     h("div", { class: "row" }, money),
   );
   uiRoot().append(panel);

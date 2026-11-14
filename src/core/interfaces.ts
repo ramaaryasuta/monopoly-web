@@ -1,4 +1,4 @@
-import type { Card, ChaosEvent } from "../data/cards";
+import type { Card, ChaosEvent, ItemId, SeasonDef } from "../data/cards";
 import type { GameState } from "./types";
 
 export interface BuildChoice {
@@ -31,6 +31,18 @@ export interface TileChoice {
   options: number[];
 }
 
+export interface ItemChoice {
+  player: number;
+  /** Kartu simpanan yang bisa dipakai sekarang beserta sasaran sahnya (pemain atau petak). */
+  usable: { item: ItemId; targets: number[] }[];
+}
+
+/** Kartu yang dipakai; `target` = id pemain / indeks petak (bila kartunya butuh sasaran). */
+export interface ItemUse {
+  item: ItemId;
+  target: number | null;
+}
+
 /** Sumber keputusan: pemain manusia (UI) atau bot (AI). */
 export interface Decider {
   waitForRoll(player: number): Promise<void>;
@@ -39,6 +51,8 @@ export interface Decider {
   chooseAcquire(c: AcquireChoice): Promise<boolean>;
   chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll">;
   chooseTile(c: TileChoice): Promise<number>;
+  /** Sebelum lempar dadu: pakai kartu simpanan, atau `null` untuk langsung lempar. */
+  chooseItem(c: ItemChoice): Promise<ItemUse | null>;
 }
 
 export type MessageKind = "info" | "good" | "bad";
@@ -54,6 +68,10 @@ export interface Presenter {
   showCard(player: number, card: Card): Promise<void>;
   /** Event konyol sedunia; targets = pemain yang terkena. */
   showEvent(event: ChaosEvent, targets: number[]): Promise<void>;
+  /** Event musiman mulai (`ended` = false) atau selesai. */
+  showSeason(season: SeasonDef, ended: boolean): Promise<void>;
+  /** Kartu simpanan dipakai. */
+  itemUsed(player: number, use: ItemUse): Promise<void>;
   playerBankrupt(state: GameState, player: number): Promise<void>;
   gameOver(state: GameState): Promise<void>;
 }
@@ -67,6 +85,8 @@ export class NullPresenter implements Presenter {
   message() {}
   async showCard() {}
   async showEvent() {}
+  async showSeason() {}
+  async itemUsed() {}
   async playerBankrupt() {}
   async gameOver() {}
 }

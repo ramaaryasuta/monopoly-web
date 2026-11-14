@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BotDecider } from "../src/core/bot";
 import { Game } from "../src/core/game";
-import { NullPresenter, type AcquireChoice, type BuildChoice, type Decider, type IslandChoice, type TileChoice } from "../src/core/interfaces";
+import { NullPresenter, type AcquireChoice, type BuildChoice, type Decider, type IslandChoice, type ItemChoice, type TileChoice } from "../src/core/interfaces";
 import type { PlayerSetup } from "../src/core/types";
 import { BroadcastDecider, RemoteDecider } from "../src/net/NetDecider";
 import { normalizeCode } from "../src/net/Room";
@@ -21,6 +21,11 @@ class RandomHuman implements Decider {
   }
   async chooseTile(c: TileChoice) {
     return c.options[Math.floor(Math.random() * c.options.length)];
+  }
+  async chooseItem(c: ItemChoice) {
+    if (Math.random() < 0.4) return null;
+    const u = c.usable[Math.floor(Math.random() * c.usable.length)];
+    return { item: u.item, target: u.targets.length ? u.targets[Math.floor(Math.random() * u.targets.length)] : null };
   }
 }
 
@@ -68,7 +73,10 @@ function simulate(seed: number, opts: { dropBAfterActs?: number } = {}) {
               g.stop();
               const r = remotes.A[1]!;
               const hostGame = games.A;
-              r.takeover(new BroadcastDecider(new BotDecider(hostGame.state), (k2, v2) => deliver("A", 1, k2, v2)));
+              // Seperti WebRTC: pesan B yang sudah terkirim tiba dulu sebelum host tahu B terputus
+              lane.A = lane.A.then(() =>
+                r.takeover(new BroadcastDecider(new BotDecider(hostGame.state), (k2, v2) => deliver("A", 1, k2, v2))),
+              );
               return;
             }
           }

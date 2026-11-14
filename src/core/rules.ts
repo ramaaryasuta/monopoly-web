@@ -38,10 +38,12 @@ export function createGame(setups: PlayerSetup[]): GameState {
       islandTurns: 0,
       pendingTour: false,
       shields: 0,
+      items: [],
     })),
     current: 0,
     round: 1,
     festivalTile: null,
+    season: null,
     winner: null,
     winReason: null,
   };
@@ -82,7 +84,18 @@ export function rentFor(state: GameState, tileIndex: number): number {
     if (ts.level === 1 && ownsGroup(state, ts.owner, def.group!)) rent *= 2;
   }
   if (ts.festival) rent *= CONFIG.festivalMultiplier;
+  if (state.season?.id === "turis") rent *= 2;
   return round10(rent);
+}
+
+/** Biaya beli/bangun setelah efek event musiman (Harbolnas = diskon 50%). */
+export function seasonalCost(state: GameState, cost: number): number {
+  return state.season?.id === "diskon" ? round10(cost / 2) : cost;
+}
+
+/** Gaji melewati Mulai (Musim THR = x2). */
+export function salaryFor(state: GameState): number {
+  return state.season?.id === "thr" ? CONFIG.salary * 2 : CONFIG.salary;
 }
 
 export function acquirePrice(state: GameState, tileIndex: number): number {

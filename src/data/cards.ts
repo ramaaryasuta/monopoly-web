@@ -18,7 +18,9 @@ export type CardEffect =
   /** Semua pemain lain terdorong mundur N petak (tanpa efek petak). */
   | { type: "pushOthers"; steps: number }
   /** Diculik ke petak acak, lalu efek petak berlaku. */
-  | { type: "randomTile" };
+  | { type: "randomTile" }
+  /** Dapat kartu simpanan (masuk kantong, dipakai nanti). */
+  | { type: "item"; item: ItemId };
 
 /** Efek visual tambahan saat kartu/event muncul. */
 export type FunFx = "fart" | "ufo" | "dance" | "cry" | "rain" | "shake" | "duck" | "dizzy";
@@ -54,6 +56,10 @@ export const CARDS: Card[] = [
   { id: "gorengan", title: "Ngutang Gorengan", text: "Ketahuan ambil 5 bayar 1. Bayar 60.", icon: "🍤", effect: { type: "pay", amount: 60 }, fx: "cry" },
   { id: "mancing", title: "Mancing Dapat Ban", text: "Ban bekasnya dijual ke bengkel. Terima 70.", icon: "🎣", effect: { type: "gain", amount: 70 }, fx: "dance" },
   { id: "cukur", title: "Salah Potong Rambut", text: "Kepala botak sebelah. Beli topi, bayar 50.", icon: "💈", effect: { type: "pay", amount: 50 }, fx: "dizzy" },
+  { id: "itemSandal", title: "Nemu Sendal Terbang", text: "Sendal jepit bersayap! Simpan di kantong, lempar ke lawan kapan saja.", icon: "🩴", effect: { type: "item", item: "sandal" }, fx: "dance" },
+  { id: "itemUtang", title: "Nemu Surat Utang", text: "Surat utang palsu tapi meyakinkan. Simpan, tagih ke lawan nanti!", icon: "📜", effect: { type: "item", item: "utang" }, fx: "dance" },
+  { id: "itemTurbo", title: "Sepatu Roda Turbo", text: "Simpan buat giliran penting: langkahmu +3.", icon: "🛼", effect: { type: "item", item: "turbo" }, fx: "duck" },
+  { id: "itemKecoak", title: "Toples Kecoak", text: "Isinya kecoak terbang. Lepas di bangunan lawan biar penghuninya kabur!", icon: "🪳", effect: { type: "item", item: "kecoak" }, fx: "shake" },
   { id: "ronda", title: "Ketiduran Pas Ronda", text: "Ditinggal teman. Kamu terbangun dan lari ke Pos Ronda.", icon: "😴", effect: { type: "goto", tile: 9 }, fx: "dizzy" },
 ];
 
@@ -97,3 +103,57 @@ export const CHAOS_EVENTS: ChaosEvent[] = [
 
 /** Peluang event konyol muncul di awal setiap ronde baru. */
 export const CHAOS_CHANCE = 0.45;
+
+// ------------------------------------------------------------------ kartu simpanan
+
+export type ItemId = "sandal" | "utang" | "turbo" | "kecoak";
+
+export interface ItemDef {
+  id: ItemId;
+  name: string;
+  icon: string;
+  /** Penjelasan singkat efek saat dipakai. */
+  text: string;
+  /** Butuh memilih pemain sasaran / petak sasaran. */
+  target: "player" | "tile" | null;
+}
+
+export const ITEMS: Record<ItemId, ItemDef> = {
+  sandal: { id: "sandal", name: "Sendal Terbang", icon: "🩴", text: "Lempar ke satu lawan: dia mundur 3 petak.", target: "player" },
+  utang: { id: "utang", name: "Surat Utang Palsu", icon: "📜", text: "Tagih satu lawan: ambil 100 darinya.", target: "player" },
+  turbo: { id: "turbo", name: "Sepatu Roda Turbo", icon: "🛼", text: "Lemparan dadu giliran ini +3 langkah.", target: null },
+  kecoak: { id: "kecoak", name: "Toples Kecoak", icon: "🪳", text: "Turunkan 1 level bangunan lawan (tanah tidak bisa).", target: "tile" },
+};
+
+/** Maksimal kartu simpanan per pemain. Kalau penuh, kartu baru dijual 50. */
+export const MAX_ITEMS = 3;
+export const SANDAL_STEPS = 3;
+export const UTANG_AMOUNT = 100;
+export const TURBO_STEPS = 3;
+
+// ------------------------------------------------------------------ event musiman
+
+export type SeasonId = "turis" | "banjir" | "diskon" | "thr";
+
+export interface SeasonDef {
+  id: SeasonId;
+  headline: string;
+  text: string;
+  /** Teks pendek untuk lencana ronde. */
+  badge: string;
+  icon: string;
+  fx: FunFx;
+}
+
+export const SEASONS: Record<SeasonId, SeasonDef> = {
+  turis: { id: "turis", headline: "Musim Turis Bule!", text: "Turis datang rombongan. Semua sewa x2 selama 2 ronde.", badge: "Sewa x2", icon: "📸", fx: "dance" },
+  banjir: { id: "banjir", headline: "Banjir Kiriman!", text: "Tukang bangunan pada ngungsi. Tidak bisa beli/bangun selama 2 ronde.", badge: "Tidak bisa bangun", icon: "🌊", fx: "rain" },
+  diskon: { id: "diskon", headline: "Harbolnas Semen!", text: "Toko bangunan cuci gudang. Biaya beli/bangun diskon 50% selama 2 ronde.", badge: "Bangun -50%", icon: "🛍️", fx: "dance" },
+  thr: { id: "thr", headline: "Musim THR!", text: "Bos lagi baik. Gaji lewat Mulai jadi x2 selama 2 ronde.", badge: "Gaji x2", icon: "💰", fx: "rain" },
+};
+
+export const SEASON_IDS = Object.keys(SEASONS) as SeasonId[];
+/** Lama event musiman (ronde). */
+export const SEASON_ROUNDS = 2;
+/** Peluang event musiman mulai di awal ronde (bila sedang tidak ada). */
+export const SEASON_CHANCE = 0.3;

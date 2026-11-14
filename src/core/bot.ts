@@ -1,5 +1,5 @@
 import { BOARD } from "../data/board";
-import type { AcquireChoice, BuildChoice, Decider, IslandChoice, TileChoice } from "./interfaces";
+import type { AcquireChoice, BuildChoice, Decider, IslandChoice, ItemChoice, ItemUse, TileChoice } from "./interfaces";
 import { ownsGroup, rentFor } from "./rules";
 import type { GameState } from "./types";
 
@@ -60,6 +60,28 @@ export class BotDecider implements Decider {
   async chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll"> {
     await this.think();
     return c.canPay && this.state.players[c.player].money > 600 ? "pay" : "roll";
+  }
+
+  async chooseItem(c: ItemChoice): Promise<ItemUse | null> {
+    await this.think();
+    const s = this.state;
+    const richest = (ids: number[]) => ids.reduce((a, b) => (s.players[b].money > s.players[a].money ? b : a));
+    // Prioritas: kecoak di bangunan termahal lawan > tagih utang > sendal > turbo
+    for (const u of c.usable) {
+      if (u.item === "kecoak") {
+        const t = u.targets.reduce((a, b) => (rentFor(s, b) > rentFor(s, a) ? b : a));
+        return { item: u.item, target: t };
+      }
+    }
+    for (const u of c.usable) {
+      if (u.item === "utang") return { item: u.item, target: richest(u.targets) };
+    }
+    for (const u of c.usable) {
+      if (u.item === "sandal") return { item: u.item, target: richest(u.targets) };
+    }
+    const turbo = c.usable.find((u) => u.item === "turbo");
+    if (turbo) return { item: "turbo", target: null };
+    return null;
   }
 
   async chooseTile(c: TileChoice): Promise<number> {

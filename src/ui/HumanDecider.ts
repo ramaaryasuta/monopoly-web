@@ -1,7 +1,8 @@
-import type { AcquireChoice, BuildChoice, Decider, IslandChoice, TileChoice } from "../core/interfaces";
+import type { AcquireChoice, BuildChoice, Decider, IslandChoice, ItemChoice, ItemUse, TileChoice } from "../core/interfaces";
 import { LEVEL_NAMES, rentFor } from "../core/rules";
 import type { BuildLevel, GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
+import { ITEMS } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
 import { escapeHtml, fmt, modal } from "./dom";
 import type { Hud } from "./Hud";
@@ -16,8 +17,59 @@ export class HumanDecider implements Decider {
     private scene: GameScene,
   ) {}
 
+  /** Tombol dadu sudah diklik saat menawarkan kartu simpanan → jangan tunggu lagi. */
+  private rollAlreadyClicked = false;
+
   async waitForRoll(): Promise<void> {
+    if (this.rollAlreadyClicked) {
+      this.rollAlreadyClicked = false;
+      return;
+    }
     await this.hud.waitRollButton();
+  }
+
+  async chooseItem(c: ItemChoice): Promise<ItemUse | null> {
+    const count = this.state.players[c.player].items.length;
+    for (;;) {
+      const action = await this.hud.waitRollOrItem(count);
+      if (action === "roll") {
+        this.rollAlreadyClicked = true;
+        return null;
+      }
+      const picked = await modal<ItemChoice["usable"][number] | null>({
+        title: "🎒 Kantong Ajaib",
+        body: "<p>Pakai satu kartu sebelum lempar dadu.</p>",
+        buttons: [
+          ...c.usable.map((u) => ({ label: `${ITEMS[u.item].icon} ${ITEMS[u.item].name}`, sub: ITEMS[u.item].text, value: u, class: "pink" })),
+          { label: "Batal", value: null, class: "white" },
+        ],
+      });
+      if (!picked) continue;
+      const def = ITEMS[picked.item];
+      if (def.target === null) return { item: picked.item, target: null };
+      if (def.target === "player") {
+        const target = await modal<number | null>({
+          title: `${def.icon} Sasaran ${def.name}`,
+          body: `<p>${def.text}</p>`,
+          buttons: [
+            ...picked.targets.map((pid) => {
+              const p = this.state.players[pid];
+              return { label: p.name, sub: `🪙 ${fmt(p.money)}`, value: pid as number | null, class: "blue" };
+            }),
+            { label: "Batal", value: null, class: "white" },
+          ],
+        });
+        if (target === null) continue;
+        return { item: picked.item, target };
+      }
+      this.hud.showPickBanner(`Klik bangunan lawan untuk dilepasi kecoak ${def.icon}`);
+      try {
+        const tile = await this.scene.pickTile(picked.targets);
+        return { item: picked.item, target: tile };
+      } finally {
+        this.hud.hidePickBanner();
+      }
+    }
   }
 
   private rentAt(tile: number, player: number, level: number) {

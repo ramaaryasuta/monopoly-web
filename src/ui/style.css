@@ -737,3 +737,12 @@ body {
 }
 .voice-panel.collapsed .vp-body { display: none; }
 .vp-warn[hidden] { display: none; }
+
+/* Kartu simpanan & event musiman */
+.roll-row { display: flex; gap: 10px; align-items: center; }
+.item-btn { font-size: 18px; padding: 12px 18px; border-radius: 18px; }
+.round-badge.season { background: linear-gradient(#bff3ff, #8fe0ff); }
+@media (max-width: 700px) {
+  .roll-row { flex-direction: column; gap: 6px; }
+  .item-btn { font-size: 15px; padding: 8px 14px; }
+}

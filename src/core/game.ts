@@ -1,6 +1,23 @@
 import { BOARD, BOARD_SIZE, ISLAND_INDEX, TOUR_INDEX } from "../data/board";
-import { CARDS, CHAOS_CHANCE, CHAOS_EVENTS, type Card, type ChaosEvent } from "../data/cards";
-import type { Decider, Presenter } from "./interfaces";
+import {
+  CARDS,
+  CHAOS_CHANCE,
+  CHAOS_EVENTS,
+  ITEMS,
+  MAX_ITEMS,
+  SANDAL_STEPS,
+  SEASON_CHANCE,
+  SEASON_IDS,
+  SEASON_ROUNDS,
+  SEASONS,
+  TURBO_STEPS,
+  UTANG_AMOUNT,
+  type Card,
+  type ChaosEvent,
+  type ItemId,
+  type SeasonId,
+} from "../data/cards";
+import type { Decider, ItemChoice, ItemUse, Presenter } from "./interfaces";
 import { createRng, rollDie, type Rng } from "./rng";
 import {
   acquirePrice,
@@ -14,6 +31,8 @@ import {
   ownedTiles,
   rentFor,
   richestPlayer,
+  salaryFor,
+  seasonalCost,
   sellValue,
   upgradeCost,
 } from "./rules";
@@ -37,6 +56,8 @@ export class Game {
   forcedCard: string | null = null;
   /** Event konyol paksa (fitur QA): id event di awal giliran berikutnya. */
   forcedChaos: string | null = null;
+  /** Event musiman paksa (fitur QA): mulai di awal giliran berikutnya. */
+  forcedSeason: SeasonId | null = null;
   private chaosRound = 1;
   private turns = 0;
   private stopped = false;
@@ -90,6 +111,13 @@ export class Game {
       return;
     }
 
+    // Kartu simpanan boleh dipakai sekali sebelum lempar dadu pertama
+    let bonus = await this.maybeUseItem(p.id);
+    if (this.state.winner !== null || p.bankrupt) {
+      this.endTurn();
+      return;
+    }
+
     let doubles = 0;
     while (!this.stopped) {
       if (p.islandTurns > 0) {
@@ -111,7 +139,8 @@ export class Game {
         }
       }
 
-      await this.moveSteps(p.id, d1 + d2);
+      await this.moveSteps(p.id, d1 + d2 + bonus);
+      bonus = 0;
       await this.resolveTile(p.id);
 
       if (this.state.winner !== null || p.bankrupt) break;
@@ -217,8 +246,9 @@ export class Game {
     await this.presenter.movePawn(pid, path, mode);
     p.position = path[path.length - 1];
     if (passedStart) {
-      this.addMoney(pid, CONFIG.salary);
-      this.presenter.message(`${p.name} melewati Mulai: +${fmt(CONFIG.salary)}`, "good");
+      const salary = salaryFor(this.state);
+      this.addMoney(pid, salary);
+      this.presenter.message(`${p.name} melewati Mulai: +${fmt(salary)}`, "good");
     }
   }
 
@@ -321,11 +351,15 @@ export class Game {
   private async offerBuild(pid: number, tile: number) {
     const ts = this.state.tiles[tile];
     const p = this.state.players[pid];
+    if (this.state.season?.id === "banjir") {
+      this.presenter.message(`Lagi banjir! ${p.name} tidak bisa beli/bangun di ${BOARD[tile].name}.`);
+      return;
+    }
     const max = maxTargetLevel(this.state, tile);
     const options: { level: number; cost: number }[] = [];
     for (let l = ts.level + 1; l <= max; l++) {
       // Landmark hanya bisa sendiri (tidak dari level < 4)
-      const cost = upgradeCost(tile, ts.level, l);
+      const cost = seasonalCost(this.state, upgradeCost(tile, ts.level, l));
       if (cost <= p.money) options.push({ level: l, cost });
     }
     if (options.length === 0) {
@@ -490,6 +524,103 @@ export class Game {
         await this.resolveTile(pid);
         return;
       }
+      case "item": {
+        const def = ITEMS[e.item];
+        if (p.items.length >= MAX_ITEMS) {
+          this.presenter.message(`Kantong ${p.name} penuh! ${def.name} dijual ke tukang loak: +50.`);
+          this.addMoney(pid, 50);
+        } else {
+          p.items.push(e.item);
+          this.presenter.message(`${p.name} menyimpan ${def.icon} ${def.name} di kantong.`, "good");
+        }
+        return;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- items
+
+  /** Kartu simpanan yang bisa dipakai pemain saat ini, beserta sasaran sahnya. */
+  usableItems(pid: number): ItemChoice["usable"] {
+    const p = this.state.players[pid];
+    const others = activePlayers(this.state).filter((i) => i !== pid);
+    const seen = new Set<ItemId>();
+    const out: ItemChoice["usable"] = [];
+    for (const item of p.items) {
+      if (seen.has(item)) continue;
+      seen.add(item);
+      let targets: number[] = [];
+      switch (item) {
+        case "sandal":
+          targets = others.filter((i) => this.state.players[i].islandTurns === 0);
+          break;
+        case "utang":
+          targets = others.filter((i) => this.state.players[i].money > 0);
+          break;
+        case "turbo":
+          if (p.islandTurns > 0) continue;
+          break;
+        case "kecoak":
+          // Tanah (level 1) dan landmark kebal kecoak
+          targets = this.state.tiles.flatMap((t, i) =>
+            t.owner !== null && t.owner !== pid && BOARD[i].kind === "property" && t.level >= 2 && t.level <= 4 ? [i] : [],
+          );
+          break;
+      }
+      if (ITEMS[item].target !== null && targets.length === 0) continue;
+      out.push({ item, targets });
+    }
+    return out;
+  }
+
+  /** Tawarkan kartu simpanan sebelum lempar dadu. Mengembalikan langkah bonus (Sepatu Roda Turbo). */
+  private async maybeUseItem(pid: number): Promise<number> {
+    const usable = this.usableItems(pid);
+    if (usable.length === 0) return 0;
+    const use = await this.deciders[pid].chooseItem({ player: pid, usable });
+    if (!use) return 0;
+    return this.applyItem(pid, use);
+  }
+
+  async applyItem(pid: number, use: ItemUse): Promise<number> {
+    const p = this.state.players[pid];
+    const option = this.usableItems(pid).find((u) => u.item === use.item);
+    if (!option) return 0;
+    const def = ITEMS[use.item];
+    if (def.target !== null && (use.target === null || !option.targets.includes(use.target))) return 0;
+    p.items.splice(p.items.indexOf(use.item), 1);
+    await this.presenter.itemUsed(pid, use);
+
+    switch (use.item) {
+      case "sandal": {
+        const v = this.state.players[use.target!];
+        this.presenter.message(`${p.name} melempar Sendal Terbang ke ${v.name}! Mundur ${SANDAL_STEPS} petak.`, "bad");
+        await this.moveBack(v.id, SANDAL_STEPS);
+        return 0;
+      }
+      case "utang": {
+        const v = this.state.players[use.target!];
+        const amt = Math.min(UTANG_AMOUNT, v.money);
+        this.presenter.message(`${p.name} menagih surat utang palsu ke ${v.name}: ${fmt(amt)}!`, "bad");
+        this.addMoney(v.id, -amt);
+        this.addMoney(pid, amt);
+        return 0;
+      }
+      case "turbo":
+        this.presenter.message(`${p.name} pakai Sepatu Roda Turbo: lemparan ini +${TURBO_STEPS} langkah!`, "good");
+        return TURBO_STEPS;
+      case "kecoak": {
+        const tile = use.target!;
+        const ts = this.state.tiles[tile];
+        const owner = this.state.players[ts.owner!];
+        ts.level = (ts.level - 1) as BuildLevel;
+        this.presenter.message(
+          `${p.name} melepas kecoak di ${BOARD[tile].name}! Bangunan ${owner.name} turun jadi ${LEVEL_NAMES[ts.level]}.`,
+          "bad",
+        );
+        await this.presenter.tileChanged(this.state, tile);
+        return 0;
+      }
     }
   }
 
@@ -502,10 +633,31 @@ export class Game {
       ev = CHAOS_EVENTS.find((c) => c.id === this.forcedChaos);
       this.forcedChaos = null;
     } else if (this.state.round !== this.chaosRound) {
-      this.chaosRound = this.state.round;
       if (this.rng() < CHAOS_CHANCE) ev = CHAOS_EVENTS[Math.floor(this.rng() * CHAOS_EVENTS.length)];
     }
+    const newRound = this.state.round !== this.chaosRound;
+    if (newRound) this.chaosRound = this.state.round;
+
+    // Event musiman: selesai bila lewat masanya, lalu mungkin mulai yang baru
+    const season = this.state.season;
+    if (newRound && season && this.state.round > season.untilRound) {
+      this.state.season = null;
+      await this.presenter.showSeason(SEASONS[season.id], true);
+    }
     if (ev) await this.applyChaos(ev);
+    if (this.state.winner !== null) return;
+
+    let next: SeasonId | null = null;
+    if (this.forcedSeason) {
+      next = this.forcedSeason;
+      this.forcedSeason = null;
+    } else if (newRound && !this.state.season && this.rng() < SEASON_CHANCE) {
+      next = SEASON_IDS[Math.floor(this.rng() * SEASON_IDS.length)];
+    }
+    if (next) {
+      this.state.season = { id: next, untilRound: this.state.round + SEASON_ROUNDS - 1 };
+      await this.presenter.showSeason(SEASONS[next], false);
+    }
   }
 
   async applyChaos(ev: ChaosEvent) {

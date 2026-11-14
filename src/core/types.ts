@@ -1,3 +1,5 @@
+import type { ItemId, SeasonId } from "../data/cards";
+
 export type TileKind =
   | "start"
   | "property"
@@ -47,6 +49,8 @@ export interface PlayerState {
   pendingTour: boolean;
   /** Kartu pelindung: membebaskan sekali bayar sewa. */
   shields: number;
+  /** Kartu simpanan di kantong. */
+  items: ItemId[];
 }
 
 export type WinReason = "lastStanding" | "tripleMonopoly" | "lineMonopoly" | "resortMonopoly" | "roundLimit";
@@ -57,6 +61,8 @@ export interface GameState {
   current: number;
   round: number;
   festivalTile: number | null;
+  /** Event musiman yang sedang berlaku (berakhir setelah ronde `untilRound`). */
+  season: { id: SeasonId; untilRound: number } | null;
   winner: number | null;
   winReason: WinReason | null;
 }

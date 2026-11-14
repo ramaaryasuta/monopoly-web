@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
-import type { MessageKind, Presenter } from "../core/interfaces";
+import type { ItemUse, MessageKind, Presenter } from "../core/interfaces";
 import type { GameState } from "../core/types";
-import type { Card, ChaosEvent } from "../data/cards";
+import { ITEMS, type Card, type ChaosEvent, type FunFx, type SeasonDef } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
 import { sfx } from "../scene/sfx";
 import { wait } from "../scene/tween";
@@ -96,6 +96,37 @@ export class ScenePresenter implements Presenter {
     await this.view.funFx(ev.fx, targets);
   }
 
+  async showSeason(season: SeasonDef, ended: boolean) {
+    this.hud.refresh();
+    if (ended) {
+      this.message(`${season.icon} ${season.headline.replace(/!$/, "")} sudah selesai. Pulau kembali normal.`);
+      return;
+    }
+    sfx.scream();
+    const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
+    await this.view.goHome(0.5);
+    await modal({
+      title: season.headline,
+      className: "comic breaking season",
+      body: `<div class="breaking-tag">📅 EVENT MUSIMAN</div><div class="card-art">${season.icon}</div><p>${season.text}</p>`,
+      buttons: [{ label: pick(["Siap!", "Wah!", "Gaskeun!", "Oke deh"]), value: 0, class: "blue" }],
+      autoCloseMs: allBots ? 2200 : 6000,
+    });
+    await this.view.funFx(season.fx, this.state.players.filter((p) => !p.bankrupt).map((p) => p.id));
+  }
+
+  async itemUsed(player: number, use: ItemUse) {
+    sfx.card();
+    const def = ITEMS[use.item];
+    this.hud.speech(player, `${def.icon} ${pick(ITEM_SHOUT)}`, true);
+    const fx: Record<string, FunFx> = { sandal: "dizzy", utang: "cry", turbo: "duck", kecoak: "shake" };
+    let targets = [player];
+    if (def.target === "player" && use.target !== null) targets = [use.target];
+    if (def.target === "tile" && use.target !== null) targets = [this.state.tiles[use.target].owner ?? player];
+    await this.view.funFx(fx[use.item], targets);
+    this.hud.refresh();
+  }
+
   async playerBankrupt(state: GameState, player: number) {
     sfx.sadTrombone();
     this.hud.refresh();
@@ -118,6 +149,7 @@ export class ScenePresenter implements Presenter {
 }
 
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const ITEM_SHOUT = ["Rasakan ini!", "Hiyaaat!", "Kejutan!", "Hehehe...", "Awas ya!"];
 const POW = ["BOOM!", "WADUH!", "PLAK!", "BRRRT!", "GASS!", "ANJAY!", "DUAR!"];
 const OK_LABELS = ["OK deh", "Pasrah 🙏", "Gaskeun!", "Yaudah lah", "Siap bos!"];
 const HAPPY = ["Gaskeun! 🔥", "Rezeki anak soleh!", "Mantap jiwa!", "Sultan mah bebas 😎", "Hahaha kaya!", "Cuan cuan cuan!", "Traktir? Nggak."];

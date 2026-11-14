@@ -2,6 +2,7 @@ import type { MessageKind } from "../core/interfaces";
 import { CONFIG, investedValue, LEVEL_NAMES, netWorth, ownedTiles, rentFor, upgradeCost, WIN_TEXT } from "../core/rules";
 import type { GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
+import { ITEMS, SEASONS } from "../data/cards";
 import { sfx, Sound } from "../scene/sfx";
 import { Speed } from "../scene/tween";
 import { escapeHtml, fmt, h, modal, uiRoot } from "./dom";
@@ -96,13 +97,17 @@ export class Hud {
 
   refresh() {
     const s = this.state;
-    this.round.textContent = `Ronde ${s.round} / ${CONFIG.roundLimit}`;
+    const season = s.season ? SEASONS[s.season.id] : null;
+    const left = s.season ? s.season.untilRound - s.round + 1 : 0;
+    this.round.textContent = `Ronde ${s.round} / ${CONFIG.roundLimit}` + (season ? `  ·  ${season.icon} ${season.badge} (${left} ronde)` : "");
+    this.round.classList.toggle("season", !!season);
     s.players.forEach((p, i) => {
       const card = this.cards[i];
       card.classList.toggle("active", s.current === i && s.winner === null);
       card.classList.toggle("bankrupt", p.bankrupt);
       const meta: string[] = [`🏠 ${ownedTiles(s, i).length}`, `💎 ${fmt(netWorth(s, i))}`];
       if (p.shields) meta.push(`🛡️${p.shields}`);
+      if (p.items.length) meta.push(`🎒${p.items.map((it) => ITEMS[it].icon).join("")}`);
       if (p.islandTurns) meta.push(`🏝️${p.islandTurns}`);
       if (p.pendingTour) meta.push("✈️");
       if (p.bankrupt) meta.splice(0, meta.length, "💀 Bangkrut");
@@ -211,6 +216,31 @@ export class Hud {
       btn.addEventListener("click", go);
       window.addEventListener("keydown", onKey);
       this.actionBar.append(btn);
+    });
+  }
+
+  /** Tombol lempar dadu + tombol buka kantong kartu simpanan. */
+  waitRollOrItem(count: number): Promise<"roll" | "item"> {
+    return new Promise((resolve) => {
+      const roll = h("button", { class: "btn roll-btn", "data-testid": "roll" }, "🎲 LEMPAR DADU");
+      const item = h("button", { class: "btn pink item-btn", "data-testid": "use-item" }, `🎒 Pakai Kartu (${count})`);
+      const row = h("div", { class: "roll-row" }, roll, item);
+      const done = (v: "roll" | "item") => {
+        window.removeEventListener("keydown", onKey);
+        row.remove();
+        sfx.click();
+        resolve(v);
+      };
+      const onKey = (e: KeyboardEvent) => {
+        if ((e.code === "Space" || e.code === "Enter") && !document.querySelector(".modal-backdrop")) {
+          e.preventDefault();
+          done("roll");
+        }
+      };
+      roll.addEventListener("click", () => done("roll"));
+      item.addEventListener("click", () => done("item"));
+      window.addEventListener("keydown", onKey);
+      this.actionBar.append(row);
     });
   }
 
