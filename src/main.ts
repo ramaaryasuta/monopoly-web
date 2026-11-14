@@ -96,7 +96,7 @@ async function boot() {
   const params = new URLSearchParams(location.search);
   // Panel QA memaksa dadu/kartu → bikin game online tidak sinkron, jadi hanya untuk main lokal
   if (params.has("qa") && !online) mountQaPanel(game, hud);
-  console.info(`[Pulau Kaya] seed=${game.seed}${online ? ` room=${online.room.code}` : " — tambahkan ?qa=1 di URL untuk panel QA"}`);
+  console.info(`[Memonopoli] seed=${game.seed}${online ? ` room=${online.room.code}` : " — tambahkan ?qa=1 di URL untuk panel QA"}`);
 
   await game.run();
   online?.room.leave();

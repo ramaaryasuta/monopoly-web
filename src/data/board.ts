@@ -22,44 +22,44 @@ const P = (index: number, name: string, group: number, price: number): TileDef =
 
 /**
  * Papan 32 petak, searah jarum jam. Sudut: 0, 8, 16, 24.
- * Semua nama fiktif/original.
+ * Nama tempat bernuansa Indonesia (plesetan & tempat terkenal).
  */
 export const BOARD: TileDef[] = [
   { index: 0, kind: "start", name: "Mulai" },
-  P(1, "Gang Becek", 0, 60),
-  { index: 2, kind: "resort", name: "Pantai Bebek Karet", price: 200 },
-  P(3, "Kos Bocor", 0, 60),
-  P(4, "Warung Mie", 0, 80),
+  P(1, "Burjo SS Tembalang", 0, 60),
+  { index: 2, kind: "resort", name: "Malioboro", price: 200 },
+  P(3, "OTY Fried Chicken", 0, 60),
+  P(4, "RM Pagi Sore", 0, 80),
   { index: 5, kind: "chance", name: "Kardus Misterius" },
-  P(6, "Pangkalan Ojek", 1, 100),
-  P(7, "Bengkel Abal2", 1, 120),
+  P(6, "Rumah Ratapan Oslo", 1, 100),
+  P(7, "Lawang Rongewu", 1, 120),
 
   { index: 8, kind: "island", name: "Pulau Jomblo" },
   P(9, "Pos Ronda", 2, 140),
-  P(10, "Toko Sendal", 2, 140),
+  P(10, "Tugu Jogja", 2, 140),
   { index: 11, kind: "chance", name: "Kardus Misterius" },
-  P(12, "Pabrik Kerupuk", 2, 160),
-  { index: 13, kind: "resort", name: "Kolam Lele Raksasa", price: 200 },
-  P(14, "Lapangan Futsal", 3, 180),
-  P(15, "Kolam Pancing", 3, 200),
+  P(12, "Buletan HI", 2, 160),
+  { index: 13, kind: "resort", name: "Monas", price: 200 },
+  P(14, "Jembatan Mahakam", 3, 180),
+  P(15, "Bank Living by Sendiri", 3, 200),
 
   { index: 16, kind: "festival", name: "Pesta Dangdut" },
   P(17, "Kafe Kopi Sachet", 4, 220),
   { index: 18, kind: "chance", name: "Kardus Misterius" },
   P(19, "Tower Sinyal", 4, 220),
   P(20, "Mall Diskonan", 4, 240),
-  { index: 21, kind: "resort", name: "Gunung Es Teh", price: 200 },
-  P(22, "Pabrik Sambal", 5, 260),
-  P(23, "Pelabuhan Lele", 5, 280),
+  { index: 21, kind: "resort", name: "Wakatobi", price: 200 },
+  P(22, "Tambang Nikel", 5, 260),
+  P(23, "IKN", 5, 280),
 
   { index: 24, kind: "tour", name: "Naik UFO" },
-  { index: 25, kind: "resort", name: "Gua Disko", price: 200 },
+  { index: 25, kind: "resort", name: "Raja Ampat", price: 200 },
   P(26, "Menara Gorengan", 6, 300),
   P(27, "Istana Kumis", 6, 320),
   { index: 28, kind: "chance", name: "Kardus Misterius" },
   { index: 29, kind: "tax", name: "Uang Palak" },
-  P(30, "Garasi Sultan", 7, 350),
-  P(31, "Puri Juragan", 7, 400),
+  P(30, "Gedung DPR", 7, 350),
+  P(31, "Istana Presiden", 7, 400),
 ];
 
 export const BOARD_SIZE = BOARD.length;

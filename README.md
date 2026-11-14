@@ -1,4 +1,4 @@
-# Pulau Kaya 🏝️🪙
+# Memonopoli : Wilayah WNI 🇮🇩
 
 Board game 3D bergaya kartun (terinspirasi genre "Let's Get Rich" / party board game) dibuat dengan **Babylon.js + TypeScript + Vite**.
 Semua karakter, nama, dan aset visual adalah original dan dibuat secara prosedural, tanpa file model eksternal.
@@ -20,7 +20,7 @@ npm run build      # typecheck + build produksi ke dist/
 | `?seed=123` di URL / Seed di menu (Main Bareng di Sini → ⚙️ Opsi lanjutan) | Game deterministik (dadu & kartu sama setiap kali), untuk reproduksi bug |
 | `window.__game` di DevTools | Akses state game (`__game.state`), `__game.forcedDice.push([6,6])` |
 | `window.__view` di DevTools | Akses scene Babylon (kamera, mesh) |
-| Seed tampil di console | `[Pulau Kaya] seed=...` setiap game dimulai |
+| Seed tampil di console | `[Memonopoli] seed=...` setiap game dimulai |
 | Klik petak mana saja | Info petak: harga, tabel sewa per level, pemilik |
 | Tombol ⏩ | Kecepatan animasi 1x/2x/3x |
 | Space / Enter | Lempar dadu |
@@ -37,7 +37,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 - Tamu terputus di tengah game → kursinya diambil alih bot oleh host. Host terputus → room bubar.
 - Tab yang disembunyikan menjeda animasinya sendiri; saat dibuka lagi game mengejar ketertinggalan, tidak ada langkah yang hilang.
 - Tanpa server TURN, sebagian jaringan (NAT ketat, beberapa operator seluler / Wi-Fi kantor) bisa gagal tersambung.
-- QA: `window.__room` di DevTools; `[Pulau Kaya] seed=... room=...` di console.
+- QA: `window.__room` di DevTools; `[Memonopoli] seed=... room=...` di console.
 
 ## Aturan singkat
 

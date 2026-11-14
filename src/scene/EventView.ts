@@ -153,7 +153,7 @@ export class EventView {
     ctx.fillRect(0, SH - 90, SW, 90);
     ctx.fillStyle = "#2b1d3a";
     ctx.font = `bold 40px ${FONT}`;
-    ctx.fillText("PULAU KAYA TV  •  " + e.headline.toUpperCase() + "  •  JANGAN PANIK  •  ", 30, SH - 44);
+    ctx.fillText("WNI TV  •  " + e.headline.toUpperCase() + "  •  JANGAN PANIK  •  ", 30, SH - 44);
 
     // Garis scanline tipis ala TV jadul
     ctx.fillStyle = "rgba(0,0,0,0.12)";

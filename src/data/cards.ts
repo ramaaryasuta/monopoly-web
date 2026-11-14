@@ -60,6 +60,14 @@ export const CARDS: Card[] = [
   { id: "itemUtang", title: "Nemu Surat Utang", text: "Surat utang palsu tapi meyakinkan. Simpan, tagih ke lawan nanti!", icon: "📜", effect: { type: "item", item: "utang" }, fx: "dance" },
   { id: "itemTurbo", title: "Sepatu Roda Turbo", text: "Simpan buat giliran penting: langkahmu +3.", icon: "🛼", effect: { type: "item", item: "turbo" }, fx: "duck" },
   { id: "itemKecoak", title: "Toples Kecoak", text: "Isinya kecoak terbang. Lepas di bangunan lawan biar penghuninya kabur!", icon: "🪳", effect: { type: "item", item: "kecoak" }, fx: "shake" },
+  { id: "orangDalam", title: "Kartu Orang Dalam", text: "Punya kenalan orang dalam. Bebas bayar sewa satu kali.", icon: "🕴️", effect: { type: "shield" }, fx: "dance" },
+  { id: "tilang", title: "Kartu Kena Tilang", text: "Lupa bawa SIM, helm cuma ditenteng. Bayar denda 75.", icon: "👮", effect: { type: "pay", amount: 75 }, fx: "cry" },
+  { id: "pajak", title: "Kartu Bayar PAJAK", text: "Orang bijak taat pajak! Bayar 25 untuk setiap level bangunanmu.", icon: "🧾", effect: { type: "repair", perLevel: 25 }, fx: "cry" },
+  { id: "korupsi", title: "Kartu Korupsi", text: "Main proyek fiktif. Kalau lolos untung besar, kalau ketahuan KPK boncos!", icon: "💼", effect: { type: "gacha", min: -200, max: 300 }, fx: "shake" },
+  { id: "pinjol", title: "Kartu Pinjol", text: "Klik 'cairkan' tanpa baca syarat. Bunganya beranak pinak! Bayar 150.", icon: "📱", effect: { type: "pay", amount: 150 }, fx: "cry" },
+  { id: "viral", title: "Kartu Viral", text: "Kontenmu FYP! Setiap pemain kirim saweran 40.", icon: "🤳", effect: { type: "collectFromAll", amount: 40 }, fx: "dance" },
+  { id: "gusur", title: "Kartu Kena Gusur", text: "Lahanmu kena proyek strategis. Angkat koper, mundur 4 petak.", icon: "🚜", effect: { type: "back", steps: 4 }, fx: "shake" },
+  { id: "wapres", title: "Kartu Wapres Resign", text: "Kursi kosong mendadak! Kamu langsung meluncur ke Istana Presiden.", icon: "🪑", effect: { type: "goto", tile: 31 }, fx: "dizzy" },
   { id: "ronda", title: "Ketiduran Pas Ronda", text: "Ditinggal teman. Kamu terbangun dan lari ke Pos Ronda.", icon: "😴", effect: { type: "goto", tile: 9 }, fx: "dizzy" },
 ];
 

@@ -42,7 +42,7 @@ export class BoardView {
     this.festivalStar = this.makeStar();
     this.festivalStar.setEnabled(false);
 
-    // Animasi idle: awan melayang, koin berputar, bintang festival
+    // Animasi idle: awan melayang, bintang festival
     let time = 0;
     scene.onBeforeRenderObservable.add(() => {
       const dt = scene.getEngine().getDeltaTime() / 1000;
@@ -54,9 +54,6 @@ export class BoardView {
           d.position.x += dt * (m.speed ?? 0.3);
           if (d.position.x > 48) d.position.x = -48;
           d.position.y = m.baseY + Math.sin(time * 0.6 + m.phase) * 0.3;
-        } else if (m.kind === "coin") {
-          d.rotation.y += dt * 2;
-          d.position.y = m.baseY + Math.sin(time * 2 + m.phase) * 0.2;
         } else if (m.kind === "sway") {
           d.rotation.z = Math.sin(time * 1.5 + m.phase) * 0.04;
         } else if (m.kind === "bob") {
@@ -173,21 +170,6 @@ export class BoardView {
       [c, c],
     ].forEach(([x, z], i) => this.makeTree(new Vector3(x, 0.15, z), 0.9, 100 + i));
 
-    // Koin melayang
-    for (let i = 0; i < 6; i++) {
-      const ang = (i / 6) * Math.PI * 2;
-      const coin = MeshBuilder.CreateCylinder(`coin${i}`, { diameter: 0.9, height: 0.15, tessellation: 24 }, s);
-      coin.rotation.x = Math.PI / 2;
-      const holder = new TransformNode(`coinHolder${i}`, s);
-      coin.parent = holder;
-      holder.position.set(Math.cos(ang) * TILE * 2.2, 2.2, Math.sin(ang) * TILE * 2.2);
-      coin.material = toon(s, "#ffd23f");
-      outline(coin, 0.04);
-      holder.metadata = { kind: "coin", phase: i, baseY: 2.2 };
-      this.decor.push(holder);
-      this.shadows.addShadowCaster(coin);
-    }
-
     this.buildWackyDecor();
 
     // Awan
@@ -219,18 +201,24 @@ export class BoardView {
     ctx.clearRect(0, 0, 1024, 512);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = `bold 170px ${FONT}`;
     ctx.lineJoin = "round";
-    ctx.lineWidth = 30;
     ctx.strokeStyle = "#2b1d3a";
-    ctx.strokeText("PULAU", 512, 150);
-    ctx.strokeText("KAYA", 512, 340);
-    const g = ctx.createLinearGradient(0, 60, 0, 440);
+    ctx.font = `bold 150px ${FONT}`;
+    ctx.lineWidth = 28;
+    ctx.strokeText("MEMONOPOLI", 512, 170, 980);
+    const g = ctx.createLinearGradient(0, 90, 0, 250);
     g.addColorStop(0, "#ffe14d");
     g.addColorStop(1, "#ff9a3d");
     ctx.fillStyle = g;
-    ctx.fillText("PULAU", 512, 150);
-    ctx.fillText("KAYA", 512, 340);
+    ctx.fillText("MEMONOPOLI", 512, 170, 980);
+    ctx.font = `bold 110px ${FONT}`;
+    ctx.lineWidth = 24;
+    ctx.strokeText("WILAYAH WNI", 512, 350, 900);
+    const g2 = ctx.createLinearGradient(0, 300, 0, 400);
+    g2.addColorStop(0, "#ffffff");
+    g2.addColorStop(1, "#ffb3b3");
+    ctx.fillStyle = g2;
+    ctx.fillText("WILAYAH WNI", 512, 350, 900);
     tex.update();
 
     const plane = MeshBuilder.CreatePlane("title", { width: TILE * 4.2, height: TILE * 2.1 }, s);

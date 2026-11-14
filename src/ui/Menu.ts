@@ -134,8 +134,9 @@ export function showMenu(): Promise<MenuResult> {
           "div",
           { class: "panel menu-panel home" },
           parade,
-          h("div", { class: "logo" }, "PULAU KAYA"),
-          h("div", { class: "tagline" }, "Lempar dadu, beli kos bocor, kentutin lawan, jadi sultan! 💨🪙"),
+          h("div", { class: "logo" }, "MEMONOPOLI"),
+          h("div", { class: "logo-sub" }, "Wilayah WNI"),
+          h("div", { class: "tagline" }, "Lempar dadu, beli Gedung DPR, kentutin lawan, jadi sultan! 💨🪙"),
           h(
             "div",
             { class: "choices" },
