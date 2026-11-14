@@ -1,4 +1,5 @@
 import { CONFIG } from "../core/rules";
+import { CODE_LEN, MAX_SEATS, normalizeCode, Room, type Seat } from "../net/Room";
 import type { PlayerSetup } from "../core/types";
 import { CRITTERS } from "../scene/Pawn";
 import { sfx, Sound } from "../scene/sfx";
@@ -10,6 +11,8 @@ export interface MenuResult {
   players: PlayerSetup[];
   characters: number[];
   seed?: number;
+  /** Ada bila permainan online. */
+  online?: { room: Room; seats: Seat[] };
 }
 
 type SlotType = "human" | "bot" | "off";
@@ -67,8 +70,8 @@ function save(slots: Slot[]) {
 }
 
 /**
- * Menu bertingkat: Beranda → Lobi (main di satu perangkat) / Online (segera) / Cara Main.
- * Resolve ketika permainan lokal dimulai.
+ * Menu bertingkat: Beranda → Lobi (main di satu perangkat) / Online (room P2P) / Cara Main.
+ * Resolve ketika permainan (lokal atau online) dimulai.
  */
 export function showMenu(): Promise<MenuResult> {
   return new Promise((resolve) => {
@@ -135,7 +138,7 @@ export function showMenu(): Promise<MenuResult> {
             "div",
             { class: "choices" },
             big("🛋️", "Main Bareng di Sini", "1 perangkat · 2–4 pemain · bisa lawan bot", "green", "mode-local", lobby),
-            big("🌐", "Main Online", "Buat room & ajak teman pakai kode", "blue", "mode-online", online, "SEGERA"),
+            big("🌐", "Main Online", "Buat room & ajak teman pakai kode", "blue", "mode-online", () => online()),
             big("📖", "Cara Main", "Aturan singkat & cara menang", "white", "mode-rules", rules),
           ),
           h("div", { class: "menu-foot" }, soundBtn),
@@ -301,10 +304,57 @@ export function showMenu(): Promise<MenuResult> {
       );
     };
 
-    // ---------------------------------------------------------------- online (segera)
+    // ---------------------------------------------------------------- online
 
-    const online = () => {
-      const code = h("input", { class: "room-code", placeholder: "KODE", maxlength: 6, disabled: true, "data-testid": "room-code" });
+    let room: Room | null = null;
+
+    /** Layar awal online: isi nama, lalu buat room atau gabung pakai kode. */
+    const online = (prefillCode = "", errorText = "") => {
+      room?.leave();
+      room = null;
+      const me = slots[0];
+      const name = h("input", { class: "online-name", value: me.name, maxlength: 12, placeholder: "Namamu", "data-testid": "online-name" });
+      name.addEventListener("input", () => {
+        me.name = name.value;
+        save(slots);
+      });
+      const code = h("input", { class: "room-code", placeholder: "KODE", maxlength: CODE_LEN, value: prefillCode, "data-testid": "room-code", autocomplete: "off" });
+      code.addEventListener("input", () => (code.value = normalizeCode(code.value)));
+      const err = h("div", { class: "menu-err", "data-testid": "online-err" }, errorText);
+      const createBtn = h("button", { class: "btn green", "data-testid": "create-room" }, "Buat Room");
+      const joinBtn = h("button", { class: "btn blue", "data-testid": "join-room" }, "Gabung");
+
+      const busy = async (btn: HTMLButtonElement, label: string, job: () => Promise<Room>) => {
+        sfx.click();
+        err.textContent = "";
+        createBtn.disabled = joinBtn.disabled = true;
+        const old = btn.textContent;
+        btn.textContent = label;
+        try {
+          room = await job();
+          roomLobby(room);
+        } catch (e) {
+          sfx.bad();
+          err.textContent = `😵 ${(e as Error).message ?? e}`;
+          createBtn.disabled = joinBtn.disabled = false;
+          btn.textContent = old;
+        }
+      };
+      createBtn.addEventListener("click", () => void busy(createBtn, "⏳ Membuat...", () => Room.host(name.value, me.char)));
+      const join = () => {
+        if (code.value.length !== CODE_LEN) {
+          sfx.bad();
+          err.textContent = `Kode room harus ${CODE_LEN} huruf.`;
+          code.focus();
+          return;
+        }
+        void busy(joinBtn, "⏳ Menyambung...", () => Room.join(code.value, name.value));
+      };
+      joinBtn.addEventListener("click", join);
+      code.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") join();
+      });
+
       const card = (icon: string, title: string, text: string, ...extra: HTMLElement[]) =>
         h("div", { class: "online-card" }, h("div", { class: "oc-icon" }, icon), h("b", {}, title), h("p", {}, text), ...extra);
       show(
@@ -312,22 +362,144 @@ export function showMenu(): Promise<MenuResult> {
           "div",
           { class: "panel menu-panel online" },
           header("🌐 Main Online", home),
-          h("div", { class: "soon" }, "🚧 Lagi dibangun tukang! Mode online segera hadir."),
+          h("label", { class: "online-name-row" }, "Namamu", name),
           h(
             "div",
             { class: "online-grid" },
-            card("🏠", "Buat Room", "Jadi tuan rumah, bagikan kode ke teman.", h("button", { class: "btn green", disabled: true }, "Buat Room")),
-            card("🔑", "Gabung Room", "Masukkan kode dari temanmu.", code, h("button", { class: "btn blue", disabled: true }, "Gabung")),
+            card("🏠", "Buat Room", "Jadi tuan rumah, bagikan kode ke teman.", createBtn),
+            card("🔑", "Gabung Room", "Masukkan kode dari temanmu.", code, joinBtn),
           ),
-          h("p", { class: "hint" }, "Sementara itu, ajak teman main bareng di satu perangkat dulu 😉"),
-          (() => {
-            const b = h("button", { class: "btn white" }, "🛋️ Main Bareng di Sini");
+          err,
+          h("p", { class: "hint" }, "Tersambung langsung antar perangkat (peer-to-peer). Host harus tetap membuka game sampai selesai."),
+        ),
+      );
+      if (prefillCode) code.focus();
+    };
+
+    /** Lobi room: kode, daftar kursi, tambah bot, mulai. */
+    const roomLobby = (r: Room) => {
+      const me = slots[0];
+      const list = h("div", { class: "seat-list" });
+      const status = h("div", { class: "hint", "data-testid": "lobby-status" });
+      const startBtn = h("button", { class: "btn green start-btn", "data-testid": "online-start" }, "▶ Mulai Main!");
+      const addBotBtn = h("button", { class: "btn small white", "data-testid": "add-bot" }, "＋ Tambah Bot 🤖");
+      const link = `${location.origin}${location.pathname}?room=${r.code}`;
+
+      const copyBtn = h("button", { class: "btn small white", title: "Salin link undangan" }, "📋 Salin link");
+      copyBtn.addEventListener("click", async () => {
+        sfx.click();
+        try {
+          await navigator.clipboard.writeText(link);
+          copyBtn.textContent = "✅ Tersalin!";
+        } catch {
+          prompt("Salin link ini:", link);
+        }
+        setTimeout(() => (copyBtn.textContent = "📋 Salin link"), 1500);
+      });
+
+      addBotBtn.addEventListener("click", () => {
+        sfx.click();
+        r.addBot();
+      });
+      startBtn.addEventListener("click", () => {
+        sfx.build();
+        r.start();
+      });
+
+      const freeCharFrom = (seats: Seat[], i: number, dir: 1 | -1) => {
+        for (let k = 1; k <= 4; k++) {
+          const next = (seats[i].char + dir * k + 8) % 4;
+          if (!seats.some((o, j) => j !== i && o.char === next)) return next;
+        }
+        return seats[i].char;
+      };
+
+      const render = (seats: Seat[]) => {
+        list.innerHTML = "";
+        seats.forEach((s, i) => {
+          const mine = s.id === r.me;
+          const editable = mine || (r.isHost && s.kind === "bot");
+          const arrow = (dir: 1 | -1) => {
+            const b = h("button", { class: "arrow", title: "Ganti karakter" }, dir > 0 ? "▶" : "◀");
             b.addEventListener("click", () => {
               sfx.click();
-              lobby();
+              const char = freeCharFrom(seats, i, dir);
+              if (mine) {
+                me.char = char;
+                save(slots);
+              }
+              r.setSeat(i, { char });
             });
             return b;
-          })(),
+          };
+          const tag = s.kind === "host" ? "👑 Host" : s.kind === "bot" ? "🤖 Bot" : "🌐 Tamu";
+          const kick = r.isHost && s.kind !== "host" ? h("button", { class: "btn small white kick", title: s.kind === "bot" ? "Hapus bot" : "Keluarkan" }, "✖") : null;
+          kick?.addEventListener("click", () => {
+            sfx.click();
+            r.removeSeat(i);
+          });
+          list.append(
+            h(
+              "div",
+              { class: `seat${mine ? " mine" : ""}`, "data-testid": `seat-${i}` },
+              h(
+                "div",
+                { class: "char-pick" },
+                editable ? arrow(-1) : null,
+                h("div", { class: "avatar", style: `background:${CRITTERS[s.char].color}` }, AVATARS[s.char]),
+                editable ? arrow(1) : null,
+              ),
+              h("div", { class: "seat-info" }, h("b", {}, s.name + (mine ? " (kamu)" : "")), h("small", {}, `${tag} · ${CRITTERS[s.char].label}`)),
+              kick,
+            ),
+          );
+        });
+        for (let i = seats.length; i < MAX_SEATS; i++) {
+          list.append(h("div", { class: "seat empty" }, h("div", { class: "avatar ghost" }, "＋"), h("small", {}, "Menunggu teman...")));
+        }
+        addBotBtn.disabled = seats.length >= MAX_SEATS;
+        startBtn.disabled = seats.length < 2;
+        status.textContent = r.isHost
+          ? seats.length < 2
+            ? "Bagikan kode ke teman, atau tambah bot. Minimal 2 pemain."
+            : "Siap! Tekan Mulai kalau semua sudah masuk."
+          : "Menunggu host memulai permainan... ⏳";
+      };
+
+      r.onLobby = (seats) => render(seats);
+      r.onClosed = (reason) => {
+        sfx.bad();
+        online("", `📡 ${reason}`);
+      };
+      r.onStart = ({ seed, seats }) => {
+        r.onLobby = null;
+        r.onClosed = null;
+        root.remove();
+        resolve({
+          players: seats.map((s) => ({ name: s.name, color: CRITTERS[s.char].color, isBot: s.kind === "bot" })),
+          characters: seats.map((s) => s.char),
+          seed,
+          online: { room: r, seats },
+        });
+      };
+      render(r.seats);
+
+      show(
+        h(
+          "div",
+          { class: "panel menu-panel online room-lobby" },
+          header("🌐 Room Online", () => online()),
+          h(
+            "div",
+            { class: "code-box" },
+            h("small", {}, "KODE ROOM"),
+            h("div", { class: "big-code", "data-testid": "room-code-display" }, r.code),
+            copyBtn,
+          ),
+          list,
+          r.isHost ? h("div", { class: "lobby-foot" }, addBotBtn) : null,
+          status,
+          r.isHost ? startBtn : null,
         ),
       );
     };
@@ -367,6 +539,8 @@ export function showMenu(): Promise<MenuResult> {
       );
     };
 
-    home();
+    const roomParam = normalizeCode(new URLSearchParams(location.search).get("room") ?? "");
+    if (roomParam) online(roomParam);
+    else home();
   });
 }

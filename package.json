@@ -14,7 +14,8 @@
   "dependencies": {
     "@babylonjs/core": "^9.36.0",
     "@babylonjs/materials": "^9.36.0",
-    "earcut": "^3.2.4"
+    "earcut": "^3.2.4",
+    "peerjs": "^1.5.4"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

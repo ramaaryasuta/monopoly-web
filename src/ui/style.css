@@ -262,6 +262,28 @@ body {
   text-align: center; text-transform: uppercase; width: 100%;
   border: 2px dashed var(--ink); border-radius: 10px; padding: 4px; background: var(--cream);
 }
+.online-name-row { display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; margin: 10px 0 14px; }
+.online-name-row input { max-width: 200px; }
+.code-box {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: #fff1b8; border: 3px dashed var(--ink); border-radius: 18px; padding: 10px; margin: 10px 0 14px;
+}
+.code-box small { font-weight: 700; letter-spacing: 2px; opacity: 0.7; }
+.big-code { font-size: 44px; font-weight: 800; letter-spacing: 10px; line-height: 1.1; padding-left: 10px; user-select: all; }
+.seat-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.seat {
+  display: flex; align-items: center; gap: 10px; text-align: left; min-width: 0;
+  background: #fff; border: 3px solid var(--ink); border-radius: 16px; padding: 8px 10px;
+}
+.seat.mine { box-shadow: 0 0 0 3px #ffd23f; }
+.seat.empty { border-style: dashed; opacity: 0.6; justify-content: center; }
+.seat .char-pick { flex-shrink: 0; }
+.seat .avatar { width: 46px; height: 46px; font-size: 26px; border-radius: 50%; border: 3px solid var(--ink); display: grid; place-items: center; flex-shrink: 0; }
+.seat-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.seat-info b, .seat-info small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat-info small { opacity: 0.7; font-size: 12px; }
+.seat .kick { padding: 2px 8px; flex-shrink: 0; }
+.room-lobby .lobby-foot { justify-content: center; }
 
 /* cara main */
 .rule-list { list-style: none; padding: 0; margin: 10px 0; text-align: left; display: flex; flex-direction: column; gap: 8px; }
@@ -276,6 +298,8 @@ body {
 @keyframes logoWobble { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg) scale(1.03); } }
 
 @media (max-width: 760px) {
+  .seat-list { grid-template-columns: 1fr; }
+  .big-code { font-size: 36px; }
   .slots { grid-template-columns: 1fr 1fr; gap: 14px 10px; }
   .menu-panel { padding: 16px 14px 18px; }
   .menu-head h2 { font-size: 20px; }
@@ -539,6 +563,8 @@ body {
 /* ---------------------------------------------------------------- mobile */
 
 @media (max-width: 760px) {
+  .seat-list { grid-template-columns: 1fr; }
+  .big-code { font-size: 36px; }
   .player-card { width: 150px; padding: 6px 8px; gap: 6px; }
   .player-card .avatar { width: 36px; height: 36px; font-size: 22px; }
   .player-card .money { font-size: 16px; }

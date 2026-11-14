@@ -14,6 +14,8 @@ export class ScenePresenter implements Presenter {
     private view: GameScene,
     private hud: Hud,
     private state: GameState,
+    /** Pemain manusia yang dikendalikan di perangkat ini (online: bukan pemain jarak jauh). */
+    private isLocalHuman: (pid: number) => boolean = (pid) => !state.players[pid].isBot,
   ) {}
 
   async turnStart(state: GameState, player: number) {
@@ -65,7 +67,7 @@ export class ScenePresenter implements Presenter {
 
   async showCard(player: number, card: Card) {
     sfx.card();
-    const bot = this.state.players[player].isBot;
+    const bot = !this.isLocalHuman(player);
     await modal({
       title: card.title,
       className: "comic",
@@ -80,7 +82,7 @@ export class ScenePresenter implements Presenter {
   async showEvent(ev: ChaosEvent, targets: number[]) {
     sfx.scream();
     const names = targets.map((t) => escapeHtml(this.state.players[t].name)).join(", ");
-    const allBots = this.state.players.every((p) => p.isBot || p.bankrupt);
+    const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
     await this.view.goHome(0.5);
     await modal({
       title: ev.headline,

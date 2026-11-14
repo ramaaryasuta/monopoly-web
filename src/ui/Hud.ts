@@ -43,6 +43,8 @@ export class Hud {
   constructor(
     private state: GameState,
     private characterIdx: number[],
+    /** Online: pemain yang dikendalikan perangkat ini (diberi tanda ⭐). */
+    private localPlayers: number[] | null = null,
   ) {
     const root = uiRoot();
     state.players.forEach((p, i) => {
@@ -53,7 +55,7 @@ export class Hud {
         h(
           "div",
           { class: "info" },
-          h("div", { class: "name" }, p.name + (p.isBot ? " 🤖" : "")),
+          h("div", { class: "name" }, this.nameLabel(i)),
           h("div", { class: "money" }, fmt(p.money)),
           h("div", { class: "meta" }),
         ),
@@ -166,6 +168,17 @@ export class Hud {
     const e = h("div", { class: "dice-result" }, `${d1} + ${d2} = ${d1 + d2}${d1 === d2 ? " 🎯" : ""}`);
     uiRoot().append(e);
     setTimeout(() => e.remove(), 1200);
+  }
+
+  private nameLabel(pid: number) {
+    const p = this.state.players[pid];
+    return (this.localPlayers?.includes(pid) ? "⭐ " : "") + p.name + (p.isBot ? " 🤖" : "");
+  }
+
+  /** Perbarui label nama (mis. pemain online terputus lalu diambil alih bot). */
+  refreshName(pid: number) {
+    const el = this.cards[pid]?.querySelector(".name");
+    if (el) el.textContent = this.nameLabel(pid);
   }
 
   // ------------------------------------------------------------------ actions
