@@ -68,13 +68,19 @@ export class ScenePresenter implements Presenter {
   async showCard(player: number, card: Card) {
     sfx.card();
     const bot = !this.isLocalHuman(player);
+    const isItem = card.effect.type === "item";
+    // Kartu 3D diambil dari tumpukan, terbang ke depan kamera, lalu dibuka
+    await this.view.cards.draw({ icon: card.icon, title: card.title, text: card.text, kind: isItem ? "item" : "card" });
+    sfx.boing();
     await modal({
       title: card.title,
-      className: "comic",
-      body: `<div class="comic-pow">${pick(POW)}</div><div class="card-art">${card.icon}</div><p>${card.text}</p>`,
-      buttons: [{ label: pick(OK_LABELS), value: 0, class: "green" }],
+      className: "comic card-reveal",
+      body: `<div class="comic-pow">${pick(POW)}</div><p>${card.text}</p>`,
+      buttons: [{ label: isItem ? "🎒 Simpan!" : pick(OK_LABELS), value: 0, class: "green" }],
       autoCloseMs: bot ? 2000 : undefined,
     });
+    // Kartu simpanan masuk ke pion; kartu biasa terbang menghilang
+    await this.view.cards.dismiss(isItem ? this.view.pawns[player].root.position : undefined);
     if (card.fx) await this.view.funFx(card.fx, [player]);
     this.hud.speech(player, pick(card.fx === "cry" ? SAD : HAPPY));
   }
@@ -119,6 +125,13 @@ export class ScenePresenter implements Presenter {
     sfx.card();
     const def = ITEMS[use.item];
     this.hud.speech(player, `${def.icon} ${pick(ITEM_SHOUT)}`, true);
+    // Kartu 3D muncul di atas pion lalu dilempar ke sasaran
+    const from = this.view.pawns[player].root.position;
+    let to = from;
+    if (def.target === "player" && use.target !== null) to = this.view.pawns[use.target].root.position;
+    if (def.target === "tile" && use.target !== null) to = this.view.board.tileCenter(use.target);
+    await this.view.cards.throwItem({ icon: def.icon, title: def.name, text: def.text, kind: "item" }, from, to);
+    sfx.zap();
     const fx: Record<string, FunFx> = { sandal: "dizzy", utang: "cry", turbo: "duck", kecoak: "shake" };
     let targets = [player];
     if (def.target === "player" && use.target !== null) targets = [use.target];

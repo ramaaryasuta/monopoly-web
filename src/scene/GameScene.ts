@@ -18,6 +18,7 @@ import {
 import type { GameState } from "../core/types";
 import type { FunFx } from "../data/cards";
 import { BoardView } from "./BoardView";
+import { CardView } from "./CardView";
 import { Dice } from "./Dice";
 import { Effects } from "./Effects";
 import { pawnSlot, TILE } from "./layout";
@@ -35,6 +36,7 @@ export class GameScene {
   board!: BoardView;
   dice!: Dice;
   effects!: Effects;
+  cards!: CardView;
   pawns: Pawn[] = [];
   private shadows: ShadowGenerator;
   private pickObserver: Observer<PointerInfo> | null = null;
@@ -93,6 +95,7 @@ export class GameScene {
     this.board = new BoardView(scene, this.shadows);
     this.dice = new Dice(scene, this.shadows);
     this.effects = new Effects(scene);
+    this.cards = new CardView(scene, cam, this.shadows);
 
     scene.onPointerObservable.add((info) => {
       if (info.type !== PointerEventTypes.POINTERTAP || this.pickObserver) return;
