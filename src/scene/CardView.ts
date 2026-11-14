@@ -1,7 +1,5 @@
 import {
-  Color3,
   DynamicTexture,
-  Matrix,
   Mesh,
   MeshBuilder,
   Quaternion,
@@ -14,6 +12,7 @@ import {
   type ShadowGenerator,
 } from "@babylonjs/core";
 import { TILE } from "./layout";
+import { cameraFacing, inFrontOfCamera, roundRect, unlitMaterial, viewDistance, wrapText } from "./screenSpace";
 import { FONT } from "./tileArt";
 import { outline, toon } from "./toon";
 import { Ease, lerp, tween } from "./tween";
@@ -52,7 +51,7 @@ export class CardView {
     private camera: ArcRotateCamera,
     shadows: ShadowGenerator,
   ) {
-    this.backMat = this.makeMat("cardBack", this.drawBack());
+    this.backMat = unlitMaterial(this.scene, "cardBack", this.drawBack());
     this.edgeMat = toon(scene, "#fffbe6");
 
     // Tumpukan kartu di papan, sedikit acak supaya terlihat "ditumpuk tangan"
@@ -70,34 +69,12 @@ export class CardView {
 
   // ------------------------------------------------------------------ textures
 
-  private makeMat(name: string, tex: DynamicTexture) {
-    const m = new StandardMaterial(name, this.scene);
-    // Tanpa pencahayaan supaya tulisan selalu terbaca: warna dari tekstur emissive saja
-    // (dengan disableLighting, diffuse tidak berkontribusi; emissiveColor dijumlahkan ke tekstur)
-    m.emissiveTexture = tex;
-    m.emissiveColor = Color3.Black();
-    m.diffuseColor = Color3.Black();
-    m.disableLighting = true;
-    m.specularColor = Color3.Black();
-    return m;
-  }
-
-  private roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
   private drawBack() {
     const tex = new DynamicTexture("cardBackTex", { width: TW, height: TH }, this.scene, true);
     const ctx = tex.getContext() as unknown as CanvasRenderingContext2D;
     ctx.fillStyle = "#fffbe6";
     ctx.fillRect(0, 0, TW, TH);
-    this.roundRect(ctx, 22, 22, TW - 44, TH - 44, 34);
+    roundRect(ctx, 22, 22, TW - 44, TH - 44, 34);
     const g = ctx.createLinearGradient(0, 0, TW, TH);
     g.addColorStop(0, "#8a5cff");
     g.addColorStop(1, "#ff5fa2");
@@ -133,28 +110,13 @@ export class CardView {
     return tex;
   }
 
-  private wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
-    const words = text.split(/\s+/);
-    const lines: string[] = [];
-    let line = "";
-    for (const w of words) {
-      const test = line ? `${line} ${w}` : w;
-      if (ctx.measureText(test).width > maxW && line) {
-        lines.push(line);
-        line = w;
-      } else line = test;
-    }
-    if (line) lines.push(line);
-    return lines;
-  }
-
   private drawFront(face: CardFace) {
     const tex = new DynamicTexture("cardFrontTex", { width: TW, height: TH }, this.scene, true);
     const ctx = tex.getContext() as unknown as CanvasRenderingContext2D;
     const item = face.kind === "item";
     ctx.fillStyle = "#fffbe6";
     ctx.fillRect(0, 0, TW, TH);
-    this.roundRect(ctx, 22, 22, TW - 44, TH - 44, 34);
+    roundRect(ctx, 22, 22, TW - 44, TH - 44, 34);
     ctx.fillStyle = item ? "#ffe1f0" : "#fff3c4";
     ctx.fill();
     ctx.lineWidth = 10;
@@ -162,7 +124,7 @@ export class CardView {
     ctx.stroke();
 
     // Pita label atas
-    this.roundRect(ctx, 60, 48, TW - 120, 64, 30);
+    roundRect(ctx, 60, 48, TW - 120, 64, 30);
     ctx.fillStyle = item ? "#ff5fa2" : "#36d1c4";
     ctx.fill();
     ctx.lineWidth = 6;
@@ -186,7 +148,7 @@ export class CardView {
 
     // Judul
     ctx.font = `bold 46px ${FONT}`;
-    const titleLines = this.wrap(ctx, face.title, TW - 100).slice(0, 2);
+    const titleLines = wrapText(ctx, face.title, TW - 100).slice(0, 2);
     let y = 440;
     ctx.lineJoin = "round";
     for (const l of titleLines) {
@@ -201,7 +163,7 @@ export class CardView {
     // Teks efek
     ctx.font = `600 30px ${FONT}`;
     ctx.fillStyle = "#2b1d3a";
-    const lines = this.wrap(ctx, face.text, TW - 110).slice(0, 6);
+    const lines = wrapText(ctx, face.text, TW - 110).slice(0, 6);
     y += 14;
     for (const l of lines) {
       ctx.fillText(l, TW / 2, y);
@@ -231,7 +193,7 @@ export class CardView {
 
     if (face) {
       const front = MeshBuilder.CreatePlane(`${name}_front`, { width: W, height: H }, s);
-      front.material = this.makeMat(`${name}_frontMat`, this.drawFront(face));
+      front.material = unlitMaterial(this.scene, `${name}_frontMat`, this.drawFront(face));
       front.parent = root;
       front.position.z = -THICK / 2 - 0.002;
     }
@@ -251,29 +213,6 @@ export class CardView {
       }
     }
     root.dispose();
-  }
-
-  /** Rotasi agar muka kartu menghadap kamera. */
-  private facingCamera(): Quaternion {
-    // Rotasi dunia kamera (+z lokal = arah pandang). Kartu dengan rotasi sama → muka (-z) menghadap kamera.
-    const q = new Quaternion();
-    Matrix.Invert(this.camera.getViewMatrix()).decompose(undefined, q);
-    return q;
-  }
-
-  /** Titik di depan kamera (sedikit ke atas agar tidak tertutup tombol di bawah). */
-  private inFrontOfCamera(dist = this.viewDist(), up = 0.35): Vector3 {
-    const cam = this.camera;
-    const fwd = cam.target.subtract(cam.position).normalize();
-    const right = Vector3.Cross(Vector3.Up(), fwd).normalize();
-    const camUp = Vector3.Cross(fwd, right).normalize();
-    return cam.position.add(fwd.scale(dist)).add(camUp.scale(up));
-  }
-
-  /** Jarak kartu dari kamera: layar sempit (HP tegak) → lebih jauh supaya kartu muat. */
-  private viewDist() {
-    const aspect = this.scene.getEngine().getAspectRatio(this.camera);
-    return Math.max(6, 3.6 / aspect);
   }
 
   // ------------------------------------------------------------------ animasi
@@ -300,11 +239,11 @@ export class CardView {
       this.scene,
       0.7,
       (t) => {
-        const end = this.inFrontOfCamera();
+        const end = inFrontOfCamera(this.camera, viewDistance(this.scene, this.camera, 6, 1.9));
         const p = Vector3.Lerp(start, end, Ease.inOutQuad(t));
         p.y += Math.sin(t * Math.PI) * 1.2;
         card.position.copyFrom(p);
-        const backToCam = this.facingCamera().multiply(Quaternion.RotationAxis(Vector3.Up(), Math.PI));
+        const backToCam = cameraFacing(this.camera).multiply(Quaternion.RotationAxis(Vector3.Up(), Math.PI));
         const spin = Quaternion.RotationAxis(Vector3.Forward(), (1 - Ease.outQuad(t)) * Math.PI * 2);
         card.rotationQuaternion = Quaternion.Slerp(startQ, backToCam, Ease.outQuad(t)).multiply(spin);
         card.scaling.setAll(lerp(1, 1.1, t));
@@ -317,9 +256,9 @@ export class CardView {
       this.scene,
       0.5,
       (t) => {
-        card.position.copyFrom(this.inFrontOfCamera());
+        card.position.copyFrom(inFrontOfCamera(this.camera, viewDistance(this.scene, this.camera, 6, 1.9)));
         const ang = lerp(Math.PI, 0, Ease.outBack(t));
-        card.rotationQuaternion = this.facingCamera().multiply(Quaternion.RotationAxis(Vector3.Up(), ang));
+        card.rotationQuaternion = cameraFacing(this.camera).multiply(Quaternion.RotationAxis(Vector3.Up(), ang));
         card.scaling.setAll(1.1 + Math.sin(t * Math.PI) * 0.18);
       },
       Ease.linear,
@@ -335,8 +274,8 @@ export class CardView {
     let t = 0;
     this.holdObs = this.scene.onBeforeRenderObservable.add(() => {
       t += this.scene.getEngine().getDeltaTime() / 1000;
-      card.position.copyFrom(this.inFrontOfCamera(this.viewDist(), 0.35 + Math.sin(t * 2.2) * 0.05));
-      card.rotationQuaternion = this.facingCamera().multiply(Quaternion.RotationAxis(Vector3.Forward(), Math.sin(t * 1.7) * 0.04));
+      card.position.copyFrom(inFrontOfCamera(this.camera, viewDistance(this.scene, this.camera, 6, 1.9), 0.35 + Math.sin(t * 2.2) * 0.05));
+      card.rotationQuaternion = cameraFacing(this.camera).multiply(Quaternion.RotationAxis(Vector3.Forward(), Math.sin(t * 1.7) * 0.04));
     });
   }
 
@@ -388,14 +327,14 @@ export class CardView {
     // Muncul & tunjukkan muka kartu ke kamera
     await tween(this.scene, 0.45, (t) => {
       card.position.copyFrom(a);
-      card.rotationQuaternion = this.facingCamera().multiply(Quaternion.RotationAxis(Vector3.Up(), lerp(Math.PI, 0, Ease.outBack(t))));
+      card.rotationQuaternion = cameraFacing(this.camera).multiply(Quaternion.RotationAxis(Vector3.Up(), lerp(Math.PI, 0, Ease.outBack(t))));
       card.scaling.setAll(lerp(0.1, 1.2, Ease.outBack(t)));
     });
     await tween(this.scene, 0.35, () => {
-      card.rotationQuaternion = this.facingCamera();
+      card.rotationQuaternion = cameraFacing(this.camera);
     });
     // Lempar melengkung sambil berputar seperti frisbee
-    const q0 = this.facingCamera();
+    const q0 = cameraFacing(this.camera);
     const dist = Vector3.Distance(a, b);
     await tween(this.scene, 0.6, (t) => {
       const p = Vector3.Lerp(a, b, t);

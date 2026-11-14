@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import type { ItemUse, MessageKind, Presenter } from "../core/interfaces";
 import type { GameState } from "../core/types";
-import { ITEMS, type Card, type ChaosEvent, type FunFx, type SeasonDef } from "../data/cards";
+import { ITEMS, SEASON_ROUNDS, type Card, type ChaosEvent, type FunFx, type SeasonDef } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
 import { sfx } from "../scene/sfx";
 import { wait } from "../scene/tween";
@@ -87,18 +87,20 @@ export class ScenePresenter implements Presenter {
 
   async showEvent(ev: ChaosEvent, targets: number[]) {
     sfx.scream();
-    const names = targets.map((t) => escapeHtml(this.state.players[t].name)).join(", ");
+    const names = targets.map((t) => this.state.players[t].name).join(", ");
+    const partial = targets.length < this.state.players.filter((p) => !p.bankrupt).length;
     const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
     await this.view.goHome(0.5);
+    // TV berita 3D jatuh dari langit & menyiarkan berita
+    await this.view.events.show({ icon: ev.icon, headline: ev.headline, text: ev.text, sub: partial ? `Yang kena: ${names}` : undefined, kind: "event" });
     await modal({
       title: ev.headline,
-      className: "comic breaking",
-      body: `<div class="breaking-tag">📢 BERITA HEBOH</div><div class="card-art">${ev.icon}</div><p>${ev.text}</p>${
-        targets.length < this.state.players.length ? `<p class="victim">Yang kena: <b>${names}</b></p>` : ""
-      }`,
+      className: "comic breaking card-reveal",
+      body: `<p>${ev.text}</p>${partial ? `<p class="victim">Yang kena: <b>${escapeHtml(names)}</b></p>` : ""}`,
       buttons: [{ label: pick(["Astaga!", "Waduh!", "Hah?!", "Ngakak 🤣"]), value: 0, class: "pink" }],
       autoCloseMs: allBots ? 2200 : 6000,
     });
+    await this.view.events.hide();
     await this.view.funFx(ev.fx, targets);
   }
 
@@ -111,13 +113,15 @@ export class ScenePresenter implements Presenter {
     sfx.scream();
     const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
     await this.view.goHome(0.5);
+    await this.view.events.show({ icon: season.icon, headline: season.headline, text: season.text, sub: `Berlaku ${SEASON_ROUNDS} ronde: ${season.badge}`, kind: "season" });
     await modal({
       title: season.headline,
-      className: "comic breaking season",
-      body: `<div class="breaking-tag">📅 EVENT MUSIMAN</div><div class="card-art">${season.icon}</div><p>${season.text}</p>`,
+      className: "comic breaking season card-reveal",
+      body: `<p>${season.text}</p>`,
       buttons: [{ label: pick(["Siap!", "Wah!", "Gaskeun!", "Oke deh"]), value: 0, class: "blue" }],
       autoCloseMs: allBots ? 2200 : 6000,
     });
+    await this.view.events.hide();
     await this.view.funFx(season.fx, this.state.players.filter((p) => !p.bankrupt).map((p) => p.id));
   }
 
