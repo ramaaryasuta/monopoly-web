@@ -584,8 +584,9 @@ body {
   .player-card .money { font-size: 16px; }
   .player-card .meta { display: none; }
   .log { display: none; }
-  .round-badge { top: auto; bottom: 120px; font-size: 13px; }
-  .toolbar { top: auto; bottom: 150px; }
+  /* Di bawah kartu pemain atas, supaya tidak tertutup menu giliran di bawah */
+  .round-badge { top: 80px; font-size: 13px; }
+  .toolbar { top: 116px; }
   .roll-btn { font-size: 22px; padding: 12px 26px; }
   .action-bar { bottom: 90px; }
   .qa { left: 12px; bottom: 170px; }
@@ -776,9 +777,21 @@ body {
 }
 
 /* ---------------------------------------------------------------- negosiasi & pasar terbuka */
-.turn-extras { display: flex; flex-direction: column; gap: 6px; }
-.turn-extras .item-btn { font-size: 15px; padding: 7px 14px; border-radius: 14px; white-space: nowrap; }
-.market-btn.has { background: var(--yellow); animation: popIn 0.35s; }
+/* Menu awal giliran: dadu besar, aksi lain berjajar rapi di bawahnya */
+.turn-menu { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.turn-extras { display: flex; gap: 8px; justify-content: center; }
+.turn-btn {
+  font-size: 15px; padding: 6px 14px; border-radius: 14px; white-space: nowrap;
+  box-shadow: 0 4px 0 var(--ink); min-width: 118px;
+}
+.turn-btn:active { box-shadow: 0 1px 0 var(--ink); transform: translateY(3px); }
+.btn.orange { background: var(--orange); }
+.market-btn { position: relative; }
+.market-btn .badge {
+  position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 10px; border: 2px solid var(--ink); background: var(--pink); color: #fff;
+  font-size: 11px; line-height: 16px; animation: popIn 0.35s;
+}
 
 .modal.trade-modal { width: min(640px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
 .modal.market-modal { width: min(480px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
@@ -811,17 +824,58 @@ body {
 .trade-net small { font-weight: 500; opacity: 0.7; color: var(--ink); }
 .trade-error { color: #c0392b; font-weight: 700; min-height: 1.2em; margin: 4px 0 0; font-size: 14px; }
 .for-who { font-weight: 700; background: #fff1b8; border-radius: 10px; padding: 4px; }
-.market-list { display: flex; flex-direction: column; gap: 6px; text-align: left; }
-.market-row { display: flex; align-items: center; gap: 8px; }
-.market-row .tile-chip { flex: 1; }
-.market-row .seller { font-weight: 700; font-size: 13px; text-shadow: 0 0 2px #fff; }
-.market-row .price { font-size: 15px; white-space: nowrap; }
-.market-row.own .tile-chip { background: #e8f6ff; }
+.market-wallet { display: inline-block; font-size: 14px; background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 2px 12px; margin-bottom: 10px; }
+.market-list { display: flex; flex-direction: column; gap: 8px; text-align: left; max-height: 50vh; overflow-y: auto; padding: 2px; }
+.market-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 8px; opacity: 0.7; font-size: 14px; text-align: center; border: 2px dashed rgba(43, 29, 58, 0.3); border-radius: 14px; }
+.market-empty span { font-size: 30px; }
+.market-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  background: #fff; border: 2px solid var(--ink); border-left: 10px solid var(--chip, #ccc); border-radius: 14px;
+}
+.market-row.own { background: #eef8ff; }
+.mr-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.mr-info b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mr-info small { font-size: 12px; opacity: 0.7; }
+.mr-seller { margin-top: 3px; }
+.mr-price { display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
+.mr-price b { font-size: 16px; }
+.mr-price small { font-size: 11px; font-weight: 700; }
+.mr-price small.murah { color: #1f8a3a; }
+.mr-price small.mahal { color: #c0392b; }
+.market-row .btn.small { min-width: 78px; }
+.player-pill {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700;
+  background: var(--cream); border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px 0 4px;
+}
+.player-pill::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c, #ccc); border: 1.5px solid var(--ink); }
+.player-pill.you { padding-left: 8px; background: #d8f0ff; }
+.player-pill.you::before { display: none; }
 .modal .hint { font-size: 13px; opacity: 0.75; margin-bottom: 0; }
 .modal p.listed { background: #fff1b8; border-radius: 10px; padding: 4px 8px; }
 @media (max-width: 700px) {
   .trade-grid { grid-template-columns: 1fr; }
-  .turn-extras { flex-direction: row; flex-wrap: wrap; justify-content: center; }
-  .turn-extras .item-btn { font-size: 13px; padding: 6px 10px; }
-  .market-row { flex-wrap: wrap; }
+  .turn-extras { gap: 6px; }
+  .turn-btn { font-size: 13px; padding: 5px 8px; min-width: 0; }
+  .market-row { padding: 6px 8px; gap: 8px; }
+  .market-row .btn.small { min-width: 0; padding: 6px 8px; }
 }
+.money-in .unit { font-weight: 700; margin-left: -2px; }
+.money-in small { opacity: 0.7; font-weight: 600; }
+.trade-error:empty, .trade-net:empty { display: none; }
+@media (max-width: 700px) {
+  .mr-info b { white-space: normal; font-size: 14px; }
+  .market-modal .buttons.row .btn { font-size: 16px; padding: 8px 14px; white-space: nowrap; }
+}
+@media (max-width: 760px) {
+  .pick-banner { top: 170px; }
+}
+
+/* Konfirmasi beli dari pasar */
+.confirm-buy p { margin: 0 0 8px; }
+.cb-table { background: #fff; border: 2px solid var(--ink); border-radius: 14px; padding: 4px 12px; text-align: left; }
+.cb-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 5px 0; font-size: 14px; border-bottom: 1px dashed rgba(43, 29, 58, 0.25); }
+.cb-row:last-child { border-bottom: 0; }
+.cb-row b { text-align: right; }
+.cb-row.price b { font-size: 18px; }
+.cb-row.low b { color: #c0392b; }
+.cb-warn { color: #c0392b; font-weight: 700; font-size: 14px; margin: 8px 0 0 !important; }

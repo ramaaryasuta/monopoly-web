@@ -41,6 +41,8 @@ export interface ModalOptions<T> {
   /** Tutup otomatis setelah ms dengan nilai tombol pertama (untuk giliran bot). */
   autoCloseMs?: number;
   className?: string;
+  /** Akses ke elemen modal & fungsi tutup (untuk tombol/validasi di dalam body). */
+  bind?: (close: (v: T) => void, root: HTMLElement) => void;
 }
 
 /** Modal berbasis Promise: resolve dengan nilai tombol yang diklik. */
@@ -80,6 +82,7 @@ export function modal<T>(o: ModalOptions<T>): Promise<T> {
       });
       btns.append(btn);
     }
+    o.bind?.(close, backdrop);
     if (o.autoCloseMs !== undefined) setTimeout(() => close(o.buttons[0].value), o.autoCloseMs);
     uiRoot().append(backdrop);
   });

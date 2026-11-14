@@ -109,8 +109,7 @@ export class Hud {
     this.round.textContent = `Ronde ${s.round} / ${CONFIG.roundLimit}` + (season ? `  ·  ${season.icon} ${season.badge} (${left} ronde)` : "");
     this.round.classList.toggle("season", !!season);
     const listed = activeListings(s).length;
-    this.marketBtn.textContent = listed ? `🏪 ${listed}` : "🏪";
-    this.marketBtn.classList.toggle("has", listed > 0);
+    this.marketBtn.replaceChildren("🏪", listed ? h("span", { class: "badge" }, String(listed)) : "");
     s.players.forEach((p, i) => {
       const card = this.cards[i];
       card.classList.toggle("active", s.current === i && s.winner === null);
@@ -260,7 +259,7 @@ export class Hud {
       type A = "roll" | "item" | "trade" | "market";
       const roll = h("button", { class: "btn roll-btn", "data-testid": "roll" }, o.rollLabel);
       const extras = h("div", { class: "turn-extras" });
-      const row = h("div", { class: "roll-row" }, roll, extras);
+      const row = h("div", { class: "turn-menu" }, roll, extras);
       const done = (v: A) => {
         window.removeEventListener("keydown", onKey);
         row.remove();
@@ -268,14 +267,14 @@ export class Hud {
         resolve(v);
       };
       const add = (label: string, cls: string, v: A, testid: string, disabled = false) => {
-        const b = h("button", { class: `btn ${cls} item-btn`, "data-testid": testid, disabled }, label);
+        const b = h("button", { class: `btn ${cls} turn-btn`, "data-testid": testid, disabled }, label);
         b.addEventListener("click", () => done(v));
         extras.append(b);
       };
       if (o.items > 0) add(`🎒 Kartu (${o.items})`, "pink", "item", "use-item");
-      add(o.tradesLeft > 0 ? "🤝 Negosiasi" : "🤝 Habis", "blue", "trade", "trade", o.tradesLeft <= 0);
+      add(o.tradesLeft > 0 ? "🤝 Negosiasi" : "🤝 Jatah habis", "blue", "trade", "trade", o.tradesLeft <= 0);
       const listed = activeListings(this.state).length;
-      add(listed ? `🏪 Pasar (${listed})` : "🏪 Pasar", "yellow", "market", "market-act");
+      add(listed ? `🏪 Pasar · ${listed}` : "🏪 Pasar", "orange", "market", "market-act");
       const onKey = (e: KeyboardEvent) => {
         if ((e.code === "Space" || e.code === "Enter") && !document.querySelector(".modal-backdrop")) {
           e.preventDefault();
