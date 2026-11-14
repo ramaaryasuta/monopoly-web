@@ -86,7 +86,6 @@ export class ScenePresenter implements Presenter {
   }
 
   async showEvent(ev: ChaosEvent, targets: number[]) {
-    sfx.scream();
     const names = targets.map((t) => this.state.players[t].name).join(", ");
     const partial = targets.length < this.state.players.filter((p) => !p.bankrupt).length;
     const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
@@ -110,7 +109,6 @@ export class ScenePresenter implements Presenter {
       this.message(`${season.icon} ${season.headline.replace(/!$/, "")} sudah selesai. Pulau kembali normal.`);
       return;
     }
-    sfx.scream();
     const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
     await this.view.goHome(0.5);
     await this.view.events.show({ icon: season.icon, headline: season.headline, text: season.text, sub: `Berlaku ${SEASON_ROUNDS} ronde: ${season.badge}`, kind: "season" });

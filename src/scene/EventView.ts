@@ -15,7 +15,8 @@ import {
 import { cameraFacing, inFrontOfCamera, roundRect, unlitMaterial, viewDistance, wrapText } from "./screenSpace";
 import { FONT } from "./tileArt";
 import { toon } from "./toon";
-import { Ease, lerp, tween } from "./tween";
+import { tvSfx } from "./sfx";
+import { Ease, lerp, Speed, tween } from "./tween";
 
 export interface EventScreen {
   icon: string;
@@ -279,6 +280,9 @@ export class EventView {
     const dropH = this.dist() * 0.8;
 
     // 1) Jatuh dari atas layar sambil miring, memantul saat "mendarat"
+    tvSfx.fall(0.45 / Speed.factor);
+    // Gedebuk tepat saat pertama menyentuh "lantai" (outBounce mencapai 1 di ~36% durasi)
+    const thud = setTimeout(() => tvSfx.thud(), (0.75 * 0.36 * 1000) / Speed.factor);
     await tween(this.scene, 0.75, (t) => {
       const { pos, rot } = this.pose(lerp(dropH, 0, Ease.outBounce(t)));
       tv.position.copyFrom(pos);
@@ -295,14 +299,21 @@ export class EventView {
     tv.scaling.setAll(1);
 
     // 3) Layar menyala ala TV tabung: garis tipis melebar
+    clearTimeout(thud);
     const screen = this.screen!;
+    tvSfx.powerOn();
     await tween(this.scene, 0.3, (t) => {
       screen.scaling.y = lerp(0.02, 1, Ease.outBack(t));
       screen.scaling.x = lerp(0.6, 1, Ease.outQuad(t));
     });
 
-    // 4) Tahan: sirene berkedip, antena goyang, TV bergoyang pelan
+    tvSfx.jingle(e.kind);
+
+    // 4) Tahan: sirene berkedip (dengan bunyi "wiu-wiu"), antena goyang, TV bergoyang pelan
     let time = 0;
+    let lastOn: boolean | null = null;
+    // Sirene mulai berbunyi setelah jingle selesai supaya tidak bertabrakan
+    const sirenFrom = 1.3;
     this.holdObs = this.scene.onBeforeRenderObservable.add(() => {
       time += this.scene.getEngine().getDeltaTime() / 1000;
       const { pos, rot } = this.pose(Math.abs(Math.sin(time * 6)) * 0.04);
@@ -310,6 +321,10 @@ export class EventView {
       tv.rotationQuaternion = rot.multiply(Quaternion.RotationAxis(Vector3.Forward(), Math.sin(time * 3) * 0.035));
       antenna.rotation.z = Math.sin(time * 9) * 0.12;
       const on = Math.floor(time * 5) % 2 === 0;
+      if (on !== lastOn) {
+        lastOn = on;
+        if (time > sirenFrom && time < sirenFrom + 3) tvSfx.sirenBeep(on);
+      }
       sirens[0].emissiveColor = Color3.FromHexString(on ? "#ff2e4d" : "#5c1020");
       sirens[1].emissiveColor = Color3.FromHexString(on ? "#10305c" : "#2e8bff");
     });
@@ -321,10 +336,12 @@ export class EventView {
     const screen = this.screen;
     if (!tv || !screen) return;
     this.stopHold();
+    tvSfx.powerOff();
     await tween(this.scene, 0.18, (t) => (screen.scaling.y = lerp(1, 0.02, Ease.inOutQuad(t))));
     await tween(this.scene, 0.14, (t) => (screen.scaling.x = lerp(1, 0.01, Ease.inOutQuad(t))));
     const p0 = tv.position.clone();
     const q0 = tv.rotationQuaternion!.clone();
+    tvSfx.whoosh();
     await tween(this.scene, 0.4, (t) => {
       tv.position.copyFrom(p0.add(new Vector3(0, Math.sin(t * Math.PI) * 0.8 - t * t * 4, 0)));
       tv.rotationQuaternion = q0.multiply(Quaternion.RotationAxis(Vector3.Forward(), t * 1.2));

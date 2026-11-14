@@ -57,6 +57,82 @@ function wobble(freq: number, dur: number, type: OscillatorType, vol: number, lf
   lfo.stop(t0 + dur + 0.02);
 }
 
+let noiseBuf: AudioBuffer | null = null;
+
+/** Desis noise terfilter (statik TV, gedebuk, whoosh). `freqTo` = sapuan frekuensi filter. */
+function noise(dur: number, vol: number, type: BiquadFilterType, freq: number, freqTo?: number, delay = 0, q = 1) {
+  const a = ac();
+  if (!a) return;
+  if (!noiseBuf || noiseBuf.sampleRate !== a.sampleRate) {
+    noiseBuf = a.createBuffer(1, a.sampleRate, a.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const t0 = a.currentTime + delay;
+  const src = a.createBufferSource();
+  src.buffer = noiseBuf;
+  src.loop = true;
+  const filter = a.createBiquadFilter();
+  filter.type = type;
+  filter.Q.value = q;
+  filter.frequency.setValueAtTime(freq, t0);
+  if (freqTo) filter.frequency.exponentialRampToValueAtTime(freqTo, t0 + dur);
+  const gain = a.createGain();
+  gain.gain.setValueAtTime(vol, t0);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(filter).connect(gain).connect(a.destination);
+  src.start(t0, Math.random() * 0.5);
+  src.stop(t0 + dur + 0.02);
+}
+
+/** Akor pendek: beberapa nada dimainkan bersamaan. */
+function chord(freqs: number[], dur: number, type: OscillatorType, vol: number, delay: number) {
+  for (const f of freqs) tone(f, dur, type, vol / freqs.length, undefined, delay);
+}
+
+/** Suara-suara TV berita 3D (event heboh & event musiman). */
+export const tvSfx = {
+  /** Siulan jatuh dari langit (durasi ≈ animasi jatuh). */
+  fall: (dur = 0.7) => {
+    tone(1500, dur, "sine", 0.05, 260);
+    noise(dur, 0.05, "bandpass", 3000, 600, 0, 2);
+  },
+  /** Gedebuk mendarat + bunyi pegas antena. */
+  thud: () => {
+    tone(120, 0.25, "sine", 0.22, 40);
+    noise(0.18, 0.18, "lowpass", 600, 120);
+    wobble(520, 0.45, "triangle", 0.05, 18, 80, 300, 0.05);
+  },
+  /** TV tabung menyala: klik, desis statik, dengung naik. */
+  powerOn: () => {
+    tone(1800, 0.03, "square", 0.05);
+    noise(0.35, 0.07, "highpass", 2500, undefined, 0.02);
+    tone(90, 0.4, "sawtooth", 0.035, 900, 0.03);
+  },
+  /** Jingle pembuka berita. Berita heboh = dramatis (minor), musiman = ceria (mayor). */
+  jingle: (kind: "event" | "season") => {
+    if (kind === "event") {
+      // da-da-da-DAAAM!
+      [0, 0.12, 0.24].forEach((d) => chord([392, 466, 587], 0.1, "square", 0.09, d + 0.1));
+      chord([311, 392, 466, 622], 0.7, "sawtooth", 0.1, 0.46);
+      tone(78, 0.7, "triangle", 0.12, 70, 0.46);
+    } else {
+      [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, "square", 0.045, undefined, 0.1 + i * 0.1));
+      chord([523, 659, 784, 1047], 0.6, "triangle", 0.12, 0.52);
+    }
+  },
+  /** Kedip sirene "wiu-wiu"; dipanggil berulang selama TV tampil. */
+  sirenBeep: (high: boolean) => tone(high ? 960 : 720, 0.22, "triangle", 0.025, high ? 900 : 760),
+  /** TV tabung dimatikan: "piuuu" turun + klik. */
+  powerOff: () => {
+    tone(1400, 0.32, "sine", 0.06, 60);
+    noise(0.12, 0.05, "highpass", 4000);
+    tone(2200, 0.02, "square", 0.04, undefined, 0.3);
+  },
+  /** Whoosh saat TV melompat pergi. */
+  whoosh: () => noise(0.4, 0.08, "bandpass", 400, 2500, 0, 1.5),
+};
+
 export const sfx = {
   fart: () => {
     wobble(95, 0.7, "sawtooth", 0.14, 28, 30, 60);
