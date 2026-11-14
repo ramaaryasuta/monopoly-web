@@ -13,20 +13,20 @@ const KIND_LABEL: Record<string, string> = {
   start: "Petak Mulai",
   property: "Properti",
   resort: "Tempat Wisata",
-  chance: "Kardus Misterius",
+  chance: "Paket Misterius",
   tax: "Pajak",
-  island: "Pulau Jomblo",
-  festival: "Pesta Dangdut",
-  tour: "Naik UFO",
+  island: "Penjara",
+  festival: "Pesta Pejabat",
+  tour: "Naik Pesawat Negara",
 };
 
 const TILE_HELP: Record<string, string> = {
   start: `Dapat ${fmt(CONFIG.salary)} setiap melewati petak ini.`,
-  chance: "Buka kardus misterius — isinya bisa duit, bisa kentut nuklir!",
-  tax: `Preman lewat. Bayar ${CONFIG.taxRate * 100}% dari uangmu (minimal 50).`,
-  island: `Galau sendirian ${CONFIG.islandTurns} giliran. Keluar dengan dadu kembar atau sewa perahu bebek ${fmt(CONFIG.islandBail)}.`,
-  festival: `Adakan dangdutan di satu propertimu — sewanya jadi x${CONFIG.festivalMultiplier}.`,
-  tour: `Numpang UFO: giliran berikutnya dijatuhkan ke petak mana saja (ongkos ${fmt(CONFIG.tourFee)}).`,
+  chance: "Paket datang tanpa pesan! Buka isinya — bisa duit, bisa kentut nuklir!",
+  tax: `Ormas datang minta "uang keamanan". Bayar ${CONFIG.taxRate * 100}% dari uangmu (minimal ${fmt(50)}).`,
+  island: `Dipenjara ${CONFIG.islandTurns} giliran. Keluar dengan dapat dadu kembar atau sogok sipir ${fmt(CONFIG.islandBail)}.`,
+  festival: `Gelar pesta pejabat di satu propertimu — sewanya jadi x${CONFIG.festivalMultiplier}.`,
+  tour: `Numpang pesawat negara: giliran berikutnya mendarat di petak mana saja (ongkos ${fmt(CONFIG.tourFee)}).`,
 };
 
 export class Hud {

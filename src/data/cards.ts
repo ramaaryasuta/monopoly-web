@@ -41,10 +41,10 @@ export const CARDS: Card[] = [
   { id: "repair", title: "Atap Bocor Semua", text: "Musim hujan! Bayar Rp20 jt untuk setiap level bangunanmu.", icon: "🪣", effect: { type: "repair", perLevel: 20 }, fx: "cry" },
   { id: "shield", title: "Jimat Kolor Sakti", text: "Kolor warisan kakek. Bebas bayar sewa satu kali.", icon: "🩲", effect: { type: "shield" }, fx: "dance" },
   { id: "toStart", title: "Ketapel Raksasa", text: "Kamu ditembakkan pakai ketapel ke petak Mulai!", icon: "🪃", effect: { type: "goto", tile: 0 }, fx: "dizzy" },
-  { id: "toIsland", title: "Ditolak Gebetan", text: "Patah hati, kamu kabur ke Pulau Jomblo.", icon: "💔", effect: { type: "island" }, fx: "cry" },
+  { id: "toIsland", title: "Digrebek Polisi", text: "Ketahuan main judi online. Langsung digiring ke Nusakambangan!", icon: "🚓", effect: { type: "island" }, fx: "cry" },
   { id: "birthday", title: "Ultah Dadakan", text: "Ngaku ulang tahun (padahal bukan). Setiap pemain memberimu Rp50 jt.", icon: "🎂", effect: { type: "collectFromAll", amount: 50 }, fx: "dance" },
   { id: "back3", title: "Kunci Motor Ketinggalan", text: "Balik lagi! Mundur 3 petak.", icon: "🔑", effect: { type: "back", steps: 3 }, fx: "dizzy" },
-  { id: "toFestival", title: "Diundang Manggung", text: "Suaramu fals tapi pede. Pergi ke Pesta Dangdut!", icon: "🎤", effect: { type: "goto", tile: 16 }, fx: "dance" },
+  { id: "toFestival", title: "Dapat Undangan VIP", text: "Namamu nyelip di daftar tamu. Berangkat ke Pesta Pejabat!", icon: "🥂", effect: { type: "goto", tile: 16 }, fx: "dance" },
   { id: "fart", title: "Kentut Nuklir", text: "BRRRT! Semua pemain lain terpental mundur 2 petak.", icon: "💨", effect: { type: "pushOthers", steps: 2 }, fx: "fart" },
   { id: "ufo", title: "Diculik Alien", text: "Alien penasaran sama kumismu. Kamu dilepas di petak acak.", icon: "🛸", effect: { type: "randomTile" }, fx: "ufo" },
   { id: "swap", title: "Tukar Jiwa", text: "Kesamber petir bareng pemain lain. Kalian tukar posisi!", icon: "⚡", effect: { type: "swap" }, fx: "shake" },
@@ -68,7 +68,7 @@ export const CARDS: Card[] = [
   { id: "viral", title: "Kartu Viral", text: "Kontenmu FYP! Setiap pemain kirim saweran Rp40 jt.", icon: "🤳", effect: { type: "collectFromAll", amount: 40 }, fx: "dance" },
   { id: "gusur", title: "Kartu Kena Gusur", text: "Lahanmu kena proyek strategis. Angkat koper, mundur 4 petak.", icon: "🚜", effect: { type: "back", steps: 4 }, fx: "shake" },
   { id: "wapres", title: "Kartu Wapres Resign", text: "Kursi kosong mendadak! Kamu langsung meluncur ke Istana Presiden.", icon: "🪑", effect: { type: "goto", tile: 31 }, fx: "dizzy" },
-  { id: "ronda", title: "Ketiduran Pas Ronda", text: "Ditinggal teman. Kamu terbangun dan lari ke Pos Ronda.", icon: "😴", effect: { type: "goto", tile: 9 }, fx: "dizzy" },
+  { id: "ronda", title: "Dipanggil Jadi Saksi", text: "Surat panggilan datang. Kamu buru-buru ke Polri.", icon: "👮", effect: { type: "goto", tile: 9 }, fx: "dizzy" },
 ];
 
 /** Event konyol sedunia: kadang muncul di awal ronde. */

@@ -83,13 +83,19 @@ export class HumanDecider implements Decider {
     const def = BOARD[c.tile];
     const isResort = def.kind === "resort";
     const title = c.currentLevel === 0 ? `Beli ${def.name}?` : `Bangun di ${def.name}?`;
-    const buttons = c.options.map((o) => ({
+    const all = [
+      ...c.options.map((o) => ({ ...o, ok: true })),
+      ...(c.unaffordable ?? []).map((o) => ({ ...o, ok: false })),
+    ].sort((a, b) => a.level - b.level);
+    const buttons = all.map((o) => ({
       label: isResort ? `🌴 Beli Wisata — ${fmt(o.cost)}` : `${LEVEL_ICON[o.level]} ${LEVEL_NAMES[o.level]} — ${fmt(o.cost)}`,
-      sub: `sewa ${fmt(this.rentAt(c.tile, c.player, o.level))}`,
+      sub: o.ok ? `sewa ${fmt(this.rentAt(c.tile, c.player, o.level))}` : `💸 uang kurang ${fmt(o.cost - c.money)}`,
       value: o.level,
       class: o.level === 5 ? "pink" : "green",
+      disabled: !o.ok,
     }));
-    buttons.push({ label: "Lewati", sub: "", value: c.currentLevel, class: "white" });
+    const noneAffordable = c.options.length === 0;
+    buttons.push({ label: noneAffordable ? "Oke, lewati" : "Lewati", sub: "", value: c.currentLevel, class: "white", disabled: false });
     const levelText = c.currentLevel > 0 ? `Saat ini: <b>${LEVEL_NAMES[c.currentLevel]}</b>. ` : "";
     return modal({
       title,
@@ -116,17 +122,17 @@ export class HumanDecider implements Decider {
 
   async chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll"> {
     return modal({
-      title: "💔 Terdampar di Pulau Jomblo",
-      body: `<p>Sisa ${c.turnsLeft} giliran. Dapat dadu kembar untuk kabur, atau sewa perahu bebek dan move on.</p>`,
+      title: "⛓️ Dipenjara di Nusakambangan",
+      body: `<p>Sisa ${c.turnsLeft} giliran. Dapatkan dadu kembar untuk kabur, atau sogok sipir biar langsung bebas.</p>`,
       buttons: [
-        { label: `🦆 Sewa perahu bebek ${fmt(c.bail)}`, value: "pay" as const, class: "blue", disabled: !c.canPay },
-        { label: "🎲 Coba dadu kembar", value: "roll" as const, class: "green" },
+        { label: `💰 Sogok sipir ${fmt(c.bail)}`, value: "pay" as const, class: "blue", disabled: !c.canPay },
+        { label: "🎲 Coba dapat dadu kembar", value: "roll" as const, class: "green" },
       ],
     });
   }
 
   async chooseTile(c: TileChoice): Promise<number> {
-    this.hud.showPickBanner(c.purpose === "tour" ? "Klik petak tempat UFO menjatuhkanmu" : "Klik propertimu untuk Pesta Dangdut");
+    this.hud.showPickBanner(c.purpose === "tour" ? "Klik petak tujuan pesawat negara" : "Klik propertimu untuk Pesta Pejabat");
     try {
       return await this.scene.pickTile(c.options);
     } finally {

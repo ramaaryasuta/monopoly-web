@@ -15,8 +15,17 @@ import { ScenePresenter } from "./ui/ScenePresenter";
 async function boot() {
   const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
   const view = new GameScene(canvas);
-  // Kamera berputar pelan di menu
-  const spin = view.scene.onBeforeRenderObservable.add(() => (view.camera.alpha += 0.0015));
+  Object.assign(window as object, { __view: view });
+  // Kamera berputar sangat pelan di menu (berbasis waktu, bukan per frame, supaya
+  // tidak makin cepat di layar 120/144 Hz). Satu putaran ≈ 5 menit.
+  // Diam total bila sistem meminta "kurangi gerakan".
+  const MENU_SPIN_RAD_PER_SEC = (Math.PI * 2) / 300;
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const spin = view.scene.onBeforeRenderObservable.add(() => {
+    if (reduceMotion) return;
+    const dt = Math.min(view.engine.getDeltaTime(), 100) / 1000;
+    view.camera.alpha += MENU_SPIN_RAD_PER_SEC * dt;
+  });
 
   await document.fonts?.ready;
   const setup = await showMenu();

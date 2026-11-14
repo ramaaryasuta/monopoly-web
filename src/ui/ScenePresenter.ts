@@ -1,6 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 import type { ItemUse, MessageKind, Presenter } from "../core/interfaces";
 import type { GameState } from "../core/types";
+import { BOARD } from "../data/board";
 import { ITEMS, SEASON_ROUNDS, type Card, type ChaosEvent, type FunFx, type SeasonDef } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
 import { seasonSfx, sfx } from "../scene/sfx";
@@ -65,11 +66,17 @@ export class ScenePresenter implements Presenter {
     this.hud.toast(text, kind);
   }
 
+  /** Nama paket (Shopee/Tokopedia/...) sesuai petak tempat pemain mendarat. */
+  private packetName(player: number): string | undefined {
+    const t = BOARD[this.state.players[player].position];
+    return t?.kind === "chance" ? t.name : undefined;
+  }
+
   async showCard(player: number, card: Card) {
     const bot = !this.isLocalHuman(player);
     const isItem = card.effect.type === "item";
     // Kartu 3D diambil dari tumpukan, terbang ke depan kamera, lalu dibuka
-    await this.view.cards.draw({ icon: card.icon, title: card.title, text: card.text, kind: isItem ? "item" : "card" });
+    await this.view.cards.draw({ icon: card.icon, title: card.title, text: card.text, kind: isItem ? "item" : "card", header: this.packetName(player) });
     await modal({
       title: card.title,
       className: "comic card-reveal",

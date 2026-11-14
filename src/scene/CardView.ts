@@ -32,6 +32,8 @@ export interface CardFace {
   text: string;
   /** "card" = kartu biasa, "item" = kartu simpanan (warna & label beda). */
   kind: "card" | "item";
+  /** Label pita atas kartu biasa, mis. nama petak paket. */
+  header?: string;
 }
 
 /** Letak tumpukan kartu di dalam papan (pojok kanan-atas area rumput). */
@@ -139,7 +141,7 @@ export class CardView {
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#ffffff";
     ctx.font = `bold 34px ${FONT}`;
-    ctx.fillText(item ? "🎒 KARTU SIMPANAN" : "KARDUS MISTERIUS", TW / 2, 82);
+    ctx.fillText(item ? "🎒 KARTU SIMPANAN" : `📦 ${(face.header ?? "Paket Misterius").toUpperCase()}`, TW / 2, 82);
 
     // Ikon besar di lingkaran
     ctx.beginPath();

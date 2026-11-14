@@ -28,6 +28,7 @@ export class BotDecider implements Decider {
   }
 
   async chooseBuild(c: BuildChoice): Promise<number> {
+    if (c.options.length === 0) return c.currentLevel;
     await this.think();
     const reserve = this.reserve(c.player);
     const affordable = c.options.filter((o) => c.money - o.cost >= reserve);

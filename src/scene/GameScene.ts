@@ -81,7 +81,8 @@ export class GameScene {
     // Post-processing: anti-alias, bloom ringan, warna lebih "pop"
     const pipeline = new DefaultRenderingPipeline("pipe", true, scene, [cam]);
     pipeline.samples = 4;
-    pipeline.fxaaEnabled = true;
+    // FXAA dimatikan: MSAA 4x sudah cukup, FXAA bikin tulisan petak buram.
+    pipeline.fxaaEnabled = false;
     pipeline.bloomEnabled = true;
     pipeline.bloomThreshold = 0.85;
     pipeline.bloomWeight = 0.25;

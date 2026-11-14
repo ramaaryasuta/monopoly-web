@@ -7,11 +7,15 @@ const ICONS: Record<string, string> = {
   start: "🏁",
   chance: "📦",
   tax: "🦹",
-  island: "💔",
-  festival: "🎤",
-  tour: "🛸",
+  island: "⛓️",
+  festival: "🥂",
+  tour: "✈️",
   resort: "🌴",
 };
+
+/** Warna tinta teks petak: hampir hitam supaya kontras di atas petak krem. */
+const INK = "#1d1228";
+const TILE_TEX_SIZE = 512;
 
 export const FONT = "'Fredoka', 'Baloo 2', 'Comic Sans MS', system-ui, sans-serif";
 
@@ -50,25 +54,27 @@ export interface TileArtState {
 export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
   const ctx = tex.getContext() as unknown as CanvasRenderingContext2D;
   const S = tex.getSize().width;
+  /** Skala ukuran garis/sudut yang dulu dirancang untuk tekstur 256px. */
+  const k = S / 256;
   ctx.clearRect(0, 0, S, S);
 
   const isCorner = def.index % 8 === 0;
   const base = isCorner ? "#fff3c4" : "#fffaf0";
-  roundRect(ctx, 6, 6, S - 12, S - 12, 28);
+  roundRect(ctx, 6 * k, 6 * k, S - 12 * k, S - 12 * k, 28 * k);
   ctx.fillStyle = base;
   ctx.fill();
 
   // Pita warna grup (sisi dalam = atas tekstur)
   if (def.kind === "property") {
     ctx.save();
-    roundRect(ctx, 6, 6, S - 12, S * 0.24, 28);
+    roundRect(ctx, 6 * k, 6 * k, S - 12 * k, S * 0.24, 28 * k);
     ctx.clip();
     ctx.fillStyle = GROUP_COLORS[def.group!];
     ctx.fillRect(0, 0, S, S * 0.3);
     ctx.restore();
   } else if (def.kind === "resort") {
     ctx.save();
-    roundRect(ctx, 6, 6, S - 12, S * 0.24, 28);
+    roundRect(ctx, 6 * k, 6 * k, S - 12 * k, S * 0.24, 28 * k);
     ctx.clip();
     const g = ctx.createLinearGradient(0, 0, S, 0);
     g.addColorStop(0, "#36d1c4");
@@ -79,9 +85,9 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
   }
 
   // Bingkai pemilik
-  ctx.lineWidth = st.ownerColor ? 16 : 8;
-  ctx.strokeStyle = st.ownerColor ?? "#3a2a4a";
-  roundRect(ctx, 10, 10, S - 20, S - 20, 26);
+  ctx.lineWidth = (st.ownerColor ? 16 : 8) * k;
+  ctx.strokeStyle = st.ownerColor ?? INK;
+  roundRect(ctx, 10 * k, 10 * k, S - 20 * k, S - 20 * k, 26 * k);
   ctx.stroke();
 
   ctx.textAlign = "center";
@@ -90,10 +96,10 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
   if (isCorner || def.kind === "chance" || def.kind === "tax") {
     ctx.font = `${isCorner ? S * 0.36 : S * 0.3}px ${FONT}`;
     ctx.fillText(ICONS[def.kind], S / 2, S * 0.42);
-    ctx.fillStyle = "#3a2a4a";
-    ctx.font = `bold ${S * 0.11}px ${FONT}`;
-    wrapText(ctx, def.name, S * 0.85).forEach((l, i, arr) => {
-      ctx.fillText(l, S / 2, S * 0.78 + (i - (arr.length - 1) / 2) * S * 0.12);
+    ctx.fillStyle = INK;
+    ctx.font = `bold ${S * 0.12}px ${FONT}`;
+    wrapText(ctx, def.name, S * 0.88).forEach((l, i, arr) => {
+      ctx.fillText(l, S / 2, S * 0.78 + (i - (arr.length - 1) / 2) * S * 0.125);
     });
     return;
   }
@@ -103,23 +109,23 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
     ctx.font = `${S * 0.2}px ${FONT}`;
     ctx.fillText(ICONS.resort, S / 2, S * 0.42);
   }
-  ctx.fillStyle = "#3a2a4a";
-  ctx.font = `bold ${S * 0.12}px ${FONT}`;
-  const lines = wrapText(ctx, def.name, S * 0.82);
-  const nameY = def.kind === "resort" ? S * 0.62 : S * 0.48;
-  lines.forEach((l, i) => ctx.fillText(l, S / 2, nameY + (i - (lines.length - 1) / 2) * S * 0.13));
+  ctx.fillStyle = INK;
+  ctx.font = `bold ${S * 0.13}px ${FONT}`;
+  const lines = wrapText(ctx, def.name, S * 0.86);
+  const nameY = def.kind === "resort" ? S * 0.6 : S * 0.48;
+  lines.forEach((l, i) => ctx.fillText(l, S / 2, nameY + (i - (lines.length - 1) / 2) * S * 0.135));
 
   // Harga / sewa
-  ctx.font = `bold ${S * 0.11}px ${FONT}`;
+  ctx.font = `bold ${S * 0.12}px ${FONT}`;
   const label = st.ownerColor ? `Sewa ${rp(st.rent)}` : rp(def.price ?? 0);
   const w = ctx.measureText(label).width + S * 0.12;
-  roundRect(ctx, S / 2 - w / 2, S * 0.76, w, S * 0.15, S * 0.07);
+  roundRect(ctx, S / 2 - w / 2, S * 0.755, w, S * 0.16, S * 0.075);
   ctx.fillStyle = st.ownerColor ?? "#ffd23f";
   ctx.fill();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = "#3a2a4a";
+  ctx.lineWidth = 4 * k;
+  ctx.strokeStyle = INK;
   ctx.stroke();
-  ctx.fillStyle = st.ownerColor ? "#fff" : "#3a2a4a";
+  ctx.fillStyle = st.ownerColor ? "#fff" : INK;
   ctx.fillText(label, S / 2, S * 0.835);
 
   if (st.festival) {
@@ -129,7 +135,9 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
 }
 
 export function createTileTexture(scene: Scene, name: string) {
-  const tex = new DynamicTexture(name, { width: 256, height: 256 }, scene, true);
+  // 512px + filter anisotropik supaya tulisan tetap tajam walau papan dilihat miring.
+  const tex = new DynamicTexture(name, { width: TILE_TEX_SIZE, height: TILE_TEX_SIZE }, scene, true);
   tex.hasAlpha = true;
+  tex.anisotropicFilteringLevel = 16;
   return tex;
 }

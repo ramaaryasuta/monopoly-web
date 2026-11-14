@@ -7,6 +7,8 @@ export interface BuildChoice {
   currentLevel: number;
   /** Level yang bisa dituju beserta total biayanya (sudah difilter yang terjangkau). */
   options: { level: number; cost: number }[];
+  /** Level yang ada tapi uangnya tidak cukup — ditampilkan sebagai tombol nonaktif. */
+  unaffordable?: { level: number; cost: number }[];
   money: number;
 }
 

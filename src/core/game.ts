@@ -134,7 +134,7 @@ export class Game {
       if (isDouble) {
         doubles++;
         if (doubles === 3) {
-          this.presenter.message(`${p.name} melempar dadu kembar 3x — terdampar di pulau!`, "bad");
+          this.presenter.message(`${p.name} melempar dadu kembar 3x — dijebloskan ke Nusakambangan!`, "bad");
           await this.sendToIsland(p.id);
           break;
         }
@@ -172,7 +172,7 @@ export class Game {
     if (action === "pay" && canPay) {
       this.addMoney(pid, -CONFIG.islandBail);
       p.islandTurns = 0;
-      this.presenter.message(`${p.name} membayar ${fmt(CONFIG.islandBail)} buat sewa perahu bebek. Bye jomblo!`);
+      this.presenter.message(`${p.name} nyogok sipir ${fmt(CONFIG.islandBail)} dan keluar lewat pintu belakang. Bebas!`);
       await decider.waitForRoll(pid);
       const [d1, d2] = this.roll();
       await this.presenter.diceRolled(pid, d1, d2);
@@ -186,7 +186,7 @@ export class Game {
     await this.presenter.diceRolled(pid, d1, d2);
     if (d1 === d2) {
       p.islandTurns = 0;
-      this.presenter.message(`${p.name} dapat dadu kembar dan kabur dari pulau!`, "good");
+      this.presenter.message(`${p.name} dapat dadu kembar dan kabur dari Nusakambangan!`, "good");
       await this.moveSteps(pid, d1 + d2);
       await this.resolveTile(pid);
     } else {
@@ -285,19 +285,19 @@ export class Game {
         return this.drawCard(pid);
       case "tax": {
         const tax = Math.max(50, Math.round((p.money * CONFIG.taxRate) / 10) * 10);
-        this.presenter.message(`${p.name} membayar pajak ${fmt(tax)}.`, "bad");
+        this.presenter.message(`${p.name} membayar uang ormas ${fmt(tax)}.`, "bad");
         await this.charge(pid, tax, null);
         return;
       }
       case "island":
-        this.presenter.message(`${p.name} terdampar di Pulau Jomblo! Kasihan...`, "bad");
+        this.presenter.message(`${p.name} dijebloskan ke Nusakambangan! Kasihan...`, "bad");
         await this.sendToIsland(pid);
         return;
       case "festival":
         return this.hostFestival(pid);
       case "tour":
         p.pendingTour = true;
-        this.presenter.message(`${p.name} naik UFO! Giliran berikutnya pilih mau dijatuhkan di mana.`);
+        this.presenter.message(`${p.name} naik Pesawat Negara! Giliran berikutnya pilih mau mendarat di mana.`);
         return;
     }
   }
@@ -358,20 +358,23 @@ export class Game {
     }
     const max = maxTargetLevel(this.state, tile);
     const options: { level: number; cost: number }[] = [];
+    const unaffordable: { level: number; cost: number }[] = [];
     for (let l = ts.level + 1; l <= max; l++) {
       // Landmark hanya bisa sendiri (tidak dari level < 4)
       const cost = seasonalCost(this.state, upgradeCost(tile, ts.level, l));
-      if (cost <= p.money) options.push({ level: l, cost });
+      (cost <= p.money ? options : unaffordable).push({ level: l, cost });
     }
-    if (options.length === 0) {
-      if (ts.owner === null) this.presenter.message(`${p.name} tidak punya cukup uang untuk membeli ${BOARD[tile].name}.`);
-      return;
+    if (options.length === 0 && unaffordable.length === 0) return;
+    if (options.length === 0 && ts.owner === null) {
+      this.presenter.message(`${p.name} tidak punya cukup uang untuk membeli ${BOARD[tile].name}.`);
     }
+    // Tetap tanya walau semua tidak terjangkau: pemain manusia melihat tombol nonaktif.
     const target = await this.deciders[pid].chooseBuild({
       player: pid,
       tile,
       currentLevel: ts.level,
       options,
+      unaffordable,
       money: p.money,
     });
     const chosen = options.find((o) => o.level === target);
@@ -395,7 +398,7 @@ export class Game {
     const p = this.state.players[pid];
     const options = ownedTiles(this.state, pid);
     if (options.length === 0) {
-      this.presenter.message(`${p.name} joget sendirian di Pesta Dangdut. Belum punya properti buat dimeriahkan.`);
+      this.presenter.message(`${p.name} datang ke Pesta Pejabat tapi belum punya properti buat dijadikan tempat pesta.`);
       return;
     }
     const tile = await this.deciders[pid].chooseTile({ player: pid, purpose: "festival", options });
@@ -406,7 +409,7 @@ export class Game {
     }
     this.state.festivalTile = tile;
     this.state.tiles[tile].festival = true;
-    this.presenter.message(`Pesta Dangdut di ${BOARD[tile].name}! Sewa jadi x${CONFIG.festivalMultiplier}.`, "good");
+    this.presenter.message(`Pesta Pejabat di ${BOARD[tile].name}! Sewa jadi x${CONFIG.festivalMultiplier}.`, "good");
     await this.presenter.tileChanged(this.state, tile);
   }
 
@@ -707,7 +710,7 @@ export class Game {
         const v = this.state.players[targets[0]];
         // Yang sedang di pulau tetap di pulau supaya aturan pulau konsisten
         if (v.islandTurns > 0) {
-          this.presenter.message(`UFO mau culik ${v.name}, tapi jijik sama jomblo. Batal!`);
+          this.presenter.message(`UFO mau culik ${v.name}, tapi penjagaan Nusakambangan terlalu ketat. Batal!`);
           return;
         }
         const dest = Math.floor(this.rng() * BOARD_SIZE);

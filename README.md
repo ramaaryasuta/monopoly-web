@@ -45,9 +45,9 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 - Mendarat di tanah kosong → beli & langsung bangun hingga **Vila**. **Landmark** dibangun saat mendarat lagi di Vila sendiri.
 - Mendarat di properti lawan → bayar **sewa**, lalu boleh **akuisisi** (2x nilai investasi). Landmark tidak bisa diakuisisi.
 - **Tempat wisata** 🌴: sewa berlipat untuk setiap wisata milik pemilik yang sama.
-- **Dadu kembar** = lempar lagi; kembar 3x = terdampar di **Pulau Jomblo** (3 giliran / sewa perahu bebek 100 / dadu kembar).
-- **Pesta Dangdut** 🎤: sewa satu propertimu x2. **Naik UFO** 🛸: giliran berikutnya dijatuhkan ke petak mana saja.
-- **Kardus Misterius** 📦: 22 kartu konyol (kentut nuklir, diculik alien, tukar jiwa, mesin capit, dll).
+- **Dadu kembar** = lempar lagi; kembar 3x = dijebloskan ke **Nusakambangan** (3 giliran / sogok sipir Rp100 jt / dadu kembar).
+- **Pesta Pejabat** 🥂: sewa satu propertimu x2. **Naik Pesawat Negara** ✈️: giliran berikutnya terbang ke petak mana saja.
+- **Paket Shopee / Tokopedia / Blibli / Lazada** 📦: 34 kartu konyol (kentut nuklir, diculik alien, tukar jiwa, mesin capit, dll).
 - **Berita Heboh** 📢: di awal ronde baru (peluang 45%) muncul event sepulau — UFO nyasar, gempa kentut, maling budiman, bansos, dll.
 - Uang kurang → properti dijual otomatis (50%) → kalau masih kurang, **bangkrut**.
 - **Menang**: lawan bangkrut semua · monopoli 3 grup warna · kuasai 1 sisi papan · kuasai 4 wisata · terkaya di ronde 30.

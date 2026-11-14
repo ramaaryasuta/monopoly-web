@@ -83,7 +83,7 @@ describe("game flow", () => {
     expect(g.state.players[0].money).toBe(CONFIG.startMoney + CONFIG.salary);
   });
 
-  it("dadu kembar 3x mengirim ke pulau", async () => {
+  it("dadu kembar 3x mengirim ke Nusakambangan", async () => {
     const g = botGame(2, 1);
     g.forcedDice = [[1, 1], [2, 2], [3, 3]];
     await g.playTurn();
@@ -114,7 +114,7 @@ describe("game flow", () => {
       const g = botGame(4, 7);
       g.state.players[2].position = 8;
       g.state.players[2].islandTurns = 2;
-      g.state.players[0].position = 5; // Kardus Misterius
+      g.state.players[0].position = 5; // Paket Shopee
       g.forcedCard = card.id;
       await g.resolveTile(0);
       for (const p of g.state.players) {

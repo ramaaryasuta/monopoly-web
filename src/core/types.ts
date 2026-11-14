@@ -6,7 +6,7 @@ export type TileKind =
   | "resort"
   | "chance"
   | "tax"
-  | "island" // penjara: Pulau Terpencil
+  | "island" // penjara: Nusakambangan
   | "festival"
   | "tour"; // Wisata Dunia: teleport giliran berikutnya
 
