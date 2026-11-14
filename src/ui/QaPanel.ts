@@ -1,5 +1,5 @@
 import type { Game } from "../core/game";
-import { CARDS } from "../data/cards";
+import { CARDS, CHAOS_EVENTS } from "../data/cards";
 import { h, uiRoot } from "./dom";
 import type { Hud } from "./Hud";
 
@@ -21,6 +21,13 @@ export function mountQaPanel(game: Game, hud: Hud) {
   for (const c of CARDS) card.append(h("option", { value: c.id }, `${c.icon} ${c.title}`));
   card.addEventListener("change", () => (game.forcedCard = card.value || null));
 
+  const chaos = h("select", { "data-testid": "qa-chaos" }, h("option", { value: "" }, "(event acak)"));
+  for (const c of CHAOS_EVENTS) chaos.append(h("option", { value: c.id }, `${c.icon} ${c.headline}`));
+  chaos.addEventListener("change", () => {
+    game.forcedChaos = chaos.value || null;
+    chaos.value = "";
+  });
+
   const money = h("button", { class: "btn small" }, "+1000 pemain aktif");
   money.addEventListener("click", () => {
     const p = game.state.players[game.state.current];
@@ -36,6 +43,7 @@ export function mountQaPanel(game: Game, hud: Hud) {
     h("div", { class: "row" }, "Dadu:", d1, d2, addDice),
     h("div", { class: "row" }, "Antrian:", queueLabel),
     h("div", { class: "row" }, "Kartu:", card),
+    h("div", { class: "row" }, "Event giliran berikut:", chaos),
     h("div", { class: "row" }, money),
   );
   uiRoot().append(panel);

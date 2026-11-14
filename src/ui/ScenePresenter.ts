@@ -1,11 +1,11 @@
 import { Vector3 } from "@babylonjs/core";
 import type { MessageKind, Presenter } from "../core/interfaces";
 import type { GameState } from "../core/types";
-import type { Card } from "../data/cards";
+import type { Card, ChaosEvent } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
 import { sfx } from "../scene/sfx";
 import { wait } from "../scene/tween";
-import { modal } from "./dom";
+import { escapeHtml, modal } from "./dom";
 import type { Hud } from "./Hud";
 
 /** Menjembatani event game logic → animasi 3D + HUD. */
@@ -37,6 +37,8 @@ export class ScenePresenter implements Presenter {
   }
 
   moneyChanged(state: GameState, player: number, delta: number) {
+    if (delta >= 150) this.hud.speech(player, pick(HAPPY));
+    else if (delta <= -150) this.hud.speech(player, pick(SAD));
     this.hud.animateMoney(player);
     this.hud.floatMoney(player, delta);
     this.hud.refresh();
@@ -66,15 +68,36 @@ export class ScenePresenter implements Presenter {
     const bot = this.state.players[player].isBot;
     await modal({
       title: card.title,
-      body: `<div class="card-art">${card.icon}</div><p>${card.text}</p>`,
-      buttons: [{ label: "OK!", value: 0, class: "green" }],
-      autoCloseMs: bot ? 1800 : undefined,
+      className: "comic",
+      body: `<div class="comic-pow">${pick(POW)}</div><div class="card-art">${card.icon}</div><p>${card.text}</p>`,
+      buttons: [{ label: pick(OK_LABELS), value: 0, class: "green" }],
+      autoCloseMs: bot ? 2000 : undefined,
     });
+    if (card.fx) await this.view.funFx(card.fx, [player]);
+    this.hud.speech(player, pick(card.fx === "cry" ? SAD : HAPPY));
+  }
+
+  async showEvent(ev: ChaosEvent, targets: number[]) {
+    sfx.scream();
+    const names = targets.map((t) => escapeHtml(this.state.players[t].name)).join(", ");
+    const allBots = this.state.players.every((p) => p.isBot || p.bankrupt);
+    await this.view.goHome(0.5);
+    await modal({
+      title: ev.headline,
+      className: "comic breaking",
+      body: `<div class="breaking-tag">📢 BERITA HEBOH</div><div class="card-art">${ev.icon}</div><p>${ev.text}</p>${
+        targets.length < this.state.players.length ? `<p class="victim">Yang kena: <b>${names}</b></p>` : ""
+      }`,
+      buttons: [{ label: pick(["Astaga!", "Waduh!", "Hah?!", "Ngakak 🤣"]), value: 0, class: "pink" }],
+      autoCloseMs: allBots ? 2200 : 6000,
+    });
+    await this.view.funFx(ev.fx, targets);
   }
 
   async playerBankrupt(state: GameState, player: number) {
-    sfx.bad();
+    sfx.sadTrombone();
     this.hud.refresh();
+    this.hud.speech(player, pick(["Mampus aku...", "Pinjol mana pinjol?!", "Aku pulang kampung aja 😭", "Jual ginjal kah?"]), true);
     await this.view.pawns[player].faint();
     void state;
   }
@@ -91,3 +114,9 @@ export class ScenePresenter implements Presenter {
     await this.hud.showGameOver();
   }
 }
+
+const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const POW = ["BOOM!", "WADUH!", "PLAK!", "BRRRT!", "GASS!", "ANJAY!", "DUAR!"];
+const OK_LABELS = ["OK deh", "Pasrah 🙏", "Gaskeun!", "Yaudah lah", "Siap bos!"];
+const HAPPY = ["Gaskeun! 🔥", "Rezeki anak soleh!", "Mantap jiwa!", "Sultan mah bebas 😎", "Hahaha kaya!", "Cuan cuan cuan!", "Traktir? Nggak."];
+const SAD = ["Waduh...", "Dompetku menangis 😭", "Kok gitu sih?!", "Asem!", "Astagaa...", "Nangis di pojokan", "Gajian masih lama..."];

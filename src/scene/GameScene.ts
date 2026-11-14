@@ -16,6 +16,7 @@ import {
   type PointerInfo,
 } from "@babylonjs/core";
 import type { GameState } from "../core/types";
+import type { FunFx } from "../data/cards";
 import { BoardView } from "./BoardView";
 import { Dice } from "./Dice";
 import { Effects } from "./Effects";
@@ -188,6 +189,67 @@ export class GameScene {
       }
     } finally {
       stop();
+    }
+  }
+
+  /** Guncang kamera (gempa, petir, kentut nuklir). */
+  async shakeCamera(strength = 0.6, dur = 0.6) {
+    const cam = this.camera;
+    const base = cam.target.clone();
+    await tween(this.scene, dur, (t) => {
+      const k = (1 - t) * strength;
+      cam.target = base.add(new Vector3((Math.random() - 0.5) * k, (Math.random() - 0.5) * k * 0.5, (Math.random() - 0.5) * k));
+    });
+    cam.target = base;
+  }
+
+  /** Efek konyol untuk kartu/event. `players` = pion yang kena. */
+  async funFx(fx: FunFx, players: number[]) {
+    const pawns = players.map((i) => this.pawns[i]).filter((p) => p && !p.isOut);
+    const center = pawns.length === 1 ? pawns[0].root.position.clone() : new Vector3(0, 0, 0);
+    switch (fx) {
+      case "fart":
+        sfx.fart();
+        for (const p of pawns) this.effects.fart(p.root.position);
+        void this.shakeCamera(0.8, 0.8);
+        await Promise.all(this.pawns.filter((p) => !p.isOut).map((p) => p.blasted()));
+        return;
+      case "ufo":
+        sfx.ufo();
+        await this.effects.ufoVisit(center, async () => {
+          await Promise.all(pawns.map((p) => p.dizzy()));
+        });
+        return;
+      case "dance":
+        sfx.dangdut();
+        for (const p of pawns) this.effects.emojiBurst(p.root.position.add(new Vector3(0, 1.8, 0)), "🎵", 6);
+        await Promise.all(pawns.map((p) => p.dance()));
+        return;
+      case "cry":
+        sfx.sadTrombone();
+        for (const p of pawns) this.effects.tears(p.root.position);
+        await Promise.all(pawns.map((p) => p.sulk()));
+        return;
+      case "rain":
+        sfx.coin();
+        this.effects.moneyRain(center);
+        await Promise.all(pawns.map((p) => p.cheer()));
+        return;
+      case "shake":
+        sfx.zap();
+        void this.shakeCamera(0.7, 0.7);
+        for (const p of pawns) this.effects.emojiBurst(p.root.position.add(new Vector3(0, 1.8, 0)), "⚡", 5);
+        await Promise.all(pawns.map((p) => p.blasted()));
+        return;
+      case "dizzy":
+        sfx.boing();
+        for (const p of pawns) this.effects.emojiBurst(p.root.position.add(new Vector3(0, 2, 0)), "⭐", 6);
+        await Promise.all(pawns.map((p) => p.dizzy()));
+        return;
+      case "duck":
+        sfx.honk();
+        await this.effects.giantDuck(pawns.length === 1 ? center.add(new Vector3(0, 0, TILE * 1.4)) : new Vector3(0, 0, TILE));
+        return;
     }
   }
 

@@ -1,5 +1,5 @@
 import { BOARD, BOARD_SIZE, ISLAND_INDEX, TOUR_INDEX } from "../data/board";
-import { CARDS, type Card } from "../data/cards";
+import { CARDS, CHAOS_CHANCE, CHAOS_EVENTS, type Card, type ChaosEvent } from "../data/cards";
 import type { Decider, Presenter } from "./interfaces";
 import { createRng, rollDie, type Rng } from "./rng";
 import {
@@ -35,6 +35,9 @@ export class Game {
   forcedDice: [number, number][] = [];
   /** Kartu paksa (fitur QA): id kartu berikutnya. */
   forcedCard: string | null = null;
+  /** Event konyol paksa (fitur QA): id event di awal giliran berikutnya. */
+  forcedChaos: string | null = null;
+  private chaosRound = 1;
   private turns = 0;
   private stopped = false;
 
@@ -72,6 +75,12 @@ export class Game {
   async playTurn(): Promise<void> {
     const p = this.currentPlayer;
     const decider = this.deciders[p.id];
+    await this.maybeChaos();
+    if (this.state.winner !== null) return;
+    if (p.bankrupt) {
+      this.endTurn();
+      return;
+    }
     await this.presenter.turnStart(this.state, p.id);
 
     if (p.pendingTour) {
@@ -133,7 +142,7 @@ export class Game {
     if (action === "pay" && canPay) {
       this.addMoney(pid, -CONFIG.islandBail);
       p.islandTurns = 0;
-      this.presenter.message(`${p.name} membayar ${fmt(CONFIG.islandBail)} untuk kapal penyelamat.`);
+      this.presenter.message(`${p.name} membayar ${fmt(CONFIG.islandBail)} buat sewa perahu bebek. Bye jomblo!`);
       await decider.waitForRoll(pid);
       const [d1, d2] = this.roll();
       await this.presenter.diceRolled(pid, d1, d2);
@@ -250,14 +259,14 @@ export class Game {
         return;
       }
       case "island":
-        this.presenter.message(`${p.name} terdampar di Pulau Terpencil!`, "bad");
+        this.presenter.message(`${p.name} terdampar di Pulau Jomblo! Kasihan...`, "bad");
         await this.sendToIsland(pid);
         return;
       case "festival":
         return this.hostFestival(pid);
       case "tour":
         p.pendingTour = true;
-        this.presenter.message(`${p.name} akan memilih tujuan Wisata Dunia di giliran berikutnya.`);
+        this.presenter.message(`${p.name} naik UFO! Giliran berikutnya pilih mau dijatuhkan di mana.`);
         return;
     }
   }
@@ -280,7 +289,7 @@ export class Game {
     const rent = rentFor(this.state, tile);
     if (p.shields > 0) {
       p.shields--;
-      this.presenter.message(`Perisai Ajaib melindungi ${p.name} dari sewa ${fmt(rent)}!`, "good");
+      this.presenter.message(`Jimat Kolor Sakti melindungi ${p.name} dari sewa ${fmt(rent)}!`, "good");
     } else {
       this.presenter.message(`${p.name} membayar sewa ${fmt(rent)} ke ${owner.name}.`, "bad");
       await this.charge(pid, rent, owner.id);
@@ -351,7 +360,7 @@ export class Game {
     const p = this.state.players[pid];
     const options = ownedTiles(this.state, pid);
     if (options.length === 0) {
-      this.presenter.message(`${p.name} menikmati Festival Bintang. Belum ada properti untuk dimeriahkan.`);
+      this.presenter.message(`${p.name} joget sendirian di Pesta Dangdut. Belum punya properti buat dimeriahkan.`);
       return;
     }
     const tile = await this.deciders[pid].chooseTile({ player: pid, purpose: "festival", options });
@@ -362,7 +371,7 @@ export class Game {
     }
     this.state.festivalTile = tile;
     this.state.tiles[tile].festival = true;
-    this.presenter.message(`Festival di ${BOARD[tile].name}! Sewa jadi x${CONFIG.festivalMultiplier}.`, "good");
+    this.presenter.message(`Pesta Dangdut di ${BOARD[tile].name}! Sewa jadi x${CONFIG.festivalMultiplier}.`, "good");
     await this.presenter.tileChanged(this.state, tile);
   }
 
@@ -412,6 +421,151 @@ export class Game {
       case "back":
         await this.moveBack(pid, e.steps);
         await this.resolveTile(pid);
+        return;
+      case "forward":
+        await this.moveSteps(pid, e.steps);
+        await this.resolveTile(pid);
+        return;
+      case "payAll":
+        for (const other of this.state.players) {
+          if (other.id === pid || other.bankrupt) continue;
+          await this.charge(pid, e.amount, other.id);
+          if (p.bankrupt || this.state.winner !== null) return;
+        }
+        return;
+      case "stealRichest": {
+        const others = activePlayers(this.state).filter((i) => i !== pid);
+        if (others.length === 0) return;
+        const victim = others.reduce((a, b) => (this.state.players[b].money > this.state.players[a].money ? b : a));
+        const amt = Math.min(e.amount, this.state.players[victim].money);
+        if (amt <= 0) return;
+        this.presenter.message(`${p.name} "pinjam" ${fmt(amt)} dari ${this.state.players[victim].name}.`, "good");
+        this.addMoney(victim, -amt);
+        this.addMoney(pid, amt);
+        return;
+      }
+      case "gacha": {
+        const steps = (e.max - e.min) / 10;
+        const amt = e.min + Math.floor(this.rng() * (steps + 1)) * 10;
+        if (amt >= 0) {
+          this.presenter.message(`Mesin capit dapat boneka! ${p.name} +${fmt(amt)}`, "good");
+          this.addMoney(pid, amt);
+        } else {
+          this.presenter.message(`Mesin capit makan koin! ${p.name} −${fmt(-amt)}`, "bad");
+          await this.charge(pid, -amt, null);
+        }
+        return;
+      }
+      case "pushOthers":
+        for (const other of this.state.players) {
+          // Yang terjebak di pulau aman dari kentut (angin laut)
+          if (other.id === pid || other.bankrupt || other.islandTurns > 0) continue;
+          await this.moveBack(other.id, e.steps);
+        }
+        return;
+      case "swap": {
+        const others = activePlayers(this.state).filter((i) => i !== pid);
+        if (others.length === 0) return;
+        const o = this.state.players[others[Math.floor(this.rng() * others.length)]];
+        const a = p.position;
+        const b = o.position;
+        this.presenter.message(`${p.name} dan ${o.name} tukar tempat!`);
+        if (a === b) return;
+        await this.presenter.movePawn(p.id, [b], "fly");
+        p.position = b;
+        await this.presenter.movePawn(o.id, [a], "fly");
+        o.position = a;
+        // Yang tadinya terjebak di pulau ikut bebas/terjebak mengikuti posisinya
+        if (p.position !== ISLAND_INDEX) p.islandTurns = 0;
+        if (o.position !== ISLAND_INDEX) o.islandTurns = 0;
+        return;
+      }
+      case "randomTile": {
+        const dest = Math.floor(this.rng() * BOARD_SIZE);
+        this.presenter.message(`Alien menjatuhkan ${p.name} di ${BOARD[dest].name}.`);
+        if (dest !== p.position) {
+          await this.presenter.movePawn(pid, [dest], "fly");
+          p.position = dest;
+        }
+        await this.resolveTile(pid);
+        return;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- chaos
+
+  /** Di awal ronde baru, kadang muncul event konyol untuk seluruh pulau. */
+  private async maybeChaos() {
+    let ev: ChaosEvent | undefined;
+    if (this.forcedChaos) {
+      ev = CHAOS_EVENTS.find((c) => c.id === this.forcedChaos);
+      this.forcedChaos = null;
+    } else if (this.state.round !== this.chaosRound) {
+      this.chaosRound = this.state.round;
+      if (this.rng() < CHAOS_CHANCE) ev = CHAOS_EVENTS[Math.floor(this.rng() * CHAOS_EVENTS.length)];
+    }
+    if (ev) await this.applyChaos(ev);
+  }
+
+  async applyChaos(ev: ChaosEvent) {
+    const alive = activePlayers(this.state);
+    const money = (i: number) => this.state.players[i].money;
+    const e = ev.effect;
+    let targets: number[] = alive;
+    if (e.type === "randomGain" || e.type === "randomPay" || e.type === "ufoAbduct")
+      targets = [alive[Math.floor(this.rng() * alive.length)]];
+    else if (e.type === "poorestGain") targets = [alive.reduce((a, b) => (money(b) < money(a) ? b : a))];
+    else if (e.type === "robinHood") targets = [alive.reduce((a, b) => (money(b) > money(a) ? b : a))];
+
+    await this.presenter.showEvent(ev, targets);
+    const name = this.state.players[targets[0]].name;
+
+    switch (e.type) {
+      case "allGain":
+        for (const id of alive) this.addMoney(id, e.amount);
+        return;
+      case "allPay":
+        for (const id of alive) {
+          await this.charge(id, e.amount, null);
+          if (this.state.winner !== null) return;
+        }
+        return;
+      case "randomGain":
+      case "poorestGain":
+        this.presenter.message(`${name} kecipratan rezeki +${fmt(e.amount)}!`, "good");
+        this.addMoney(targets[0], e.amount);
+        return;
+      case "randomPay":
+        this.presenter.message(`${name} apes, −${fmt(e.amount)}.`, "bad");
+        await this.charge(targets[0], e.amount, null);
+        return;
+      case "robinHood": {
+        const rich = targets[0];
+        const others = alive.filter((i) => i !== rich);
+        const share = Math.floor(Math.min(e.amount, money(rich)) / Math.max(1, others.length) / 10) * 10;
+        if (share <= 0) return;
+        this.presenter.message(`Maling budiman merampok ${name} dan bagi-bagi ${fmt(share)} per orang!`);
+        this.addMoney(rich, -share * others.length);
+        for (const o of others) this.addMoney(o, share);
+        return;
+      }
+      case "ufoAbduct": {
+        const v = this.state.players[targets[0]];
+        // Yang sedang di pulau tetap di pulau supaya aturan pulau konsisten
+        if (v.islandTurns > 0) {
+          this.presenter.message(`UFO mau culik ${v.name}, tapi jijik sama jomblo. Batal!`);
+          return;
+        }
+        const dest = Math.floor(this.rng() * BOARD_SIZE);
+        this.presenter.message(`${v.name} diculik UFO ke ${BOARD[dest].name}!`);
+        if (dest !== v.position) {
+          await this.presenter.movePawn(v.id, [dest], "fly");
+          v.position = dest;
+        }
+        return;
+      }
+      case "nothing":
         return;
     }
   }

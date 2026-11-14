@@ -4,11 +4,11 @@ import { GROUP_COLORS } from "../data/board";
 
 const ICONS: Record<string, string> = {
   start: "🏁",
-  chance: "🎁",
-  tax: "💰",
-  island: "🏝️",
-  festival: "🎉",
-  tour: "✈️",
+  chance: "📦",
+  tax: "🦹",
+  island: "💔",
+  festival: "🎤",
+  tour: "🛸",
   resort: "🌴",
 };
 

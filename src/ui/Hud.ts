@@ -6,26 +6,26 @@ import { sfx, Sound } from "../scene/sfx";
 import { Speed } from "../scene/tween";
 import { escapeHtml, fmt, h, modal, uiRoot } from "./dom";
 
-export const AVATARS = ["🐱", "🐰", "🐻", "🐸"];
+export const AVATARS = ["🥔", "👾", "🐔", "🍔"];
 
 const KIND_LABEL: Record<string, string> = {
   start: "Petak Mulai",
   property: "Properti",
   resort: "Tempat Wisata",
-  chance: "Kotak Kejutan",
+  chance: "Kardus Misterius",
   tax: "Pajak",
-  island: "Pulau Terpencil",
-  festival: "Festival",
-  tour: "Wisata Dunia",
+  island: "Pulau Jomblo",
+  festival: "Pesta Dangdut",
+  tour: "Naik UFO",
 };
 
 const TILE_HELP: Record<string, string> = {
   start: `Dapat ${CONFIG.salary} setiap melewati petak ini.`,
-  chance: "Ambil kartu kejutan acak — bisa untung, bisa buntung!",
-  tax: `Bayar ${CONFIG.taxRate * 100}% dari uangmu (minimal 50).`,
-  island: `Terjebak ${CONFIG.islandTurns} giliran. Keluar dengan dadu kembar atau bayar ${CONFIG.islandBail}.`,
-  festival: `Pilih satu propertimu — sewanya jadi x${CONFIG.festivalMultiplier}.`,
-  tour: `Giliran berikutnya terbang ke petak mana saja (biaya ${CONFIG.tourFee}).`,
+  chance: "Buka kardus misterius — isinya bisa duit, bisa kentut nuklir!",
+  tax: `Preman lewat. Bayar ${CONFIG.taxRate * 100}% dari uangmu (minimal 50).`,
+  island: `Galau sendirian ${CONFIG.islandTurns} giliran. Keluar dengan dadu kembar atau sewa perahu bebek ${CONFIG.islandBail}.`,
+  festival: `Adakan dangdutan di satu propertimu — sewanya jadi x${CONFIG.festivalMultiplier}.`,
+  tour: `Numpang UFO: giliran berikutnya dijatuhkan ke petak mana saja (ongkos ${CONFIG.tourFee}).`,
 };
 
 export class Hud {
@@ -146,6 +146,20 @@ export class Hud {
     this.toasts.append(t);
     while (this.toasts.children.length > 3) this.toasts.firstChild!.remove();
     setTimeout(() => t.remove(), 3100);
+  }
+
+  private lastSpeech: number[] = [];
+
+  /** Balon ucapan konyol di atas kepala pion. */
+  speech(pid: number, text: string, force = false) {
+    const now = performance.now();
+    if (!force && now - (this.lastSpeech[pid] ?? 0) < 1800) return;
+    this.lastSpeech[pid] = now;
+    const pos = this.screenPosOfPlayer?.(pid);
+    if (!pos) return;
+    const e = h("div", { class: "speech", style: `left:${pos.x}px;top:${pos.y}px` }, text);
+    uiRoot().append(e);
+    setTimeout(() => e.remove(), 2200);
   }
 
   showDiceResult(d1: number, d2: number) {

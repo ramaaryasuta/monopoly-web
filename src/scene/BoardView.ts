@@ -48,7 +48,7 @@ export class BoardView {
       const dt = scene.getEngine().getDeltaTime() / 1000;
       time += dt;
       for (const d of this.decor) {
-        const m = d.metadata as { kind: string; phase: number; baseY: number; speed?: number } | undefined;
+        const m = d.metadata as { kind: string; phase: number; baseY: number; speed?: number; radius?: number } | undefined;
         if (!m) continue;
         if (m.kind === "cloud") {
           d.position.x += dt * (m.speed ?? 0.3);
@@ -59,6 +59,18 @@ export class BoardView {
           d.position.y = m.baseY + Math.sin(time * 2 + m.phase) * 0.2;
         } else if (m.kind === "sway") {
           d.rotation.z = Math.sin(time * 1.5 + m.phase) * 0.04;
+        } else if (m.kind === "bob") {
+          d.position.y = m.baseY + Math.sin(time * 1.6 + m.phase) * 0.25;
+          d.rotation.z = Math.sin(time * 1.1 + m.phase) * 0.12;
+          d.rotation.x = Math.cos(time * 0.9 + m.phase) * 0.08;
+        } else if (m.kind === "orbit") {
+          const a = time * (m.speed ?? 0.2) + m.phase;
+          const r = m.radius ?? 30;
+          d.position.set(Math.cos(a) * r, m.baseY, Math.sin(a) * r);
+          d.rotation.y = -a;
+        } else if (m.kind === "wobble") {
+          d.rotation.z = Math.sin(time * 0.8 + m.phase) * 0.08;
+          d.position.y = m.baseY + Math.sin(time * 1.3 + m.phase) * 0.3;
         }
       }
       if (this.festivalStar.isEnabled()) {
@@ -176,6 +188,8 @@ export class BoardView {
       this.shadows.addShadowCaster(coin);
     }
 
+    this.buildWackyDecor();
+
     // Awan
     for (let i = 0; i < 9; i++) {
       const cloud = new TransformNode(`cloud${i}`, s);
@@ -247,6 +261,8 @@ export class BoardView {
     outline(crown, 0.04);
     this.shadows.addShadowCaster(crown);
     this.shadows.addShadowCaster(trunk);
+    // Wajah konyol menghadap kamera (sebagian pohon saja)
+    if (id % 2 === 0 || id >= 100) this.addFace(root, new Vector3(0, 2.05, -0.86), 0.32, id % 4 === 0 ? "grin" : "o");
     root.metadata = { kind: "sway", phase: id, baseY: pos.y };
     this.decor.push(root);
   }
@@ -275,6 +291,148 @@ export class BoardView {
       dot.parent = root;
     }
     this.shadows.addShadowCaster(cap);
+    this.addFace(root, new Vector3(0, 0.5, -0.3), 0.18, "grin");
+  }
+
+  /** Mata googly juling + mulut di permukaan objek (menghadap -z). */
+  private addFace(parent: TransformNode, at: Vector3, size: number, mouth: "grin" | "o") {
+    const s = this.scene;
+    for (const sx of [-1, 1]) {
+      const eye = MeshBuilder.CreateSphere("fEye", { diameter: size, segments: 10 }, s);
+      eye.material = toon(s, "#ffffff");
+      eye.parent = parent;
+      eye.position.set(at.x + sx * size * 0.62, at.y, at.z);
+      eye.scaling.z = 0.6;
+      outline(eye, 0.02);
+      const p = MeshBuilder.CreateSphere("fPupil", { diameter: size * 0.45, segments: 8 }, s);
+      p.material = toon(s, "#2b1d3a");
+      p.parent = parent;
+      p.position.set(at.x + sx * size * 0.62 - sx * size * 0.12, at.y - size * 0.05, at.z - size * 0.28);
+      p.scaling.z = 0.4;
+    }
+    const m =
+      mouth === "o"
+        ? MeshBuilder.CreateSphere("fMouth", { diameter: size * 0.5, segments: 8 }, s)
+        : MeshBuilder.CreateBox("fMouth", { width: size * 1.3, height: size * 0.25, depth: size * 0.2 }, s);
+    m.material = toon(s, "#2b1d3a");
+    m.parent = parent;
+    m.position.set(at.x, at.y - size * 0.85, at.z + 0.02);
+    if (mouth === "o") m.scaling.z = 0.4;
+  }
+
+  /** Dekorasi aneh: matahari berkacamata, bebek karet, sirip hiu, sendal raksasa, donat. */
+  private buildWackyDecor() {
+    const s = this.scene;
+    const mk = (m: Mesh, hex: string, parent: TransformNode, w = 0.05) => {
+      m.material = toon(s, hex);
+      m.parent = parent;
+      if (w) outline(m, w);
+      return m;
+    };
+
+    // Matahari pakai kacamata hitam
+    const sun = new TransformNode("sunFace", s);
+    sun.position.set(-26, 20, 42);
+    const disc = mk(MeshBuilder.CreateSphere("sunDisc", { diameter: 8, segments: 20 }, s), "#ffd23f", sun, 0.08);
+    disc.scaling.z = 0.5;
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const ray = mk(MeshBuilder.CreateCylinder("ray", { diameterTop: 0, diameterBottom: 1.2, height: 1.8, tessellation: 4 }, s), "#ffb84d", sun, 0.04);
+      ray.position.set(Math.cos(a) * 5.2, Math.sin(a) * 5.2, 0);
+      ray.rotation.z = a - Math.PI / 2;
+    }
+    for (const sx of [-1.3, 1.3]) {
+      const lens = mk(MeshBuilder.CreateBox("sunLens", { width: 2.2, height: 1.2, depth: 0.3 }, s), "#111122", sun, 0.03);
+      lens.position.set(sx, 0.7, -2);
+    }
+    const bridge = mk(MeshBuilder.CreateBox("sunBridge", { width: 1, height: 0.25, depth: 0.2 }, s), "#111122", sun, 0);
+    bridge.position.set(0, 0.9, -2);
+    const smile = mk(MeshBuilder.CreateBox("sunSmile", { width: 3, height: 0.35, depth: 0.2 }, s), "#c25a00", sun, 0);
+    smile.position.set(0, -1.3, -1.95);
+    for (const sx of [-1, 1]) {
+      const corner = mk(MeshBuilder.CreateBox("sunSmileC", { width: 0.7, height: 0.35, depth: 0.2 }, s), "#c25a00", sun, 0);
+      corner.position.set(sx * 1.65, -1.05, -1.95);
+      corner.rotation.z = sx * 0.7;
+    }
+    sun.metadata = { kind: "wobble", phase: 0, baseY: 20 };
+    this.decor.push(sun);
+
+    // Bebek karet mengapung di laut
+    const duckSpots: [number, number, number][] = [
+      [24, -24, 1.6],
+      [-30, -14, 1.2],
+      [33, 12, 1.4],
+    ];
+    duckSpots.forEach(([x, z, sc], i) => {
+      const duck = new TransformNode(`duck${i}`, s);
+      duck.position.set(x, -1.1, z);
+      duck.scaling.setAll(sc);
+      duck.rotation.y = Math.PI + i;
+      const b = mk(MeshBuilder.CreateSphere("duckBody", { diameter: 2, segments: 14 }, s), "#ffd23f", duck);
+      b.scaling.set(1.25, 0.75, 1);
+      b.position.y = 0.5;
+      const hd = mk(MeshBuilder.CreateSphere("duckHead", { diameter: 1.2, segments: 14 }, s), "#ffd23f", duck);
+      hd.position.set(0, 1.5, 0.5);
+      const bk = mk(MeshBuilder.CreateSphere("duckBeak", { diameter: 0.7, segments: 10 }, s), "#ff8c3d", duck, 0.03);
+      bk.scaling.set(1.1, 0.4, 1);
+      bk.position.set(0, 1.4, 1.1);
+      const tail = mk(MeshBuilder.CreateCylinder("duckTail", { diameterTop: 0, diameterBottom: 0.7, height: 0.7, tessellation: 8 }, s), "#ffd23f", duck, 0.03);
+      tail.position.set(0, 1, -1.1);
+      tail.rotation.x = -0.9;
+      for (const sx of [-0.3, 0.3]) {
+        const e = mk(MeshBuilder.CreateSphere("duckEye", { diameter: 0.3, segments: 8 }, s), "#ffffff", duck, 0.02);
+        e.position.set(sx, 1.7, 0.95);
+        const p = mk(MeshBuilder.CreateSphere("duckPupil", { diameter: 0.15, segments: 6 }, s), "#111122", duck, 0);
+        p.position.set(sx * (i === 1 ? 0.6 : 1.2), 1.68, 1.08);
+      }
+      duck.metadata = { kind: "bob", phase: i * 2, baseY: -1.1 };
+      this.decor.push(duck);
+    });
+
+    // Sirip hiu berputar mengelilingi pulau
+    for (let i = 0; i < 2; i++) {
+      const fin = new TransformNode(`fin${i}`, s);
+      const f = mk(MeshBuilder.CreateCylinder("fin", { diameterTop: 0, diameterBottom: 1.6, height: 1.8, tessellation: 3 }, s), "#6c7a92", fin);
+      f.scaling.z = 0.3;
+      f.position.y = 0.5;
+      const foam = mk(MeshBuilder.CreateTorus("foam", { diameter: 1.8, thickness: 0.25, tessellation: 16 }, s), "#ffffff", fin, 0);
+      foam.scaling.y = 0.3;
+      fin.metadata = { kind: "orbit", phase: i * Math.PI, baseY: -1.1, speed: 0.18 + i * 0.07, radius: 28 + i * 6 };
+      this.decor.push(fin);
+    }
+
+    // Sendal jepit raksasa nancep di bukit belakang
+    const sandal = new TransformNode("giantSandal", s);
+    sandal.position.set(15, 1.2, 15.5);
+    sandal.rotation.set(-1.1, 0.5, 0.2);
+    const sole = mk(MeshBuilder.CreateCylinder("sole", { diameter: 2.4, height: 0.35, tessellation: 24 }, s), "#ffffff", sandal);
+    sole.scaling.set(1, 1, 2);
+    const sole2 = mk(MeshBuilder.CreateCylinder("sole2", { diameter: 2.4, height: 0.15, tessellation: 24 }, s), "#3a7bff", sandal, 0);
+    sole2.scaling.set(1, 1, 2);
+    sole2.position.y = -0.24;
+    for (const sx of [-1, 1]) {
+      const strap = mk(MeshBuilder.CreateCapsule("strap", { radius: 0.15, height: 1.9 }, s), "#3a7bff", sandal, 0.03);
+      strap.position.set(sx * 0.45, 0.4, 0.6);
+      strap.rotation.set(0.9, 0, sx * 0.8);
+    }
+
+    // Donat raksasa tergeletak
+    const donut = new TransformNode("giantDonut", s);
+    donut.position.set(-15.5, 0.6, 14);
+    donut.rotation.set(0.25, 0, 0.2);
+    mk(MeshBuilder.CreateTorus("dough", { diameter: 3.2, thickness: 1.3, tessellation: 24 }, s), "#e9a04b", donut);
+    const frost = mk(MeshBuilder.CreateTorus("frost", { diameter: 3.2, thickness: 1.2, tessellation: 24 }, s), "#ff7ab6", donut, 0);
+    frost.position.y = 0.18;
+    frost.scaling.y = 0.75;
+    const sprCols = ["#ffe14d", "#5bb8ff", "#7ee06b", "#ffffff"];
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const r = 1.45 + (i % 3) * 0.15;
+      const sp = mk(MeshBuilder.CreateCapsule("spr", { radius: 0.06, height: 0.3 }, s), sprCols[i % 4], donut, 0);
+      sp.position.set(Math.cos(a) * r, 0.68, Math.sin(a) * r);
+      sp.rotation.set(Math.PI / 2, a * 3, 0);
+    }
+    this.shadows.addShadowCaster(frost);
   }
 
   private makeStar(): Mesh {
@@ -422,6 +580,15 @@ export class BoardView {
         roof.position.set(x, h + 0.25, 0);
         const door = add(MeshBuilder.CreateBox("door", { width: 0.2, height: 0.3, depth: 0.02 }, s), "#a8673a", false);
         door.position.set(x, 0.15, -0.31);
+        // Jendela = mata googly, rumahnya ikut melongo
+        for (const sx of [-0.15, 0.15]) {
+          const win = add(MeshBuilder.CreateSphere("winEye", { diameter: 0.17, segments: 8 }, s), "#ffffff", false);
+          win.position.set(x + sx, h - 0.15, -0.3);
+          win.scaling.z = 0.4;
+          const pup = add(MeshBuilder.CreateSphere("winPupil", { diameter: 0.08, segments: 6 }, s), "#2b1d3a", false);
+          pup.position.set(x + sx + (Math.random() - 0.5) * 0.05, h - 0.17, -0.35);
+          pup.renderOutline = false;
+        }
       }
       return root;
     }
@@ -435,6 +602,16 @@ export class BoardView {
     cap.position.y = 2.7;
     const orb = add(MeshBuilder.CreateSphere("lmOrb", { diameter: 0.35 }, s), "#ffffff");
     orb.position.y = 3.2;
+    // Menara sultan: kacamata hitam + kumis
+    for (const sx of [-0.17, 0.17]) {
+      const lens = add(MeshBuilder.CreateBox("lmLens", { width: 0.28, height: 0.16, depth: 0.06 }, s), "#111122", false);
+      lens.position.set(sx, 1.85, -0.36);
+    }
+    for (const sx of [-1, 1]) {
+      const st = add(MeshBuilder.CreateCapsule("lmStache", { radius: 0.06, height: 0.4 }, s), "#2b1d3a", false);
+      st.position.set(sx * 0.15, 1.6, -0.4);
+      st.rotation.z = sx * (Math.PI / 2 - 0.4);
+    }
     return root;
   }
 

@@ -433,3 +433,88 @@ body {
   .action-bar { bottom: 90px; }
   .qa { left: 12px; bottom: 170px; }
 }
+
+/* ---------------------------------------------------------------- konyol / komik */
+
+.modal.comic {
+  background:
+    radial-gradient(circle, rgba(43, 29, 58, 0.09) 1.5px, transparent 1.6px) 0 0 / 12px 12px,
+    #fffbe6;
+  transform: rotate(-1.5deg);
+  border-width: 5px;
+  position: relative;
+  overflow: visible;
+}
+.modal.comic h2 {
+  font-size: 30px;
+  color: #ff4d6d;
+  -webkit-text-stroke: 1.5px var(--ink);
+  text-shadow: 3px 3px 0 var(--ink);
+  letter-spacing: 0.5px;
+}
+.comic-pow {
+  position: absolute;
+  top: -26px;
+  right: -18px;
+  background: #ffe14d;
+  border: 4px solid var(--ink);
+  padding: 6px 14px;
+  font-weight: 700;
+  font-size: 22px;
+  transform: rotate(12deg);
+  clip-path: polygon(0 12%, 14% 0, 28% 14%, 46% 0, 60% 14%, 78% 0, 90% 16%, 100% 8%, 94% 40%, 100% 62%, 90% 100%, 70% 86%, 52% 100%, 36% 86%, 16% 100%, 6% 82%, 0 60%, 6% 36%);
+  animation: powIn 0.45s cubic-bezier(0.2, 1.8, 0.4, 1);
+  box-shadow: none;
+}
+.modal.comic .card-art { font-size: 88px; animation: cardFlip 0.6s ease-out, wiggle 0.5s ease-in-out 0.6s 3; }
+.modal.breaking { transform: rotate(1deg); }
+.modal.breaking h2 { color: #ffe14d; }
+.breaking-tag {
+  display: inline-block;
+  background: #ff2e4d;
+  color: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  padding: 2px 12px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 1px;
+  animation: blink 0.5s steps(2) infinite;
+}
+.modal .victim { background: #ffe1e6; border: 2px dashed var(--ink); border-radius: 10px; padding: 6px; }
+
+.speech {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 0 var(--ink);
+  animation: speechPop 2.2s ease-out forwards;
+  z-index: 5;
+}
+.speech::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  border: 8px solid transparent;
+  border-top: 10px solid var(--ink);
+  transform: translateX(-50%);
+}
+
+@keyframes powIn { from { transform: rotate(40deg) scale(0); } }
+@keyframes wiggle { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+@keyframes blink { 50% { opacity: 0.4; } }
+@keyframes speechPop {
+  0% { opacity: 0; transform: translate(-50%, -80%) scale(0.4); }
+  10% { opacity: 1; transform: translate(-50%, -100%) scale(1.1); }
+  18% { transform: translate(-50%, -100%) scale(1); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -130%); }
+}

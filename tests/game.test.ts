@@ -5,6 +5,7 @@ import { NullPresenter, type Decider } from "../src/core/interfaces";
 import { acquirePrice, checkMonopolyWin, CONFIG, createGame, rentFor, upgradeCost } from "../src/core/rules";
 import type { PlayerSetup } from "../src/core/types";
 import { BOARD, PROPERTY_GROUPS, RESORTS } from "../src/data/board";
+import { CARDS, CHAOS_EVENTS } from "../src/data/cards";
 
 const setups = (n: number): PlayerSetup[] =>
   Array.from({ length: n }, (_, i) => ({ name: `P${i}`, color: "#fff", isBot: true }));
@@ -106,6 +107,54 @@ describe("game flow", () => {
     await g.charge(1, 100, 0);
     expect(g.state.players[1].bankrupt).toBe(false);
     expect(g.state.tiles[31].owner).toBeNull();
+  });
+
+  it("semua kartu konyol bisa dimainkan tanpa merusak state", async () => {
+    for (const card of CARDS) {
+      const g = botGame(4, 7);
+      g.state.players[2].position = 8;
+      g.state.players[2].islandTurns = 2;
+      g.state.players[0].position = 5; // Kardus Misterius
+      g.forcedCard = card.id;
+      await g.resolveTile(0);
+      for (const p of g.state.players) {
+        expect(p.money, card.id).toBeGreaterThanOrEqual(0);
+        expect(p.position, card.id).toBeGreaterThanOrEqual(0);
+        expect(p.position, card.id).toBeLessThan(BOARD.length);
+        if (p.islandTurns > 0) expect(p.position, card.id).toBe(8);
+      }
+    }
+  });
+
+  it("kentut nuklir mendorong lawan mundur 2 petak", async () => {
+    const g = botGame(3, 1);
+    g.state.players[0].position = 5;
+    g.state.players[1].position = 12;
+    g.state.players[2].position = 1;
+    g.forcedCard = "fart";
+    await g.resolveTile(0);
+    expect(g.state.players[1].position).toBe(10);
+    expect(g.state.players[2].position).toBe(31);
+  });
+
+  it("semua event heboh bisa dijalankan", async () => {
+    for (const ev of CHAOS_EVENTS) {
+      const g = botGame(4, 3);
+      g.state.players[1].money = 20;
+      const before = g.state.players.reduce((s, p) => s + p.money, 0);
+      await g.applyChaos(ev);
+      for (const p of g.state.players) expect(p.money, ev.id).toBeGreaterThanOrEqual(0);
+      const after = g.state.players.reduce((s, p) => s + p.money, 0);
+      if (ev.effect.type === "robinHood") expect(after, ev.id).toBe(before);
+    }
+  });
+
+  it("event heboh muncul di awal ronde baru", async () => {
+    const g = botGame(2, 5);
+    let shown = 0;
+    g.presenter = Object.assign(new NullPresenter(), { showEvent: async () => void shown++ });
+    await g.run();
+    expect(shown).toBeGreaterThan(0);
   });
 
   it("simulasi bot 50 seed selalu selesai dengan pemenang", async () => {

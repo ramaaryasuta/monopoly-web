@@ -6,7 +6,7 @@ import type { GameScene } from "../scene/GameScene";
 import { escapeHtml, fmt, modal } from "./dom";
 import type { Hud } from "./Hud";
 
-const LEVEL_ICON = ["", "🚩", "🏠", "🏠🏠", "🏡", "🏰"];
+const LEVEL_ICON = ["", "🚩", "🏠", "🏠🏠", "🏡", "🗼"];
 
 /** Keputusan pemain manusia lewat UI (modal, tombol, klik petak 3D). */
 export class HumanDecider implements Decider {
@@ -64,17 +64,17 @@ export class HumanDecider implements Decider {
 
   async chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll"> {
     return modal({
-      title: "🏝️ Terdampar di Pulau",
-      body: `<p>Sisa ${c.turnsLeft} giliran. Dapatkan dadu kembar untuk kabur, atau panggil kapal penyelamat.</p>`,
+      title: "💔 Terdampar di Pulau Jomblo",
+      body: `<p>Sisa ${c.turnsLeft} giliran. Dapat dadu kembar untuk kabur, atau sewa perahu bebek dan move on.</p>`,
       buttons: [
-        { label: `⛵ Bayar ${fmt(c.bail)} & keluar`, value: "pay" as const, class: "blue", disabled: !c.canPay },
+        { label: `🦆 Sewa perahu bebek ${fmt(c.bail)}`, value: "pay" as const, class: "blue", disabled: !c.canPay },
         { label: "🎲 Coba dadu kembar", value: "roll" as const, class: "green" },
       ],
     });
   }
 
   async chooseTile(c: TileChoice): Promise<number> {
-    this.hud.showPickBanner(c.purpose === "tour" ? "Klik petak tujuan Wisata Dunia" : "Klik propertimu untuk Festival");
+    this.hud.showPickBanner(c.purpose === "tour" ? "Klik petak tempat UFO menjatuhkanmu" : "Klik propertimu untuk Pesta Dangdut");
     try {
       return await this.scene.pickTile(c.options);
     } finally {

@@ -19,9 +19,9 @@ export function showMenu(): Promise<MenuResult> {
   return new Promise((resolve) => {
     const slots: { type: SlotType; name: string; char: number }[] = [
       { type: "human", name: "Kamu", char: 0 },
-      { type: "bot", name: "Momo", char: 1 },
-      { type: "bot", name: "Bubu", char: 2 },
-      { type: "bot", name: "Pipo", char: 3 },
+      { type: "bot", name: "Om Mata", char: 1 },
+      { type: "bot", name: "Jago", char: 2 },
+      { type: "bot", name: "Burger", char: 3 },
     ];
 
     const grid = h("div", { class: "slots" });
@@ -90,8 +90,9 @@ export function showMenu(): Promise<MenuResult> {
       <ul>
         <li>Lempar dadu, jalan, lalu <b>beli</b> tanah & bangun rumah → vila → <b>landmark</b>.</li>
         <li>Mendarat di properti lawan? Bayar <b>sewa</b>, lalu boleh <b>akuisisi</b> (harga 2x investasi). Landmark tidak bisa diakuisisi.</li>
-        <li>Dadu kembar = lempar lagi. Kembar 3x = terdampar di pulau.</li>
-        <li>Lewat Mulai: +${CONFIG.salary}. Festival: sewa x${CONFIG.festivalMultiplier}. Wisata Dunia: terbang ke mana saja.</li>
+        <li>Dadu kembar = lempar lagi. Kembar 3x = terdampar di Pulau Jomblo.</li>
+        <li>Awas <b>Berita Heboh</b>: UFO nyasar, gempa kentut, maling budiman bisa muncul kapan saja!</li>
+        <li>Lewat Mulai: +${CONFIG.salary}. Pesta Dangdut: sewa x${CONFIG.festivalMultiplier}. Naik UFO: dijatuhkan ke mana saja.</li>
         <li><b>Menang</b> jika: semua lawan bangkrut, monopoli 3 grup warna, kuasai satu sisi papan, kuasai semua wisata, atau terkaya di ronde ${CONFIG.roundLimit}.</li>
       </ul>`;
 
@@ -99,7 +100,7 @@ export function showMenu(): Promise<MenuResult> {
       "div",
       { class: "panel" },
       h("div", { class: "logo" }, "PULAU KAYA"),
-      h("div", { class: "tagline" }, "Lempar dadu, bangun kerajaan, jadi yang terkaya! 🪙"),
+      h("div", { class: "tagline" }, "Lempar dadu, beli kos bocor, kentutin lawan, jadi sultan! 💨🪙"),
       grid,
       h(
         "div",
@@ -124,7 +125,7 @@ export function showMenu(): Promise<MenuResult> {
       sfx.build();
       menu.remove();
       const players = active.map((s) => ({
-        name: s.name.trim() || CRITTERS[s.char].label.split(" ")[0],
+        name: s.name.trim() || CRITTERS[s.char].label.split(" ").slice(-1)[0],
         color: CRITTERS[s.char].color,
         isBot: s.type === "bot",
       }));

@@ -1,4 +1,4 @@
-import type { Card } from "../data/cards";
+import type { Card, ChaosEvent } from "../data/cards";
 import type { GameState } from "./types";
 
 export interface BuildChoice {
@@ -52,6 +52,8 @@ export interface Presenter {
   tileChanged(state: GameState, tile: number): Promise<void>;
   message(text: string, kind?: MessageKind): void;
   showCard(player: number, card: Card): Promise<void>;
+  /** Event konyol sedunia; targets = pemain yang terkena. */
+  showEvent(event: ChaosEvent, targets: number[]): Promise<void>;
   playerBankrupt(state: GameState, player: number): Promise<void>;
   gameOver(state: GameState): Promise<void>;
 }
@@ -64,6 +66,7 @@ export class NullPresenter implements Presenter {
   async tileChanged() {}
   message() {}
   async showCard() {}
+  async showEvent() {}
   async playerBankrupt() {}
   async gameOver() {}
 }
