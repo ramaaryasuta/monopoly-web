@@ -21,12 +21,12 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 const TILE_HELP: Record<string, string> = {
-  start: `Dapat ${CONFIG.salary} setiap melewati petak ini.`,
+  start: `Dapat ${fmt(CONFIG.salary)} setiap melewati petak ini.`,
   chance: "Buka kardus misterius — isinya bisa duit, bisa kentut nuklir!",
   tax: `Preman lewat. Bayar ${CONFIG.taxRate * 100}% dari uangmu (minimal 50).`,
-  island: `Galau sendirian ${CONFIG.islandTurns} giliran. Keluar dengan dadu kembar atau sewa perahu bebek ${CONFIG.islandBail}.`,
+  island: `Galau sendirian ${CONFIG.islandTurns} giliran. Keluar dengan dadu kembar atau sewa perahu bebek ${fmt(CONFIG.islandBail)}.`,
   festival: `Adakan dangdutan di satu propertimu — sewanya jadi x${CONFIG.festivalMultiplier}.`,
-  tour: `Numpang UFO: giliran berikutnya dijatuhkan ke petak mana saja (ongkos ${CONFIG.tourFee}).`,
+  tour: `Numpang UFO: giliran berikutnya dijatuhkan ke petak mana saja (ongkos ${fmt(CONFIG.tourFee)}).`,
 };
 
 export class Hud {
@@ -273,7 +273,7 @@ export class Hud {
         .join("");
       body += `<table>${rows}</table>`;
     } else if (def.kind === "resort") {
-      body += `<p>Harga ${fmt(def.price!)}. Sewa ${CONFIG.resortBaseRent} dan berlipat ganda untuk setiap tempat wisata yang dimiliki pemilik yang sama.</p>`;
+      body += `<p>Harga ${fmt(def.price!)}. Sewa ${fmt(CONFIG.resortBaseRent)} dan berlipat ganda untuk setiap tempat wisata yang dimiliki pemilik yang sama.</p>`;
     } else {
       body += `<p>${TILE_HELP[def.kind] ?? ""}</p>`;
     }

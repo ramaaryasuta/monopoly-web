@@ -358,7 +358,7 @@ body {
 .player-card .info { min-width: 0; flex: 1; }
 .player-card .name { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .player-card .money { font-weight: 700; font-size: 22px; }
-.player-card .money::before { content: "🪙 "; font-size: 16px; }
+
 .player-card .meta { font-size: 12px; opacity: 0.85; }
 
 .round-badge {

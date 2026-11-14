@@ -54,7 +54,7 @@ export class HumanDecider implements Decider {
           buttons: [
             ...picked.targets.map((pid) => {
               const p = this.state.players[pid];
-              return { label: p.name, sub: `🪙 ${fmt(p.money)}`, value: pid as number | null, class: "blue" };
+              return { label: p.name, sub: `${fmt(p.money)}`, value: pid as number | null, class: "blue" };
             }),
             { label: "Batal", value: null, class: "white" },
           ],
@@ -94,7 +94,7 @@ export class HumanDecider implements Decider {
     return modal({
       title,
       bandColor: def.group !== undefined ? GROUP_COLORS[def.group] : "#36d1c4",
-      body: `<p>${levelText}Uangmu: <b>🪙 ${fmt(c.money)}</b></p>`,
+      body: `<p>${levelText}Uangmu: <b>${fmt(c.money)}</b></p>`,
       buttons,
     });
   }
@@ -105,7 +105,7 @@ export class HumanDecider implements Decider {
     return modal({
       title: `Akuisisi ${def.name}?`,
       bandColor: GROUP_COLORS[def.group!],
-      body: `<p>Rebut properti ini dari <b>${escapeHtml(owner.name)}</b> seharga <b>🪙 ${fmt(c.price)}</b>.<br/>Uangmu: ${fmt(c.money)}</p>`,
+      body: `<p>Rebut properti ini dari <b>${escapeHtml(owner.name)}</b> seharga <b>${fmt(c.price)}</b>.<br/>Uangmu: ${fmt(c.money)}</p>`,
       row: true,
       buttons: [
         { label: "💰 Akuisisi!", value: true, class: "pink" },

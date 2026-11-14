@@ -1,4 +1,5 @@
 import { CONFIG } from "../core/rules";
+import { rp } from "../core/money";
 import { CODE_LEN, MAX_SEATS, normalizeCode, Room, type Seat } from "../net/Room";
 import { Voice } from "../net/Voice";
 import type { PlayerSetup } from "../core/types";
@@ -136,7 +137,7 @@ export function showMenu(): Promise<MenuResult> {
           parade,
           h("div", { class: "logo" }, "MEMONOPOLI"),
           h("div", { class: "logo-sub" }, "Wilayah WNI"),
-          h("div", { class: "tagline" }, "Lempar dadu, beli Gedung DPR, kentutin lawan, jadi sultan! 💨🪙"),
+          h("div", { class: "tagline" }, "Lempar dadu, beli Gedung DPR, kentutin lawan, jadi sultan! 💨💸"),
           h(
             "div",
             { class: "choices" },
@@ -535,7 +536,7 @@ export function showMenu(): Promise<MenuResult> {
             item("🎲", "Lempar dadu, jalan, lalu <b>beli</b> tanah & bangun rumah → vila → <b>landmark</b>."),
             item("💸", "Mendarat di properti lawan? Bayar <b>sewa</b>, lalu boleh <b>akuisisi</b> (2x harga investasi). Landmark tidak bisa direbut."),
             item("🎯", "Dadu kembar = lempar lagi. Kembar 3x = terdampar di <b>Pulau Jomblo</b>."),
-            item("🏁", `Lewat Mulai: +${CONFIG.salary}. <b>Pesta Dangdut</b>: sewa x${CONFIG.festivalMultiplier}. <b>Naik UFO</b>: dijatuhkan ke petak mana saja.`),
+            item("🏁", `Lewat Mulai: +${rp(CONFIG.salary)}. <b>Pesta Dangdut</b>: sewa x${CONFIG.festivalMultiplier}. <b>Naik UFO</b>: dijatuhkan ke petak mana saja.`),
             item("📦", "<b>Kardus Misterius</b>: kartu konyol — bisa dapat duit, bisa kena kentut nuklir."),
             item("📢", "<b>Berita Heboh</b>: UFO nyasar, gempa kentut, maling budiman bisa muncul tiap ronde!"),
           ),

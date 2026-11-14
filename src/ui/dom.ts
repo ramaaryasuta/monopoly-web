@@ -18,7 +18,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
-export const fmt = (n: number) => n.toLocaleString("id-ID");
+export { rp as fmt } from "../core/money";
 
 export function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);

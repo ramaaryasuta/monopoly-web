@@ -1,3 +1,4 @@
+import { rp } from "./money";
 import { BOARD, BOARD_SIZE, ISLAND_INDEX, TOUR_INDEX } from "../data/board";
 import {
   CARDS,
@@ -44,7 +45,7 @@ export interface GameOptions {
   maxTurns?: number;
 }
 
-const fmt = (n: number) => n.toLocaleString("id-ID");
+const fmt = rp;
 
 export class Game {
   readonly state: GameState;
@@ -527,7 +528,7 @@ export class Game {
       case "item": {
         const def = ITEMS[e.item];
         if (p.items.length >= MAX_ITEMS) {
-          this.presenter.message(`Kantong ${p.name} penuh! ${def.name} dijual ke tukang loak: +50.`);
+          this.presenter.message(`Kantong ${p.name} penuh! ${def.name} dijual ke tukang loak: +${fmt(50)}.`);
           this.addMoney(pid, 50);
         } else {
           p.items.push(e.item);
