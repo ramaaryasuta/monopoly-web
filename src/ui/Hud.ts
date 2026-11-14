@@ -5,7 +5,9 @@ import { BOARD, GROUP_COLORS } from "../data/board";
 import { ITEMS, SEASONS } from "../data/cards";
 import { sfx, Sound } from "../scene/sfx";
 import { Speed } from "../scene/tween";
+import { activeListings, listingFor } from "../core/trade";
 import { escapeHtml, fmt, h, modal, uiRoot } from "./dom";
+import { viewMarket } from "./TradeUi";
 
 export const AVATARS = ["🥔", "👾", "🐔", "🍔"];
 
@@ -37,6 +39,7 @@ export class Hud {
   private toasts = h("div", { class: "toasts" });
   private actionBar = h("div", { class: "action-bar" });
   private pickBanner: HTMLElement | null = null;
+  private marketBtn = h("button", { class: "btn small white market-btn", title: "Pasar Terbuka", "data-testid": "market" }, "🏪");
   /** Untuk memproyeksikan teks uang melayang di atas pion. */
   screenPosOfPlayer: ((pid: number) => { x: number; y: number } | null) | null = null;
   onResetCamera: (() => void) | null = null;
@@ -82,7 +85,11 @@ export class Hud {
     });
     const camBtn = h("button", { class: "btn small white", title: "Reset kamera" }, "🎥");
     camBtn.addEventListener("click", () => this.onResetCamera?.());
-    const toolbar = h("div", { class: "toolbar" }, speedBtn, muteBtn, camBtn);
+    this.marketBtn.addEventListener("click", () => {
+      sfx.click();
+      void viewMarket(this.state, this.localPlayers?.[0] ?? null);
+    });
+    const toolbar = h("div", { class: "toolbar" }, speedBtn, muteBtn, camBtn, this.marketBtn);
 
     root.append(this.round, toolbar, log, this.toasts, this.actionBar);
     this.refresh();
@@ -101,6 +108,9 @@ export class Hud {
     const left = s.season ? s.season.untilRound - s.round + 1 : 0;
     this.round.textContent = `Ronde ${s.round} / ${CONFIG.roundLimit}` + (season ? `  ·  ${season.icon} ${season.badge} (${left} ronde)` : "");
     this.round.classList.toggle("season", !!season);
+    const listed = activeListings(s).length;
+    this.marketBtn.textContent = listed ? `🏪 ${listed}` : "🏪";
+    this.marketBtn.classList.toggle("has", listed > 0);
     s.players.forEach((p, i) => {
       const card = this.cards[i];
       card.classList.toggle("active", s.current === i && s.winner === null);
@@ -244,6 +254,40 @@ export class Hud {
     });
   }
 
+  /** Menu awal giliran: lempar dadu, kantong, negosiasi, pasar. */
+  waitTurnMenu(o: { items: number; tradesLeft: number; rollLabel: string }): Promise<"roll" | "item" | "trade" | "market"> {
+    return new Promise((resolve) => {
+      type A = "roll" | "item" | "trade" | "market";
+      const roll = h("button", { class: "btn roll-btn", "data-testid": "roll" }, o.rollLabel);
+      const extras = h("div", { class: "turn-extras" });
+      const row = h("div", { class: "roll-row" }, roll, extras);
+      const done = (v: A) => {
+        window.removeEventListener("keydown", onKey);
+        row.remove();
+        sfx.click();
+        resolve(v);
+      };
+      const add = (label: string, cls: string, v: A, testid: string, disabled = false) => {
+        const b = h("button", { class: `btn ${cls} item-btn`, "data-testid": testid, disabled }, label);
+        b.addEventListener("click", () => done(v));
+        extras.append(b);
+      };
+      if (o.items > 0) add(`🎒 Kartu (${o.items})`, "pink", "item", "use-item");
+      add(o.tradesLeft > 0 ? "🤝 Negosiasi" : "🤝 Habis", "blue", "trade", "trade", o.tradesLeft <= 0);
+      const listed = activeListings(this.state).length;
+      add(listed ? `🏪 Pasar (${listed})` : "🏪 Pasar", "yellow", "market", "market-act");
+      const onKey = (e: KeyboardEvent) => {
+        if ((e.code === "Space" || e.code === "Enter") && !document.querySelector(".modal-backdrop")) {
+          e.preventDefault();
+          done("roll");
+        }
+      };
+      roll.addEventListener("click", () => done("roll"));
+      window.addEventListener("keydown", onKey);
+      this.actionBar.append(row);
+    });
+  }
+
   showPickBanner(text: string) {
     this.hidePickBanner();
     this.pickBanner = h("div", { class: "pick-banner panel" }, `👆 ${text}`);
@@ -282,6 +326,8 @@ export class Hud {
     } else if (def.kind === "property" || def.kind === "resort") {
       body += `<p>Belum dimiliki.</p>`;
     }
+    const listing = listingFor(s, index);
+    if (listing) body += `<p class="listed">🏪 Dijual di Pasar Terbuka: <b>${fmt(listing.price)}</b></p>`;
     await modal({
       title: def.name,
       bandColor: def.kind === "property" ? GROUP_COLORS[def.group!] : undefined,

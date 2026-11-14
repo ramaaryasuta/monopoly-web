@@ -67,8 +67,14 @@ async function boot() {
         return new BroadcastDecider(s.kind === "bot" ? bot : human, (k, v) => room.sendAct(pid, k, v));
       }
       const r = new RemoteDecider((waiting, kind) => {
-        if (kind === "roll") return; // label "Giliran X" sudah tampil
-        hud.setTurnLabel(waiting ? `⏳ ${game.state.players[pid].name} lagi mikir...` : null);
+        if (kind === "roll" || kind === "deal") return; // label "Giliran X" sudah tampil
+        const name = game.state.players[pid].name;
+        if (kind === "trade") {
+          const cur = game.state.players[game.state.current];
+          hud.setTurnLabel(waiting ? `🤝 ${name} lagi mikirin tawaran...` : `Giliran ${cur.name}${cur.isBot ? " 🤖" : ""}`);
+          return;
+        }
+        hud.setTurnLabel(waiting ? `⏳ ${name} lagi mikir...` : null);
       });
       remotes.push(r);
       return r;

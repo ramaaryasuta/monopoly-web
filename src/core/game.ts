@@ -18,7 +18,7 @@ import {
   type ItemId,
   type SeasonId,
 } from "../data/cards";
-import type { Decider, ItemChoice, ItemUse, Presenter } from "./interfaces";
+import type { DealAction, Decider, ItemChoice, ItemUse, Presenter, TradeOffer } from "./interfaces";
 import { createRng, rollDie, type Rng } from "./rng";
 import {
   acquirePrice,
@@ -37,6 +37,14 @@ import {
   sellValue,
   upgradeCost,
 } from "./rules";
+import {
+  activeListings,
+  describeOffer,
+  MAX_COUNTERS,
+  MAX_TRADES_PER_TURN,
+  tradeError,
+  validMarketPrice,
+} from "./trade";
 import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
 
 export interface GameOptions {
@@ -108,6 +116,13 @@ export class Game {
     if (p.pendingTour) {
       p.pendingTour = false;
       await this.doTour(p.id);
+      this.endTurn();
+      return;
+    }
+
+    // Negosiasi & Pasar Terbuka sebelum lempar dadu
+    await this.dealPhase(p.id);
+    if (this.state.winner !== null || p.bankrupt || this.stopped) {
       this.endTurn();
       return;
     }
@@ -341,6 +356,7 @@ export class Game {
         this.addMoney(pid, -price);
         this.addMoney(owner.id, price);
         ts.owner = pid;
+        this.cleanMarket();
         this.presenter.message(`${p.name} mengakuisisi ${BOARD[tile].name} dari ${owner.name} seharga ${fmt(price)}!`, "good");
         await this.presenter.tileChanged(this.state, tile);
         if (this.checkMonopoly(pid)) return;
@@ -628,6 +644,133 @@ export class Game {
     }
   }
 
+  // ---------------------------------------------------------------- negosiasi & pasar
+
+  /** Sebelum lempar dadu, pemain giliran boleh bernegosiasi / berdagang di Pasar Terbuka berkali-kali. */
+  private async dealPhase(pid: number) {
+    const p = this.state.players[pid];
+    let trades = 0;
+    for (let n = 0; n < 20 && !this.stopped; n++) {
+      this.cleanMarket();
+      const act = await this.deciders[pid].chooseDeal({
+        player: pid,
+        tradesLeft: Math.max(0, MAX_TRADES_PER_TURN - trades),
+        hasItems: this.usableItems(pid).length > 0,
+        inIsland: p.islandTurns > 0,
+      });
+      if (!act) return;
+      if (act.type === "trade") {
+        if (trades >= MAX_TRADES_PER_TURN) {
+          this.presenter.message(`${p.name} sudah ${MAX_TRADES_PER_TURN}x menawar di giliran ini.`);
+          continue;
+        }
+        trades++;
+      }
+      await this.applyDeal(pid, act);
+      if (this.state.winner !== null || p.bankrupt) return;
+    }
+  }
+
+  async applyDeal(pid: number, act: DealAction): Promise<void> {
+    const p = this.state.players[pid];
+    switch (act?.type) {
+      case "trade":
+        if (act.offer?.from !== pid) return;
+        return this.negotiate(act.offer);
+      case "list": {
+        const ts = this.state.tiles[act.tile];
+        if (!ts || ts.owner !== pid || !validMarketPrice(act.price)) return;
+        const def = BOARD[act.tile];
+        if (def.kind !== "property" && def.kind !== "resort") return;
+        this.state.market = this.state.market.filter((l) => l.tile !== act.tile);
+        this.state.market.push({ tile: act.tile, seller: pid, price: act.price });
+        this.presenter.message(`🏪 ${p.name} memajang ${def.name} di Pasar Terbuka seharga ${fmt(act.price)}.`);
+        await this.presenter.marketChanged(this.state);
+        return;
+      }
+      case "unlist": {
+        const before = this.state.market.length;
+        this.state.market = this.state.market.filter((l) => !(l.tile === act.tile && l.seller === pid));
+        if (this.state.market.length === before) return;
+        this.presenter.message(`🏪 ${p.name} menarik ${BOARD[act.tile].name} dari Pasar Terbuka.`);
+        await this.presenter.marketChanged(this.state);
+        return;
+      }
+      case "buy": {
+        const l = activeListings(this.state).find((x) => x.tile === act.tile);
+        if (!l || l.seller === pid || p.money < l.price) return;
+        const seller = this.state.players[l.seller];
+        this.addMoney(pid, -l.price);
+        this.addMoney(seller.id, l.price);
+        this.state.tiles[l.tile].owner = pid;
+        this.cleanMarket();
+        this.presenter.message(`🏪 ${p.name} membeli ${BOARD[l.tile].name} dari ${seller.name} di Pasar Terbuka seharga ${fmt(l.price)}!`, "good");
+        await this.presenter.tileChanged(this.state, l.tile);
+        await this.presenter.marketChanged(this.state);
+        this.checkMonopoly(pid);
+        return;
+      }
+    }
+  }
+
+  /** Tawar-menawar: pihak penerima menerima, menolak, atau menawar balik (bergantian). */
+  private async negotiate(first: TradeOffer) {
+    let o = first;
+    for (let round = 0; !this.stopped; round++) {
+      const err = tradeError(this.state, o);
+      if (err) {
+        this.presenter.message(`🤝 Tawaran batal: ${err}.`, "bad");
+        return;
+      }
+      const from = this.state.players[o.from];
+      const to = this.state.players[o.to];
+      this.presenter.message(`🤝 ${from.name} ${round === 0 ? "menawarkan" : "menawar balik"} ke ${to.name}: ${describeOffer(this.state, o)}`);
+      const canCounter = round < MAX_COUNTERS;
+      await this.presenter.tradeProposed(this.state, o, round);
+      const reply = await this.deciders[o.to].respondTrade({ player: o.to, offer: o, round, canCounter });
+      if (reply?.type === "accept") {
+        await this.executeTrade(o);
+        return;
+      }
+      if (reply?.type === "counter" && canCounter && reply.offer?.from === o.to && reply.offer?.to === o.from) {
+        o = reply.offer;
+        continue;
+      }
+      this.presenter.message(`🙅 ${to.name} menolak tawaran ${from.name}.`, "bad");
+      await this.presenter.tradeResolved(this.state, o, false);
+      return;
+    }
+  }
+
+  private async executeTrade(o: TradeOffer) {
+    const from = this.state.players[o.from];
+    const to = this.state.players[o.to];
+    if (o.giveMoney > 0) {
+      this.addMoney(o.from, -o.giveMoney);
+      this.addMoney(o.to, o.giveMoney);
+    }
+    if (o.takeMoney > 0) {
+      this.addMoney(o.to, -o.takeMoney);
+      this.addMoney(o.from, o.takeMoney);
+    }
+    for (const t of o.giveTiles) this.state.tiles[t].owner = o.to;
+    for (const t of o.takeTiles) this.state.tiles[t].owner = o.from;
+    this.cleanMarket();
+    this.presenter.message(`🤝 Deal! ${to.name} menerima tawaran ${from.name}.`, "good");
+    for (const t of [...o.giveTiles, ...o.takeTiles]) await this.presenter.tileChanged(this.state, t);
+    await this.presenter.tradeResolved(this.state, o, true);
+    // Pemain giliran dicek dulu, lalu lawannya
+    const order = o.from === this.state.current ? [o.from, o.to] : [o.to, o.from];
+    for (const pid of order) if (this.checkMonopoly(pid)) return;
+  }
+
+  /** Buang listing yang sudah tidak sah (wilayah pindah tangan / penjual bangkrut). */
+  private cleanMarket() {
+    if (this.state.market.length === 0) return;
+    const valid = activeListings(this.state);
+    if (valid.length !== this.state.market.length) this.state.market = valid;
+  }
+
   // ---------------------------------------------------------------- chaos
 
   /** Di awal ronde baru, kadang muncul event konyol untuk seluruh pulau. */
@@ -774,6 +917,7 @@ export class Game {
     const ts = this.state.tiles[tile];
     ts.owner = null;
     ts.level = 0;
+    this.cleanMarket();
     if (ts.festival) {
       ts.festival = false;
       this.state.festivalTile = null;

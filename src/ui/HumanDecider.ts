@@ -1,11 +1,26 @@
-import type { AcquireChoice, BuildChoice, Decider, IslandChoice, ItemChoice, ItemUse, TileChoice } from "../core/interfaces";
+import type {
+  AcquireChoice,
+  BuildChoice,
+  DealAction,
+  DealChoice,
+  Decider,
+  IslandChoice,
+  ItemChoice,
+  ItemUse,
+  TileChoice,
+  TradeOffer,
+  TradeReply,
+  TradeReplyChoice,
+} from "../core/interfaces";
+import { flipOffer, sameOffer } from "../core/trade";
 import { LEVEL_NAMES, rentFor } from "../core/rules";
 import type { BuildLevel, GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
 import { ITEMS } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
-import { escapeHtml, fmt, modal } from "./dom";
+import { escapeHtml, fmt, h, modal } from "./dom";
 import type { Hud } from "./Hud";
+import { editOffer, marketMenu, offerView, pickTradeTarget } from "./TradeUi";
 
 const LEVEL_ICON = ["", "🚩", "🏠", "🏠🏠", "🏡", "🗼"];
 
@@ -19,6 +34,69 @@ export class HumanDecider implements Decider {
 
   /** Tombol dadu sudah diklik saat menawarkan kartu simpanan → jangan tunggu lagi. */
   private rollAlreadyClicked = false;
+  /** Menu awal giliran: dadu diklik → jangan tawarkan kantong lagi. */
+  private skipItemMenu = false;
+  /** Menu awal giliran: tombol kantong diklik → langsung buka kantong. */
+  private openItemMenu = false;
+
+  async chooseDeal(c: DealChoice): Promise<DealAction | null> {
+    this.rollAlreadyClicked = false;
+    this.skipItemMenu = false;
+    this.openItemMenu = false;
+    for (;;) {
+      const action = await this.hud.waitTurnMenu({
+        items: c.hasItems ? this.state.players[c.player].items.length : 0,
+        tradesLeft: c.tradesLeft,
+        rollLabel: c.inIsland ? "⛓️ LANJUT" : "🎲 LEMPAR DADU",
+      });
+      if (action === "roll") {
+        this.rollAlreadyClicked = true;
+        this.skipItemMenu = true;
+        return null;
+      }
+      if (action === "item") {
+        this.openItemMenu = true;
+        return null;
+      }
+      if (action === "market") {
+        const deal = await marketMenu(this.state, c.player);
+        if (deal) return deal;
+        continue;
+      }
+      const target = await pickTradeTarget(this.state, c.player);
+      if (target === null) continue;
+      const draft: TradeOffer = { from: c.player, to: target, giveTiles: [], giveMoney: 0, takeTiles: [], takeMoney: 0 };
+      const offer = await editOffer(this.state, draft, `🤝 Tawaran ke ${this.state.players[target].name}`);
+      if (offer) return { type: "trade", offer };
+    }
+  }
+
+  async respondTrade(c: TradeReplyChoice): Promise<TradeReply> {
+    const o = c.offer;
+    const from = this.state.players[o.from];
+    const me = this.state.players[c.player];
+    // Main bareng satu perangkat: tunjukkan untuk siapa tawaran ini
+    const hotseat = this.state.players.filter((p) => !p.isBot && !p.bankrupt).length > 1;
+    for (;;) {
+      const v = await modal<"accept" | "counter" | "reject">({
+        title: `🤝 ${c.round === 0 ? "Tawaran" : "Tawar balik"} dari ${from.name}`,
+        className: "trade-modal",
+        body: h("div", {}, hotseat ? h("p", { class: "for-who" }, `Untuk ${me.name} 👀`) : null, offerView(this.state, o)),
+        row: true,
+        buttons: [
+          { label: "✅ Terima", value: "accept", class: "green" },
+          ...(c.canCounter ? [{ label: "🔁 Tawar Balik", value: "counter" as const, class: "blue" }] : []),
+          { label: "❌ Tolak", value: "reject", class: "white" },
+        ],
+      });
+      if (v !== "counter") return { type: v };
+      const counter = await editOffer(this.state, flipOffer(o), `🔁 Tawar balik ke ${from.name}`);
+      if (!counter) continue;
+      // Tawar balik yang isinya sama persis = menerima
+      if (sameOffer(counter, flipOffer(o))) return { type: "accept" };
+      return { type: "counter", offer: counter };
+    }
+  }
 
   async waitForRoll(): Promise<void> {
     if (this.rollAlreadyClicked) {
@@ -30,8 +108,15 @@ export class HumanDecider implements Decider {
 
   async chooseItem(c: ItemChoice): Promise<ItemUse | null> {
     const count = this.state.players[c.player].items.length;
+    if (this.skipItemMenu) {
+      this.skipItemMenu = false;
+      return null;
+    }
+    let direct = this.openItemMenu;
+    this.openItemMenu = false;
     for (;;) {
-      const action = await this.hud.waitRollOrItem(count);
+      const action = direct ? "item" : await this.hud.waitRollOrItem(count);
+      direct = false;
       if (action === "roll") {
         this.rollAlreadyClicked = true;
         return null;

@@ -232,3 +232,81 @@ describe("kartu simpanan & event musiman", () => {
     expect(log).toContain("end:banjir@3");
   });
 });
+
+describe("negosiasi & pasar terbuka", () => {
+  const scripted = (g: Game, replies: Record<number, import("../src/core/interfaces").TradeReply[]>) => {
+    const bots = g.state.players.map(() => new BotDecider(g.state));
+    g.deciders = bots.map((b, pid) => {
+      const d = Object.create(b) as Decider;
+      d.respondTrade = async () => replies[pid]?.shift() ?? { type: "reject" };
+      return d;
+    });
+  };
+
+  it("tukar wilayah + uang bila diterima", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[1] = { owner: 0, level: 2, festival: false };
+    g.state.tiles[31] = { owner: 1, level: 1, festival: false };
+    scripted(g, { 1: [{ type: "accept" }] });
+    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [1], giveMoney: 100, takeTiles: [31], takeMoney: 0 } });
+    expect(g.state.tiles[1].owner).toBe(1);
+    expect(g.state.tiles[31].owner).toBe(0);
+    expect(g.state.players[0].money).toBe(CONFIG.startMoney - 100);
+    expect(g.state.players[1].money).toBe(CONFIG.startMoney + 100);
+  });
+
+  it("ditolak → tidak ada yang berubah", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[31] = { owner: 1, level: 1, festival: false };
+    scripted(g, { 1: [{ type: "reject" }] });
+    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [31], takeMoney: 0 } });
+    expect(g.state.tiles[31].owner).toBe(1);
+    expect(g.state.players[0].money).toBe(CONFIG.startMoney);
+  });
+
+  it("tawar balik lalu diterima pengirim awal", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[31] = { owner: 1, level: 1, festival: false };
+    scripted(g, {
+      1: [{ type: "counter", offer: { from: 1, to: 0, giveTiles: [31], giveMoney: 0, takeTiles: [], takeMoney: 300 } }],
+      0: [{ type: "accept" }],
+    });
+    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [31], takeMoney: 0 } });
+    expect(g.state.tiles[31].owner).toBe(0);
+    expect(g.state.players[0].money).toBe(CONFIG.startMoney - 300);
+  });
+
+  it("tawaran tidak sah diabaikan (wilayah bukan milik lawan)", async () => {
+    const g = botGame(2, 1);
+    scripted(g, { 1: [{ type: "accept" }] });
+    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [31], takeMoney: 0 } });
+    expect(g.state.tiles[31].owner).toBeNull();
+    expect(g.state.players[0].money).toBe(CONFIG.startMoney);
+  });
+
+  it("pajang, beli, dan listing hilang saat pindah tangan", async () => {
+    const g = botGame(3, 1);
+    g.state.tiles[31] = { owner: 1, level: 1, festival: false };
+    await g.applyDeal(1, { type: "list", tile: 31, price: 250 });
+    expect(g.state.market).toEqual([{ tile: 31, seller: 1, price: 250 }]);
+    await g.applyDeal(1, { type: "buy", tile: 31 }); // tidak bisa beli milik sendiri
+    expect(g.state.tiles[31].owner).toBe(1);
+    await g.applyDeal(2, { type: "buy", tile: 31 });
+    expect(g.state.tiles[31].owner).toBe(2);
+    expect(g.state.players[2].money).toBe(CONFIG.startMoney - 250);
+    expect(g.state.players[1].money).toBe(CONFIG.startMoney + 250);
+    expect(g.state.market).toEqual([]);
+  });
+
+  it("bot menolak tawaran yang membubarkan monopolinya", async () => {
+    const g = botGame(2, 1);
+    for (const t of PROPERTY_GROUPS[7]) g.state.tiles[t] = { owner: 1, level: 1, festival: false };
+    const reply = await new BotDecider(g.state).respondTrade({
+      player: 1,
+      round: 0,
+      canCounter: true,
+      offer: { from: 0, to: 1, giveTiles: [], giveMoney: 900, takeTiles: [PROPERTY_GROUPS[7][0]], takeMoney: 0 },
+    });
+    expect(reply.type).toBe("reject");
+  });
+});

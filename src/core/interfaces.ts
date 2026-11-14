@@ -45,6 +45,46 @@ export interface ItemUse {
   target: number | null;
 }
 
+/**
+ * Tawaran tukar/jual wilayah antar pemain. Dilihat dari sisi pengirim (`from`):
+ * `give*` = yang diberikan `from` ke `to`, `take*` = yang diminta `from` dari `to`.
+ */
+export interface TradeOffer {
+  from: number;
+  to: number;
+  giveTiles: number[];
+  giveMoney: number;
+  takeTiles: number[];
+  takeMoney: number;
+}
+
+/** Aksi sebelum lempar dadu: negosiasi atau transaksi Pasar Terbuka. */
+export type DealAction =
+  | { type: "trade"; offer: TradeOffer }
+  | { type: "list"; tile: number; price: number }
+  | { type: "unlist"; tile: number }
+  | { type: "buy"; tile: number };
+
+export interface DealChoice {
+  player: number;
+  /** Sisa jatah mengirim tawaran negosiasi di giliran ini. */
+  tradesLeft: number;
+  /** Ada kartu simpanan yang bisa dipakai (untuk tombol 🎒). */
+  hasItems: boolean;
+  inIsland: boolean;
+}
+
+export type TradeReply = { type: "accept" } | { type: "reject" } | { type: "counter"; offer: TradeOffer };
+
+export interface TradeReplyChoice {
+  /** Pemain yang menjawab (= offer.to). */
+  player: number;
+  offer: TradeOffer;
+  /** Tawaran ke berapa dalam negosiasi ini (0 = tawaran pertama). */
+  round: number;
+  canCounter: boolean;
+}
+
 /** Sumber keputusan: pemain manusia (UI) atau bot (AI). */
 export interface Decider {
   waitForRoll(player: number): Promise<void>;
@@ -55,6 +95,10 @@ export interface Decider {
   chooseTile(c: TileChoice): Promise<number>;
   /** Sebelum lempar dadu: pakai kartu simpanan, atau `null` untuk langsung lempar. */
   chooseItem(c: ItemChoice): Promise<ItemUse | null>;
+  /** Di awal giliran: negosiasi / pasar, atau `null` untuk lanjut (lempar dadu). */
+  chooseDeal(c: DealChoice): Promise<DealAction | null>;
+  /** Menjawab tawaran negosiasi: terima, tolak, atau tawar balik. */
+  respondTrade(c: TradeReplyChoice): Promise<TradeReply>;
 }
 
 export type MessageKind = "info" | "good" | "bad";
@@ -74,6 +118,12 @@ export interface Presenter {
   showSeason(season: SeasonDef, ended: boolean): Promise<void>;
   /** Kartu simpanan dipakai. */
   itemUsed(player: number, use: ItemUse): Promise<void>;
+  /** Isi Pasar Terbuka berubah. */
+  marketChanged(state: GameState): Promise<void>;
+  /** Tawaran negosiasi dikirim (semua pemain melihatnya). */
+  tradeProposed(state: GameState, offer: TradeOffer, round: number): Promise<void>;
+  /** Negosiasi selesai: deal (`accepted`) atau ditolak. */
+  tradeResolved(state: GameState, offer: TradeOffer, accepted: boolean): Promise<void>;
   playerBankrupt(state: GameState, player: number): Promise<void>;
   gameOver(state: GameState): Promise<void>;
 }
@@ -89,6 +139,9 @@ export class NullPresenter implements Presenter {
   async showEvent() {}
   async showSeason() {}
   async itemUsed() {}
+  async marketChanged() {}
+  async tradeProposed() {}
+  async tradeResolved() {}
   async playerBankrupt() {}
   async gameOver() {}
 }

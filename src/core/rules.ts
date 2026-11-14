@@ -44,6 +44,7 @@ export function createGame(setups: PlayerSetup[]): GameState {
     round: 1,
     festivalTile: null,
     season: null,
+    market: [],
     winner: null,
     winReason: null,
   };

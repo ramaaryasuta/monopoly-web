@@ -1,6 +1,18 @@
-import type { AcquireChoice, BuildChoice, Decider, IslandChoice, ItemChoice, ItemUse, TileChoice } from "../core/interfaces";
+import type {
+  AcquireChoice,
+  BuildChoice,
+  DealAction,
+  DealChoice,
+  Decider,
+  IslandChoice,
+  ItemChoice,
+  ItemUse,
+  TileChoice,
+  TradeReply,
+  TradeReplyChoice,
+} from "../core/interfaces";
 
-type Kind = "roll" | "build" | "acq" | "island" | "tile" | "item";
+export type Kind = "roll" | "build" | "acq" | "island" | "tile" | "item" | "deal" | "trade";
 
 /** Membungkus decider lokal (manusia/bot) dan menyiarkan setiap keputusannya ke jaringan. */
 export class BroadcastDecider implements Decider {
@@ -36,6 +48,16 @@ export class BroadcastDecider implements Decider {
   async chooseItem(c: ItemChoice) {
     const v = await this.inner.chooseItem(c);
     this.send("item", v);
+    return v;
+  }
+  async chooseDeal(c: DealChoice) {
+    const v = await this.inner.chooseDeal(c);
+    this.send("deal", v);
+    return v;
+  }
+  async respondTrade(c: TradeReplyChoice) {
+    const v = await this.inner.respondTrade(c);
+    this.send("trade", v);
     return v;
   }
 }
@@ -116,5 +138,11 @@ export class RemoteDecider implements Decider {
   }
   chooseItem(c: ItemChoice) {
     return this.next<ItemUse | null>("item", (d) => d.chooseItem(c));
+  }
+  chooseDeal(c: DealChoice) {
+    return this.next<DealAction | null>("deal", (d) => d.chooseDeal(c));
+  }
+  respondTrade(c: TradeReplyChoice) {
+    return this.next<TradeReply>("trade", (d) => d.respondTrade(c));
   }
 }

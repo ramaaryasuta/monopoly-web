@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
-import type { ItemUse, MessageKind, Presenter } from "../core/interfaces";
+import type { ItemUse, MessageKind, Presenter, TradeOffer } from "../core/interfaces";
 import type { GameState } from "../core/types";
 import { BOARD } from "../data/board";
 import { tilePosition } from "../scene/layout";
@@ -160,6 +160,31 @@ export class ScenePresenter implements Presenter {
     this.hud.refresh();
   }
 
+  async marketChanged() {
+    this.hud.refresh();
+  }
+
+  async tradeProposed(_state: GameState, offer: TradeOffer, round: number) {
+    this.hud.speech(offer.from, pick(round === 0 ? DEAL_ASK : DEAL_COUNTER), true);
+    sfx.click();
+    // Beri waktu membaca balon sebelum modal jawaban muncul
+    await wait(this.view.scene, 0.4);
+  }
+
+  async tradeResolved(_state: GameState, offer: TradeOffer, accepted: boolean) {
+    this.hud.refresh();
+    if (!accepted) {
+      this.hud.speech(offer.to, pick(DEAL_NO), true);
+      return;
+    }
+    sfx.coin();
+    for (const pid of [offer.from, offer.to]) {
+      this.view.effects.emojiBurst(this.view.pawns[pid].root.position.add(new Vector3(0, 1.5, 0)), "🤝", 5);
+    }
+    this.hud.speech(offer.to, pick(DEAL_YES), true);
+    await wait(this.view.scene, 0.5);
+  }
+
   async playerBankrupt(state: GameState, player: number) {
     sfx.sadTrombone();
     this.hud.refresh();
@@ -187,3 +212,7 @@ const POW = ["BOOM!", "WADUH!", "PLAK!", "BRRRT!", "GASS!", "ANJAY!", "DUAR!"];
 const OK_LABELS = ["OK deh", "Pasrah 🙏", "Gaskeun!", "Yaudah lah", "Siap bos!"];
 const HAPPY = ["Gaskeun! 🔥", "Rezeki anak soleh!", "Mantap jiwa!", "Sultan mah bebas 😎", "Hahaha kaya!", "Cuan cuan cuan!", "Traktir? Nggak."];
 const SAD = ["Waduh...", "Dompetku menangis 😭", "Kok gitu sih?!", "Asem!", "Astagaa...", "Nangis di pojokan", "Gajian masih lama..."];
+const DEAL_ASK = ["Deal, bos? 🤝", "Ada penawaran menarik nih!", "Bisa nego dong~", "Harga teman!"];
+const DEAL_COUNTER = ["Kurang dikit lagi...", "Gimana kalau segini?", "Naikin dong! 😤", "Nego tipis-tipis"];
+const DEAL_NO = ["Ogah! 🙅", "Mimpi kali!", "Nggak dulu deh", "Harga diri lebih mahal!"];
+const DEAL_YES = ["Deal! 🤝", "Sepakat!", "Cuan bareng!", "Salaman dulu!"];

@@ -53,6 +53,13 @@ export interface PlayerState {
   items: ItemId[];
 }
 
+/** Wilayah yang dijual di Pasar Terbuka (bisa dibeli pemain mana pun di gilirannya). */
+export interface MarketListing {
+  tile: number;
+  seller: number;
+  price: number;
+}
+
 export type WinReason = "lastStanding" | "tripleMonopoly" | "lineMonopoly" | "resortMonopoly" | "roundLimit";
 
 export interface GameState {
@@ -63,6 +70,8 @@ export interface GameState {
   festivalTile: number | null;
   /** Event musiman yang sedang berlaku (berakhir setelah ronde `untilRound`). */
   season: { id: SeasonId; untilRound: number } | null;
+  /** Pasar Terbuka: wilayah yang sedang dijual pemiliknya. */
+  market: MarketListing[];
   winner: number | null;
   winReason: WinReason | null;
 }

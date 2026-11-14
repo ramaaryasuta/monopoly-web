@@ -499,6 +499,7 @@ body {
 .modal-backdrop {
   position: fixed;
   inset: 0;
+  z-index: 10; /* di atas balon ucapan pion */
   display: grid;
   place-items: center;
   background: rgba(43, 29, 58, 0.35);
@@ -772,4 +773,55 @@ body {
 }
 @media (max-width: 700px) {
   .modal.card-reveal p.victim { display: block; }
+}
+
+/* ---------------------------------------------------------------- negosiasi & pasar terbuka */
+.turn-extras { display: flex; flex-direction: column; gap: 6px; }
+.turn-extras .item-btn { font-size: 15px; padding: 7px 14px; border-radius: 14px; white-space: nowrap; }
+.market-btn.has { background: var(--yellow); animation: popIn 0.35s; }
+
+.modal.trade-modal { width: min(640px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+.modal.market-modal { width: min(480px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+.trade-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+.trade-col { background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 8px; min-width: 0; }
+.trade-col h3 { margin: 0 0 6px; font-size: 15px; }
+.trade-col .have { display: block; margin-top: 4px; opacity: 0.7; font-size: 12px; }
+.chips { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+.chips .empty, .market-list .empty { opacity: 0.6; font-size: 13px; text-align: center; }
+.tile-chip {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  border: 2px solid var(--ink); border-left: 8px solid var(--chip, #ccc); border-radius: 10px;
+  padding: 3px 8px; background: var(--cream); font-size: 13px;
+}
+.tile-chip b { flex: 1; min-width: 0; }
+.tile-chip small { opacity: 0.7; font-size: 11px; }
+.tile-chip.money { border-left-color: var(--yellow); }
+.chips.pick label { cursor: pointer; }
+.chips.pick label:has(input:checked) .tile-chip { background: #fff1b8; box-shadow: 0 0 0 2px var(--yellow); }
+.chips.pick input { accent-color: var(--green); margin: 0; }
+.money-in { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
+.money-in input {
+  font-family: var(--font); font-size: 15px; width: 90px; border: 2px solid var(--ink); border-radius: 8px; padding: 3px 6px;
+}
+.money-in.big { justify-content: center; font-size: 16px; }
+.money-in.big input { width: 120px; font-size: 18px; }
+.trade-net { font-weight: 700; margin: 8px 0 0; font-size: 14px; }
+.trade-net.plus { color: #1f8a3a; }
+.trade-net.minus { color: #c0392b; }
+.trade-net small { font-weight: 500; opacity: 0.7; color: var(--ink); }
+.trade-error { color: #c0392b; font-weight: 700; min-height: 1.2em; margin: 4px 0 0; font-size: 14px; }
+.for-who { font-weight: 700; background: #fff1b8; border-radius: 10px; padding: 4px; }
+.market-list { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.market-row { display: flex; align-items: center; gap: 8px; }
+.market-row .tile-chip { flex: 1; }
+.market-row .seller { font-weight: 700; font-size: 13px; text-shadow: 0 0 2px #fff; }
+.market-row .price { font-size: 15px; white-space: nowrap; }
+.market-row.own .tile-chip { background: #e8f6ff; }
+.modal .hint { font-size: 13px; opacity: 0.75; margin-bottom: 0; }
+.modal p.listed { background: #fff1b8; border-radius: 10px; padding: 4px 8px; }
+@media (max-width: 700px) {
+  .trade-grid { grid-template-columns: 1fr; }
+  .turn-extras { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .turn-extras .item-btn { font-size: 13px; padding: 6px 10px; }
+  .market-row { flex-wrap: wrap; }
 }
