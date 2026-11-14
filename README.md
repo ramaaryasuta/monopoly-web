@@ -17,7 +17,7 @@ npm run build      # typecheck + build produksi ke dist/
 | Cara | Fungsi |
 |---|---|
 | `?qa=1` di URL | Panel QA: antrikan hasil dadu, paksa kartu, paksa Berita Heboh di giliran berikutnya, +1000 uang ke pemain aktif |
-| `?seed=123` di URL / kolom Seed di menu | Game deterministik (dadu & kartu sama setiap kali), untuk reproduksi bug |
+| `?seed=123` di URL / Seed di menu (Main Bareng di Sini → ⚙️ Opsi lanjutan) | Game deterministik (dadu & kartu sama setiap kali), untuk reproduksi bug |
 | `window.__game` di DevTools | Akses state game (`__game.state`), `__game.forcedDice.push([6,6])` |
 | `window.__view` di DevTools | Akses scene Babylon (kamera, mesh) |
 | Seed tampil di console | `[Pulau Kaya] seed=...` setiap game dimulai |
