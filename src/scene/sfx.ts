@@ -375,4 +375,11 @@ export const sfx = {
     [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.18, "square", 0.06, undefined, i * 0.12));
   },
   click: () => tone(700, 0.05, "square", 0.04),
+  /** Fanfare singkat saat satu grup warna dikuasai penuh. */
+  setComplete: () => {
+    duckMusic(1.6);
+    [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.14, "square", 0.05, undefined, i * 0.09));
+    for (const f of [784, 988, 1319]) tone(f, 0.6, "triangle", 0.045, undefined, 0.4);
+    [1568, 2093, 2637].forEach((f, i) => tone(f, 0.08, "sine", 0.03, undefined, 0.55 + i * 0.06));
+  },
 };

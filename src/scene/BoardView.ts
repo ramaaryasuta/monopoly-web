@@ -10,15 +10,15 @@ import {
   type Scene,
 } from "@babylonjs/core";
 import earcut from "earcut";
-import { rentFor } from "../core/rules";
+import { ownsGroup, rentFor } from "../core/rules";
 import type { GameState } from "../core/types";
-import { BOARD, isCorner } from "../data/board";
+import { BOARD, isCorner, PROPERTY_GROUPS } from "../data/board";
 import { GRID, gridOf, HALF, inwardDir, TILE, TILE_HEIGHT, tilePosition, tileYaw, WORLD_SCALE } from "./layout";
 import { buildLandmark } from "./landmarks";
 import { LOW_GFX } from "./quality";
 import { createTileTexture, drawTile, FONT } from "./tileArt";
 import { outline, toon } from "./toon";
-import { Ease, tween } from "./tween";
+import { Ease, tween, wait } from "./tween";
 
 interface TileView {
   root: TransformNode;
@@ -27,6 +27,8 @@ interface TileView {
   tex: DynamicTexture;
   buildings: TransformNode;
   baseY: number;
+  /** Tekstur sedang digambar sebagai bagian set lengkap. */
+  fullSet: boolean;
 }
 
 export class BoardView {
@@ -497,7 +499,7 @@ export class BoardView {
       // Bangunan diletakkan di rumput sisi dalam petak supaya label tetap terbaca
       buildings.position.set(0, 0.15, TILE * 0.82);
 
-      this.tiles.push({ root, block, top, tex, buildings, baseY: 0 });
+      this.tiles.push({ root, block, top, tex, buildings, baseY: 0, fullSet: false });
       drawTile(tex, def, { ownerColor: null, rent: 0, festival: false });
       tex.update();
     }
@@ -509,8 +511,13 @@ export class BoardView {
     const ts = state.tiles[index];
     const view = this.tiles[index];
     const owner = ts.owner !== null ? state.players[ts.owner] : null;
-    drawTile(view.tex, def, { ownerColor: owner?.color ?? null, rent: rentFor(state, index), festival: ts.festival });
-    view.tex.update();
+    this.drawTileTex(state, index);
+    // Status set lengkap ikut mengubah petak lain di grup yang sama (mahkota & sewa)
+    if (def.kind === "property") {
+      for (const i of PROPERTY_GROUPS[def.group!]) {
+        if (i !== index && this.tiles[i].fullSet !== this.isFullSet(state, i)) this.drawTileTex(state, i);
+      }
+    }
 
     // Festival star
     if (ts.festival) {
@@ -534,6 +541,39 @@ export class BoardView {
       node.scaling.setAll(0.01);
       await tween(this.scene, 0.45, (t) => node.scaling.setAll(Math.max(0.01, t)), Ease.outBack);
     }
+  }
+
+  private isFullSet(state: GameState, index: number) {
+    const def = BOARD[index];
+    const owner = state.tiles[index].owner;
+    return def.kind === "property" && owner !== null && ownsGroup(state, owner, def.group!);
+  }
+
+  private drawTileTex(state: GameState, index: number) {
+    const ts = state.tiles[index];
+    const view = this.tiles[index];
+    const owner = ts.owner !== null ? state.players[ts.owner] : null;
+    view.fullSet = this.isFullSet(state, index);
+    drawTile(view.tex, BOARD[index], { ownerColor: owner?.color ?? null, rent: rentFor(state, index), festival: ts.festival, fullSet: view.fullSet });
+    view.tex.update();
+  }
+
+  /** Perayaan set lengkap: petak satu grup melompat bergantian sambil berkilau warna grup. */
+  async celebrateSet(indices: number[], color: string) {
+    const flash = Color3.FromHexString(color);
+    const jumps = indices.map(async (i, n) => {
+      const t = this.tiles[i];
+      await wait(this.scene, n * 0.18);
+      t.block.renderOverlay = true;
+      t.block.overlayColor = flash;
+      await tween(this.scene, 0.55, (k) => {
+        t.root.position.y = t.baseY + Math.sin(k * Math.PI) * 0.9;
+        t.block.overlayAlpha = 0.75 * Math.sin(k * Math.PI);
+      });
+      if (!this.highlighted.has(i)) t.block.renderOverlay = false;
+      t.root.position.y = t.baseY;
+    });
+    await Promise.all(jumps);
   }
 
   /** Model bangunan prosedural per level. */

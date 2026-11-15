@@ -43,7 +43,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 
 ## Aturan singkat
 
-- Mulai dengan Rp300 jt. Lewat **Mulai** +Rp350 jt. Urutan jalan diundi: pemain pertama dipilih acak.
+- Mulai dengan Rp500 jt. Lewat **Mulai** +Rp350 jt. Urutan jalan diundi: pemain pertama dipilih acak.
 - **Urutan ular** 🐍 (3–4 pemain): supaya pemain yang jalan lebih dulu tidak selalu dapat tanah terbaik, ronde genap berjalan terbalik (mis. 1-2-3-4, lalu 4-3-2-1, lalu 1-2-3-4). Pemain di batas ronde main dua kali berturut-turut. Ular berakhir di batas ronde begitu ada pemain yang melewati **Mulai**, lalu urutan kembali normal.
 - Mendarat di tanah kosong → beli & langsung bangun hingga **Vila**. Di **putaran pertama** (sebelum pertama kali lewat Mulai) hanya boleh beli tanah. **Landmark** dibangun saat mendarat lagi di Vila sendiri.
 - Mendarat di properti lawan → bayar **sewa** = 65% nilai wilayah (total biaya tanah + bangunan yang sudah dikeluarkan). Punya **satu grup warna lengkap** → sewa semua wilayah di grup itu **+30%**. Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).

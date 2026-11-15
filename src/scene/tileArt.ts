@@ -48,6 +48,8 @@ export interface TileArtState {
   ownerColor: string | null;
   rent: number;
   festival: boolean;
+  /** Pemilik menguasai seluruh grup warna petak ini (sewa +bonus set). */
+  fullSet?: boolean;
 }
 
 /** Gambar permukaan atas petak ke DynamicTexture. Atas tekstur = arah ke dalam papan. */
@@ -89,6 +91,19 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
   ctx.strokeStyle = st.ownerColor ?? INK;
   roundRect(ctx, 10 * k, 10 * k, S - 20 * k, S - 20 * k, 26 * k);
   ctx.stroke();
+  if (st.fullSet) {
+    // Set lengkap: bingkai emas di dalam bingkai pemilik + mahkota di pita warna
+    ctx.lineWidth = 7 * k;
+    ctx.strokeStyle = "#ffd23f";
+    roundRect(ctx, 21 * k, 21 * k, S - 42 * k, S - 42 * k, 20 * k);
+    ctx.stroke();
+    ctx.lineWidth = 2 * k;
+    ctx.strokeStyle = INK;
+    roundRect(ctx, 17.5 * k, 17.5 * k, S - 35 * k, S - 35 * k, 22 * k);
+    ctx.stroke();
+    roundRect(ctx, 24.5 * k, 24.5 * k, S - 49 * k, S - 49 * k, 18 * k);
+    ctx.stroke();
+  }
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -127,6 +142,13 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
   ctx.stroke();
   ctx.fillStyle = st.ownerColor ? "#fff" : INK;
   ctx.fillText(label, S / 2, S * 0.835);
+
+  if (st.fullSet) {
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `${S * 0.17}px ${FONT}`;
+    ctx.fillText("👑", S * 0.17, S * 0.15);
+  }
 
   if (st.festival) {
     ctx.font = `${S * 0.16}px ${FONT}`;

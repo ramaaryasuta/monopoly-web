@@ -1,7 +1,8 @@
 import { Vector3 } from "@babylonjs/core";
 import type { ItemUse, MessageKind, Presenter, TradeOffer } from "../core/interfaces";
 import type { GameState } from "../core/types";
-import { BOARD } from "../data/board";
+import { BOARD, GROUP_COLORS, GROUP_NAMES, PROPERTY_GROUPS } from "../data/board";
+import { CONFIG, ownsGroup } from "../core/rules";
 import { tilePosition } from "../scene/layout";
 import { ITEMS, SEASON_ROUNDS, type Card, type ChaosEvent, type FunFx, type SeasonDef } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
@@ -9,6 +10,7 @@ import { seasonSfx, sfx } from "../scene/sfx";
 import { wait } from "../scene/tween";
 import { escapeHtml, modal } from "./dom";
 import type { Hud } from "./Hud";
+import { cardSummary } from "./cardSummary";
 
 /** Menjembatani event game logic → animasi 3D + HUD. */
 export class ScenePresenter implements Presenter {
@@ -21,7 +23,52 @@ export class ScenePresenter implements Presenter {
     private state: GameState,
     /** Pemain manusia yang dikendalikan di perangkat ini (online: bukan pemain jarak jauh). */
     private isLocalHuman: (pid: number) => boolean = (pid) => !state.players[pid].isBot,
-  ) {}
+  ) {
+    this.setOwners = this.currentSetOwners(state);
+  }
+
+  /** Pemilik set lengkap per grup warna (null = belum ada), untuk mendeteksi set baru. */
+  private setOwners: (number | null)[];
+
+  private currentSetOwners(state: GameState) {
+    return PROPERTY_GROUPS.map((tiles) => {
+      const owner = state.tiles[tiles[0]].owner;
+      return owner !== null && ownsGroup(state, owner, BOARD[tiles[0]].group!) ? owner : null;
+    });
+  }
+
+  /** Samakan catatan set tanpa perayaan (mis. setelah riwayat online diputar ulang). */
+  syncSets(state: GameState) {
+    this.setOwners = this.currentSetOwners(state);
+  }
+
+  /** Rayakan setiap grup warna yang baru saja dikuasai penuh. */
+  private async checkNewSets(state: GameState) {
+    const now = this.currentSetOwners(state);
+    const fresh = now.map((o, g) => (o !== null && o !== this.setOwners[g] ? g : -1)).filter((g) => g >= 0);
+    this.setOwners = now;
+    for (const g of fresh) await this.celebrateSet(state, now[g]!, g);
+  }
+
+  private async celebrateSet(state: GameState, pid: number, group: number) {
+    const p = state.players[pid];
+    const tiles = PROPERTY_GROUPS[group];
+    const color = GROUP_COLORS[group];
+    const center = tiles.reduce((acc, i) => acc.addInPlace(tilePosition(i)), new Vector3()).scaleInPlace(1 / tiles.length);
+    const bonus = Math.round(CONFIG.setRentBonus * 100);
+    this.hud.log(`👑 SET LENGKAP! ${p.name} menguasai semua wilayah grup ${GROUP_NAMES[group]} — sewanya +${bonus}%!`, "good");
+    await this.view.focus(center.clone(), 22, 0.5);
+    sfx.setComplete();
+    this.hud.banner("👑 SET LENGKAP!", `${p.name} menguasai grup ${GROUP_NAMES[group]} · sewa +${bonus}%`, color);
+    tiles.forEach((i, n) => {
+      void wait(this.view.scene, n * 0.18).then(() => this.view.effects.emojiBurst(tilePosition(i).add(new Vector3(0, 1.4, 0)), n % 2 ? "⭐" : "👑", 5));
+    });
+    await this.view.board.celebrateSet(tiles, color);
+    this.view.effects.confetti(center.add(new Vector3(0, 2, 0)));
+    this.hud.speech(pid, pick(SET_SHOUT), true);
+    void this.view.pawns[pid].cheer();
+    await wait(this.view.scene, 0.9);
+  }
 
   async turnStart(state: GameState, player: number) {
     this.hud.refresh();
@@ -73,6 +120,7 @@ export class ScenePresenter implements Presenter {
     }
     await this.view.board.updateTile(state, tile, true);
     this.hud.refresh();
+    await this.checkNewSets(state);
   }
 
   message(text: string, kind: MessageKind = "info") {
@@ -89,12 +137,15 @@ export class ScenePresenter implements Presenter {
   async showCard(player: number, card: Card) {
     const bot = !this.isLocalHuman(player);
     const isItem = card.effect.type === "item";
+    const sum = cardSummary(this.state, player, card);
     // Kartu 3D diambil dari tumpukan, terbang ke depan kamera, lalu dibuka
     await this.view.cards.draw({ icon: card.icon, title: card.title, text: card.text, kind: isItem ? "item" : "card", header: this.packetName(player) });
     await modal({
       title: card.title,
       className: "comic card-reveal",
-      body: `<div class="comic-pow">${pick(POW)}</div><p>${card.text}</p>`,
+      body:
+        `<div class="comic-pow">${pick(POW)}</div><p>${card.text}</p>` +
+        `<div class="card-effect ${sum.tone}"><b>${escapeHtml(sum.main)}</b>${sum.detail ? `<small>${escapeHtml(sum.detail)}</small>` : ""}</div>`,
       buttons: [{ label: isItem ? "🎒 Simpan!" : pick(OK_LABELS), value: 0, class: "green" }],
       autoCloseMs: bot ? 2000 : undefined,
     });
@@ -215,4 +266,5 @@ const SAD = ["Waduh...", "Dompetku menangis 😭", "Kok gitu sih?!", "Asem!", "A
 const DEAL_ASK = ["Deal, bos? 🤝", "Ada penawaran menarik nih!", "Bisa nego dong~", "Harga teman!"];
 const DEAL_COUNTER = ["Kurang dikit lagi...", "Gimana kalau segini?", "Naikin dong! 😤", "Nego tipis-tipis"];
 const DEAL_NO = ["Ogah! 🙅", "Mimpi kali!", "Nggak dulu deh", "Harga diri lebih mahal!"];
+const SET_SHOUT = ["Satu komplek punyaku! 👑", "Tuan tanah sejati!", "Sewa naik, bos! 📈", "Komplit kayak nasi padang!", "Lunas semua, hehe"];
 const DEAL_YES = ["Deal! 🤝", "Sepakat!", "Cuan bareng!", "Salaman dulu!"];

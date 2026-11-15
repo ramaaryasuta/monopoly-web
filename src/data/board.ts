@@ -12,6 +12,9 @@ export const GROUP_COLORS = [
   "#ff5b5b", // 7 ceri
 ];
 
+/** Nama grup warna (sesuai komentar GROUP_COLORS), untuk pengumuman set lengkap. */
+export const GROUP_NAMES = ["Permen", "Jeruk", "Lemon", "Daun", "Langit", "Laut", "Anggur", "Ceri"];
+
 const P = (index: number, name: string, group: number, price: number): TileDef => ({
   index,
   kind: "property",

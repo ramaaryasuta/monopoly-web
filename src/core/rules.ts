@@ -4,7 +4,7 @@ import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
 const ROUND_LIMIT = 62;
 
 export const CONFIG = {
-  startMoney: 300,
+  startMoney: 500,
   salary: 350,
   islandTurns: 3,
   islandBail: 50,

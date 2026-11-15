@@ -59,6 +59,7 @@ async function boot() {
     game.presenter = scene;
     const st = game.state;
     view.setupPlayers(st, setup.characters);
+    scene.syncSets(st);
     st.players.forEach((p, i) => {
       if (p.bankrupt) void view.pawns[i].faint();
       hud.refreshName(i);

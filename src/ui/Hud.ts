@@ -206,6 +206,18 @@ export class Hud {
     setTimeout(() => e.remove(), 2200);
   }
 
+  /** Spanduk besar di tengah layar (mis. set lengkap). */
+  banner(title: string, sub: string, color: string) {
+    const e = h(
+      "div",
+      { class: "set-banner", style: `--group:${color}` },
+      h("div", { class: "set-title" }, title),
+      h("div", { class: "set-sub" }, sub),
+    );
+    uiRoot().append(e);
+    setTimeout(() => e.remove(), 2700);
+  }
+
   showDiceResult(d1: number, d2: number) {
     const e = h("div", { class: "dice-result" }, `${d1} + ${d2} = ${d1 + d2}${d1 === d2 ? " 🎯" : ""}`);
     uiRoot().append(e);
