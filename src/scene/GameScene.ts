@@ -49,11 +49,7 @@ export class GameScene {
   constructor(canvas: HTMLCanvasElement) {
     // preserveDrawingBuffer tidak dipakai (tak ada screenshot) dan memperlambat GPU HP.
     this.engine = new Engine(canvas, true, { stencil: true, powerPreference: "high-performance" }, true);
-    if (LOW_GFX) {
-      // Layar HP ber-DPR 2–3 = 4–9x piksel. Batasi resolusi render ke ~1.5x.
-      const dpr = window.devicePixelRatio || 1;
-      this.engine.setHardwareScalingLevel(Math.max(1, dpr / 1.5));
-    }
+    if (LOW_GFX) this.adaptiveResolution();
     const scene = (this.scene = new Scene(this.engine));
     // Tidak ada efek hover: jangan picking tiap gerakan pointer (ratusan mesh).
     scene.skipPointerMovePicking = true;
@@ -126,6 +122,31 @@ export class GameScene {
 
     this.engine.runRenderLoop(() => scene.render());
     window.addEventListener("resize", () => this.engine.resize());
+  }
+
+  /**
+   * HP/tablet: mulai dari resolusi tajam (maks 2.5x piksel CSS, supaya tulisan
+   * petak terbaca), lalu turunkan bertahap HANYA bila FPS memang rendah.
+   * Tidak pernah di bawah 1.75x agar layar tidak buram.
+   */
+  private adaptiveResolution() {
+    const dpr = window.devicePixelRatio || 1;
+    const MAX_DPR = Math.min(dpr, 2.5);
+    const MIN_DPR = Math.min(dpr, 1.75);
+    let renderDpr = MAX_DPR;
+    // Hardware scaling = piksel CSS per piksel render, jadi 1/renderDpr (bukan dpr/renderDpr).
+    const apply = () => this.engine.setHardwareScalingLevel(1 / renderDpr);
+    apply();
+    let slow = 0;
+    window.setInterval(() => {
+      if (document.visibilityState !== "visible" || renderDpr <= MIN_DPR) return;
+      // Dua cek berturut-turut di bawah 40 FPS baru turun (hindari lonjakan sesaat)
+      slow = this.engine.getFps() < 40 ? slow + 1 : 0;
+      if (slow < 2) return;
+      slow = 0;
+      renderDpr = Math.max(MIN_DPR, renderDpr - 0.25);
+      apply();
+    }, 1500);
   }
 
   // ------------------------------------------------------------------ setup
