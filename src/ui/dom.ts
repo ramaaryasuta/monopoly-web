@@ -30,6 +30,8 @@ export interface ModalButton<T> {
   class?: string;
   sub?: string;
   disabled?: boolean;
+  /** Wilayah terkait tombol ini (untuk peta mini: hover → petak menyala). */
+  tile?: number;
 }
 
 export interface ModalOptions<T> {
@@ -72,7 +74,7 @@ export function modal<T>(o: ModalOptions<T>): Promise<T> {
     for (const b of o.buttons) {
       const btn = h(
         "button",
-        { class: `btn ${b.class ?? ""} ${b.sub ? "opt" : ""}`, disabled: b.disabled },
+        { class: `btn ${b.class ?? ""} ${b.sub ? "opt" : ""}`, disabled: b.disabled, "data-tile": b.tile },
         h("span", {}, b.label),
         b.sub ? h("small", {}, b.sub) : null,
       );

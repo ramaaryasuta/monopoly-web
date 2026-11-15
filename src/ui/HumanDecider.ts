@@ -21,7 +21,7 @@ import { ITEMS } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
 import { fmt, h, modal } from "./dom";
 import type { Hud } from "./Hud";
-import { editOffer, marketMenu, offerView, pickTradeTarget } from "./TradeUi";
+import { editOffer, focusMap, mapForButtons, marketMenu, offerView, pickTradeTarget } from "./TradeUi";
 
 const LEVEL_ICON = ["", "🚩", "🏠", "🏠🏠", "🏡", "🗼"];
 
@@ -209,11 +209,12 @@ export class HumanDecider implements Decider {
     const hotseat = this.hotseat;
     const canTrade = c.tradesLeft > 0 && this.state.players.some((p) => p.id !== c.player && !p.bankrupt);
     type V = DebtAction | "trade" | { type: "pickDown"; tile: number };
+    const debtTiles = [...new Set([...(c.downgrades ?? []).map((d) => d.tile), ...c.tiles.map((t) => t.tile)])];
     for (;;) {
       const v = await modal<V>({
         title: "💸 Uangnya kurang!",
         className: "debt-modal",
-        body: h(
+        ...mapForButtons(this.state, debtTiles, h(
           "div",
           {},
           hotseat ? h("p", { class: "for-who" }, `Untuk ${me.name} 👀`) : null,
@@ -225,7 +226,7 @@ export class HumanDecider implements Decider {
               ? `⚠️ Walau semua dijual ke bank (+${fmt(totalSell)}) masih kurang. Coba nego jual ke pemain lain, atau menyerah.`
               : "Turunkan bangunan (wilayah tetap milikmu), jual wilayah ke bank (50% nilai investasi), atau nego jual ke pemain lain.",
           ),
-        ),
+        )),
         buttons: [
           ...(c.downgrades ?? []).map((d) => {
             const def = BOARD[d.tile];
@@ -235,6 +236,7 @@ export class HumanDecider implements Decider {
               sub: `${LEVEL_NAMES[d.level]} → ?`,
               value: { type: "pickDown", tile: d.tile } as V,
               class: "green",
+              tile: d.tile,
             };
           }),
           ...c.tiles.map((t) => {
@@ -245,6 +247,7 @@ export class HumanDecider implements Decider {
               sub: lvl,
               value: { type: "sell", tile: t.tile } as V,
               class: "orange",
+              tile: t.tile,
             };
           }),
           {
@@ -265,6 +268,7 @@ export class HumanDecider implements Decider {
             "div",
             {},
             hotseat ? h("p", { class: "for-who" }, `Untuk ${me.name} 👀`) : null,
+            focusMap(this.state, d.tile),
             h("p", {
               html: `Sekarang <b>${LEVEL_NAMES[d.level]}</b>. Bangunan dijual ke bank 50% harga, wilayah tetap milikmu. Kurang <b>${fmt(short)}</b>.`,
             }),

@@ -13,6 +13,7 @@ import {
 } from "../core/trade";
 import type { GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
+import { BoardMap, linkMap, type MapMark } from "./BoardMap";
 import { fmt, h, modal } from "./dom";
 
 const tileColor = (t: number) => (BOARD[t].kind === "resort" ? "#36d1c4" : GROUP_COLORS[BOARD[t].group!]);
@@ -22,7 +23,7 @@ const levelText = (state: GameState, t: number) => (BOARD[t].kind === "resort" ?
 function tileChip(state: GameState, t: number): HTMLElement {
   return h(
     "span",
-    { class: "tile-chip", style: `--chip:${tileColor(t)}` },
+    { class: "tile-chip", style: `--chip:${tileColor(t)}`, "data-tile": t },
     h("b", {}, BOARD[t].name),
     h("small", {}, `${levelText(state, t)} · ${fmt(investedValue(state, t))}`),
   );
@@ -42,9 +43,20 @@ function sideBox(state: GameState, title: string, tiles: number[], money: number
 export function offerView(state: GameState, o: TradeOffer): HTMLElement {
   const gain = offerGainFor(state, o);
   const from = state.players[o.from];
-  return h(
+  const marks = new Map<number, MapMark>();
+  for (const t of o.giveTiles) marks.set(t, "gain");
+  for (const t of o.takeTiles) marks.set(t, "lose");
+  const map = new BoardMap(state, {
+    marks,
+    legend: [
+      { mark: "gain", text: "Kamu dapat" },
+      { mark: "lose", text: "Kamu berikan" },
+    ],
+  });
+  const view = h(
     "div",
     {},
+    map.el,
     h(
       "div",
       { class: "trade-grid" },
@@ -58,6 +70,8 @@ export function offerView(state: GameState, o: TradeOffer): HTMLElement {
       h("small", {}, " (berdasarkan nilai investasi, belum termasuk strategi monopoli)"),
     ),
   );
+  linkMap(view, map);
+  return view;
 }
 
 /** Pilih lawan negosiasi. */
@@ -115,7 +129,22 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
   const theirs = column(false);
   const error = h("p", { class: "trade-error" });
   const net = h("p", { class: "trade-net" });
-  const body = h("div", { class: "trade-editor" }, h("div", { class: "trade-grid" }, mine.col, theirs.col), net, error);
+  const map = new BoardMap(state, {
+    relevant: checks.map((c) => c.tile),
+    // Klik petak di peta = centang/lepas wilayah itu
+    onPick: (t) => {
+      const c = checks.find((x) => x.tile === t);
+      if (!c) return;
+      c.input.checked = !c.input.checked;
+      c.input.dispatchEvent(new Event("change", { bubbles: true }));
+    },
+    legend: [
+      { mark: "lose", text: "Kamu berikan" },
+      { mark: "gain", text: "Kamu minta" },
+    ],
+  });
+  const body = h("div", { class: "trade-editor" }, map.el, h("div", { class: "trade-grid" }, mine.col, theirs.col), net, error);
+  linkMap(body, map);
 
   const read = (): TradeOffer => {
     const num = (i: HTMLInputElement) => Math.max(0, Math.floor(Number(i.value) || 0));
@@ -143,6 +172,10 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
   });
   const update = () => {
     const o = read();
+    const marks = new Map<number, MapMark>();
+    for (const t of o.giveTiles) marks.set(t, "lose");
+    for (const t of o.takeTiles) marks.set(t, "gain");
+    map.setMarks(marks);
     mine.preview.textContent = o.giveMoney ? `= ${fmt(o.giveMoney)}` : "";
     theirs.preview.textContent = o.takeMoney ? `= ${fmt(o.takeMoney)}` : "";
     const err = tradeError(state, o);
@@ -180,6 +213,13 @@ function marketList(state: GameState, viewer: number | null, act?: (a: DealActio
     box.append(h("div", { class: "market-empty" }, h("span", {}, "🦗"), "Pasar masih sepi. Belum ada wilayah yang dijual."));
     return box;
   }
+  const map = new BoardMap(state, {
+    relevant: listings.map((l) => l.tile),
+    marks: new Map(listings.map((l) => [l.tile, "focus" as MapMark])),
+    legend: [{ mark: "focus", text: "Dijual di pasar" }],
+  });
+  const wrap = h("div", {}, map.el, box);
+  linkMap(wrap, map);
   const money = viewer !== null ? state.players[viewer].money : 0;
   for (const l of listings) {
     const own = l.seller === viewer;
@@ -187,7 +227,7 @@ function marketList(state: GameState, viewer: number | null, act?: (a: DealActio
     const deal = l.price < value ? "murah" : l.price > value * 1.5 ? "mahal" : "";
     const row = h(
       "div",
-      { class: `market-row${own ? " own" : ""}`, style: `--chip:${tileColor(l.tile)}` },
+      { class: `market-row${own ? " own" : ""}`, style: `--chip:${tileColor(l.tile)}`, "data-tile": l.tile },
       h(
         "div",
         { class: "mr-info" },
@@ -209,7 +249,7 @@ function marketList(state: GameState, viewer: number | null, act?: (a: DealActio
     }
     box.append(row);
   }
-  return box;
+  return wrap;
 }
 
 /** Lihat Pasar Terbuka tanpa bisa bertransaksi (bisa dibuka siapa saja kapan saja). */
@@ -266,6 +306,7 @@ async function confirmBuy(state: GameState, me: number, tile: number): Promise<b
   const body = h(
     "div",
     { class: "confirm-buy" },
+    focusMap(state, tile),
     h("p", {}, "Yakin mau membeli wilayah ini?"),
     h(
       "div",
@@ -294,7 +335,6 @@ async function confirmBuy(state: GameState, me: number, tile: number): Promise<b
 async function pickListing(state: GameState, me: number): Promise<DealAction | null> {
   const tile = await modal<number | null>({
     title: "➕ Pajang wilayah mana?",
-    body: "<p>Wilayah tetap milikmu (sewa tetap masuk) sampai ada yang membelinya.</p>",
     buttons: [
       ...tradeableTiles(state, me).map((t) => {
         const l = listingFor(state, t);
@@ -303,10 +343,12 @@ async function pickListing(state: GameState, me: number): Promise<DealAction | n
           sub: `${levelText(state, t)} · nilai ${fmt(investedValue(state, t))}${l ? ` · sekarang ${fmt(l.price)}` : ""}`,
           value: t as number | null,
           class: "blue",
+          tile: t,
         };
       }),
       { label: "Batal", value: null, class: "white" },
     ],
+    ...mapForButtons(state, tradeableTiles(state, me), "<p>Wilayah tetap milikmu (sewa tetap masuk) sampai ada yang membelinya.</p>"),
   });
   if (tile === null) return null;
 
@@ -316,6 +358,7 @@ async function pickListing(state: GameState, me: number): Promise<DealAction | n
   const body = h(
     "div",
     { class: "trade-editor" },
+    focusMap(state, tile),
     h("p", {}, `Nilai investasi ${BOARD[tile].name}: `, h("b", {}, fmt(investedValue(state, tile)))),
     h("label", { class: "money-in big" }, h("span", {}, "💰 Harga"), input, h("span", { class: "unit" }, "jt"), preview),
   );
@@ -342,4 +385,28 @@ async function pickListing(state: GameState, me: number): Promise<DealAction | n
   if (!(await done)) return null;
   const price = Math.floor(Number(input.value));
   return validMarketPrice(price) ? { type: "list", tile, price } : null;
+}
+
+/** Peta mini dengan satu petak disorot (untuk dialog yang membahas satu wilayah). */
+export function focusMap(state: GameState, tile: number): HTMLElement {
+  const map = new BoardMap(state, { marks: new Map([[tile, "focus" as MapMark]]) });
+  map.hover(tile);
+  // Info petak terpilih tetap tampil walau kursor lewat lalu pergi
+  map.onHover = (t) => {
+    if (t === null) map.hover(tile);
+  };
+  return map.el;
+}
+
+/**
+ * Peta mini untuk modal berisi daftar tombol wilayah (`ModalButton.tile`).
+ * Hasilnya disebar ke opsi modal: `body` diganti (peta + body lama) dan `bind` menghubungkan hover.
+ */
+export function mapForButtons(state: GameState, tiles: number[], body?: string | Node) {
+  const map = new BoardMap(state, { relevant: tiles });
+  const content = typeof body === "string" ? h("div", { html: body }) : body;
+  return {
+    body: h("div", {}, map.el, content ?? null),
+    bind: (_close: unknown, root: HTMLElement) => linkMap(root, map),
+  };
 }
