@@ -71,6 +71,11 @@ export interface GameState {
   /** Pemain yang membuka permainan (diacak); ronde naik saat giliran kembali ke dia. */
   firstPlayer: number;
   round: number;
+  /**
+   * Urutan ular: ronde genap berjalan terbalik, supaya keunggulan memilih tanah lebih dulu
+   * bergantian. Berakhir (jadi false) di batas ronde begitu ada pemain yang melewati Mulai.
+   */
+  snake: boolean;
   festivalTile: number | null;
   /** Event musiman yang sedang berlaku (berakhir setelah ronde `untilRound`). */
   season: { id: SeasonId; untilRound: number } | null;

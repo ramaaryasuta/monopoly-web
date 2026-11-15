@@ -44,6 +44,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 ## Aturan singkat
 
 - Mulai dengan Rp300 jt. Lewat **Mulai** +Rp350 jt. Urutan jalan diundi: pemain pertama dipilih acak.
+- **Urutan ular** 🐍 (3–4 pemain): supaya pemain yang jalan lebih dulu tidak selalu dapat tanah terbaik, ronde genap berjalan terbalik (mis. 1-2-3-4, lalu 4-3-2-1, lalu 1-2-3-4). Pemain di batas ronde main dua kali berturut-turut. Ular berakhir di batas ronde begitu ada pemain yang melewati **Mulai**, lalu urutan kembali normal.
 - Mendarat di tanah kosong → beli & langsung bangun hingga **Vila**. Di **putaran pertama** (sebelum pertama kali lewat Mulai) hanya boleh beli tanah. **Landmark** dibangun saat mendarat lagi di Vila sendiri.
 - Mendarat di properti lawan → bayar **sewa** = 65% nilai wilayah (total biaya tanah + bangunan yang sudah dikeluarkan). Punya **satu grup warna lengkap** → sewa semua wilayah di grup itu **+30%**. Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).
 - **Tempat wisata** 🌴: sewa berlipat untuk setiap wisata milik pemilik yang sama.
@@ -52,7 +53,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 - **Paket Shopee / Tokopedia / Blibli / Lazada** 📦: 34 kartu konyol (kentut nuklir, nebeng heli pejabat, tukar jiwa, mesin capit, dll).
 - **Berita Heboh** 📢: di awal ronde baru (peluang 45%) muncul event sepulau — heli pejabat salah jemput, gempa kentut, maling budiman, bansos, dll.
 - Uang kurang → **turunkan bangunan** (mis. Vila → Rumah 1; wilayah tetap milikmu, dapat 50% harga bangunan yang dibongkar), pilih sendiri wilayah yang dijual ke bank (50%), atau **nego jual** ke pemain lain (maks 3x). Masih kurang / menyerah → **bangkrut**.
-- **Menang**: lawan bangkrut semua · monopoli 3 grup warna · kuasai 1 sisi papan · kuasai 4 wisata · terkaya di ronde 62.
+- **Menang**: lawan bangkrut semua · monopoli 3 grup warna · kuasai 1 sisi papan · kuasai 4 wisata **dan** 1 grup warna lengkap · terkaya di ronde 62.
 
 ## Struktur
 

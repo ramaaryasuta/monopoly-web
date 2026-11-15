@@ -11,7 +11,8 @@ export const CONFIG = {
   roundLimit: 62,
   sellRate: 0.5,
   festivalMultiplier: 2,
-  resortBaseRent: 15,
+  /** Sewa wisata = dasar x 2^(jumlah wisata dimiliki - 1): 30 / 60 / 120 / 240. */
+  resortBaseRent: 30,
   /** Sewa = persentase nilai wilayah (total biaya tanah + bangunan yang sudah dikeluarkan). */
   rentRate: 0.65,
   /** Punya satu grup warna lengkap (set): sewa semua wilayah di set naik 30%. */
@@ -44,6 +45,8 @@ export function createGame(setups: PlayerSetup[]): GameState {
     current: 0,
     firstPlayer: 0,
     round: 1,
+    // Dengan 2 pemain tidak ada bias urutan yang berarti, jadi urutan ular tidak dipakai
+    snake: setups.length >= 3,
     festivalTile: null,
     season: null,
     market: [],
@@ -161,7 +164,8 @@ export function checkMonopolyWin(state: GameState, player: number): WinReason | 
   const groups = PROPERTY_GROUPS.filter((_, g) => ownsGroup(state, player, g)).length;
   if (groups >= 3) return "tripleMonopoly";
   if (SIDE_PROPERTIES.some((side) => side.every((i) => state.tiles[i].owner === player))) return "lineMonopoly";
-  if (RESORTS.every((i) => state.tiles[i].owner === player)) return "resortMonopoly";
+  // Wisata murah (4 x 200), jadi menang lewat wisata juga mensyaratkan satu grup warna lengkap
+  if (groups >= 1 && RESORTS.every((i) => state.tiles[i].owner === player)) return "resortMonopoly";
   return null;
 }
 
@@ -177,6 +181,6 @@ export const WIN_TEXT: Record<WinReason, string> = {
   lastStanding: "Pemain terakhir yang bertahan!",
   tripleMonopoly: "Monopoli 3 grup warna!",
   lineMonopoly: "Menguasai satu sisi papan penuh!",
-  resortMonopoly: "Menguasai semua tempat wisata!",
+  resortMonopoly: "Menguasai semua tempat wisata + 1 grup warna!",
   roundLimit: "Batas ronde tercapai — kekayaan terbesar!",
 };

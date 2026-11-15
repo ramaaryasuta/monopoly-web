@@ -261,13 +261,29 @@ export class Game {
       this.declareWinner(alive[0], "lastStanding");
       return;
     }
-    let next = this.state.current;
-    do {
-      next = (next + 1) % this.state.players.length;
-      if (next === this.state.firstPlayer) this.state.round++;
-    } while (this.state.players[next].bankrupt);
-    // Ronde naik setiap pemain pertama yang masih hidup memulai lagi
-    this.state.current = next;
+    const st = this.state;
+    const n = st.players.length;
+    const forward = Array.from({ length: n }, (_, i) => (st.firstPlayer + i) % n);
+    // Selama urutan ular aktif, ronde genap berjalan terbalik (pemain terakhir main lagi di awal)
+    const orderOf = (round: number) => (st.snake && round % 2 === 0 ? [...forward].reverse() : forward);
+    let order = orderOf(st.round);
+    let idx = order.indexOf(st.current) + 1;
+    for (;;) {
+      if (idx >= n) {
+        st.round++;
+        // Ular berakhir begitu ada pemain yang sudah melewati Mulai (dicek hanya di batas ronde)
+        if (st.snake && st.players.some((p) => p.laps > 0)) {
+          st.snake = false;
+          this.presenter.message("🔁 Urutan giliran kembali normal.", "info");
+        }
+        order = orderOf(st.round);
+        idx = 0;
+        if (st.snake && st.round % 2 === 0) this.presenter.message("🐍 Urutan giliran dibalik ronde ini!", "info");
+      }
+      if (!st.players[order[idx]].bankrupt) break;
+      idx++;
+    }
+    st.current = order[idx];
     if (this.state.round > CONFIG.roundLimit) {
       this.state.round = CONFIG.roundLimit;
       this.declareWinner(richestPlayer(this.state), "roundLimit");

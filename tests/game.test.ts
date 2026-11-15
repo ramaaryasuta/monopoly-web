@@ -74,14 +74,19 @@ describe("rules", () => {
   it("sewa resort berlipat sesuai jumlah resort", () => {
     const s = createGame(setups(2));
     s.tiles[2] = { owner: 1, level: 1, festival: false };
-    expect(rentFor(s, 2)).toBe(20);
-    s.tiles[16] = { owner: 1, level: 1, festival: false };
     expect(rentFor(s, 2)).toBe(30);
+    s.tiles[16] = { owner: 1, level: 1, festival: false };
+    expect(rentFor(s, 2)).toBe(60);
+    s.tiles[26] = { owner: 1, level: 1, festival: false };
+    s.tiles[31] = { owner: 1, level: 1, festival: false };
+    expect(rentFor(s, 2)).toBe(240);
   });
 
-  it("deteksi monopoli resort", () => {
+  it("monopoli resort hanya menang bila disertai 1 grup warna lengkap", () => {
     const s = createGame(setups(2));
     for (const r of RESORTS) s.tiles[r] = { owner: 1, level: 1, festival: false };
+    expect(checkMonopolyWin(s, 1)).toBeNull(); // 4 wisata saja belum cukup
+    for (const t of PROPERTY_GROUPS[1]) s.tiles[t] = { owner: 1, level: 1, festival: false };
     expect(checkMonopolyWin(s, 1)).toBe("resortMonopoly");
     expect(checkMonopolyWin(s, 0)).toBeNull();
   });
@@ -144,6 +149,7 @@ describe("game flow", () => {
     expect(firsts.size).toBe(4);
 
     const g = new Game(setups(3), [], new NullPresenter(), { seed: 1, randomStart: true });
+    g.state.snake = false; // urutan normal
     g.state.current = g.state.firstPlayer = 2;
     const end = () => (g as unknown as { endTurn(): void }).endTurn();
     end(); // 2 → 0
@@ -151,6 +157,98 @@ describe("game flow", () => {
     end(); // 0 → 1
     end(); // 1 → 2: kembali ke pembuka
     expect(g.state.round).toBe(2);
+    expect(g.state.current).toBe(2);
+  });
+
+  describe("urutan ular", () => {
+    const endOf = (g: Game) => () => (g as unknown as { endTurn(): void }).endTurn();
+    /** Urutan pemain yang bermain selama `turns` giliran, mulai dari pemain sekarang. */
+    const play = (g: Game, turns: number) => {
+      const end = endOf(g);
+      const seq = [g.state.current];
+      for (let i = 1; i < turns; i++) {
+        end();
+        seq.push(g.state.current);
+      }
+      return seq;
+    };
+
+    it("aktif untuk 3-4 pemain, mati untuk 2 pemain", () => {
+      expect(createGame(setups(2)).snake).toBe(false);
+      expect(createGame(setups(3)).snake).toBe(true);
+      expect(createGame(setups(4)).snake).toBe(true);
+    });
+
+    it("ronde genap berjalan terbalik; pemain di batas ronde main dua kali berturut-turut", () => {
+      const g = new Game(setups(4), [], new NullPresenter(), { seed: 1 });
+      expect(play(g, 12)).toEqual([0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3]);
+      expect(g.state.round).toBe(3);
+    });
+
+    it("pembuka acak: urutan ular mengikuti firstPlayer", () => {
+      const g = new Game(setups(4), [], new NullPresenter(), { seed: 1 });
+      g.state.current = g.state.firstPlayer = 2;
+      expect(play(g, 8)).toEqual([2, 3, 0, 1, 1, 0, 3, 2]);
+    });
+
+    it("berakhir di batas ronde setelah ada pemain yang melewati Mulai", () => {
+      const g = new Game(setups(4), [], new NullPresenter(), { seed: 1 });
+      const end = endOf(g);
+      g.state.players[2].laps = 1; // lewat Mulai di tengah ronde 1: urutan belum berubah
+      end();
+      end();
+      expect(g.state.snake).toBe(true);
+      expect(g.state.current).toBe(2);
+      end(); // 2 → 3
+      end(); // batas ronde 1 → 2: ular berakhir, ronde 2 sudah normal (bukan terbalik)
+      expect(g.state.snake).toBe(false);
+      expect(g.state.round).toBe(2);
+      expect(g.state.current).toBe(0);
+      expect(play(g, 8)).toEqual([0, 1, 2, 3, 0, 1, 2, 3]);
+    });
+
+    it("berakhir setelah ronde terbalik: pemain terakhir main dua kali, lalu normal", () => {
+      const g = new Game(setups(4), [], new NullPresenter(), { seed: 1 });
+      const end = endOf(g);
+      for (let i = 0; i < 4; i++) end(); // ronde 2 dimulai: 3 jalan lagi
+      expect(g.state.current).toBe(3);
+      g.state.players[1].laps = 1;
+      for (let i = 0; i < 4; i++) end(); // 3,2,1,0 → batas ronde 2 → 3: ular berakhir
+      expect(g.state.snake).toBe(false);
+      expect(g.state.round).toBe(3);
+      expect(g.state.current).toBe(0);
+      expect(play(g, 5)).toEqual([0, 1, 2, 3, 0]);
+    });
+
+    it("pemain bangkrut dilewati, termasuk saat urutan terbalik", () => {
+      const g = new Game(setups(4), [], new NullPresenter(), { seed: 1 });
+      g.state.players[2].bankrupt = true;
+      expect(play(g, 8)).toEqual([0, 1, 3, 3, 1, 0, 0, 1]);
+      expect(g.state.round).toBe(3);
+    });
+
+    it("pembuka bangkrut: ronde tetap naik tepat sekali per putaran", () => {
+      const g = new Game(setups(3), [], new NullPresenter(), { seed: 1 });
+      g.state.players[0].bankrupt = true; // pembuka
+      g.state.current = 1;
+      expect(play(g, 6)).toEqual([1, 2, 2, 1, 1, 2]);
+      expect(g.state.round).toBe(3);
+    });
+
+    it("deterministik: seed sama → urutan sama di semua peer", async () => {
+      const run = async () => {
+        const g = botGame(4, 7, 40);
+        const seq: number[] = [];
+        const orig = (g as unknown as { endTurn(): void }).endTurn.bind(g);
+        (g as unknown as { endTurn(): void }).endTurn = () => {
+          seq.push(g.state.current);
+          orig();
+        };
+        await g.run();
+        return seq;
+      };
+      expect(await run()).toEqual(await run());
+    });
   });
 
   it("putaran pertama hanya bisa beli tanah, setelah lewat Mulai boleh bangun", async () => {
