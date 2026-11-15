@@ -14,6 +14,7 @@ import { rentFor } from "../core/rules";
 import type { GameState } from "../core/types";
 import { BOARD, isCorner } from "../data/board";
 import { GRID, gridOf, HALF, inwardDir, TILE, TILE_HEIGHT, tilePosition, tileYaw, WORLD_SCALE } from "./layout";
+import { buildLandmark } from "./landmarks";
 import { createTileTexture, drawTile, FONT } from "./tileArt";
 import { outline, toon } from "./toon";
 import { Ease, tween } from "./tween";
@@ -581,25 +582,8 @@ export class BoardView {
       return root;
     }
 
-    // Landmark: menara megah
-    const base = add(MeshBuilder.CreateCylinder("lmBase", { diameter: 1.3, height: 0.5, tessellation: 12 }, s), "#fff6e6");
-    base.position.y = 0.25;
-    const tower = add(MeshBuilder.CreateCylinder("lmTower", { diameterTop: 0.6, diameterBottom: 0.9, height: 1.8, tessellation: 12 }, s), color);
-    tower.position.y = 1.4;
-    const cap = add(MeshBuilder.CreateCylinder("lmCap", { diameterTop: 0, diameterBottom: 1, height: 0.8, tessellation: 12 }, s), "#ffd23f");
-    cap.position.y = 2.7;
-    const orb = add(MeshBuilder.CreateSphere("lmOrb", { diameter: 0.35 }, s), "#ffffff");
-    orb.position.y = 3.2;
-    // Menara sultan: kacamata hitam + kumis
-    for (const sx of [-0.17, 0.17]) {
-      const lens = add(MeshBuilder.CreateBox("lmLens", { width: 0.28, height: 0.16, depth: 0.06 }, s), "#111122", false);
-      lens.position.set(sx, 1.85, -0.36);
-    }
-    for (const sx of [-1, 1]) {
-      const st = add(MeshBuilder.CreateCapsule("lmStache", { radius: 0.06, height: 0.4 }, s), "#2b1d3a", false);
-      st.position.set(sx * 0.15, 1.6, -0.4);
-      st.rotation.z = sx * (Math.PI / 2 - 0.4);
-    }
+    // Landmark: model khusus per petak (ikonik / tema), lihat landmarks.ts
+    buildLandmark(s, add, BOARD[id].name, color);
     return root;
   }
 
