@@ -3,6 +3,7 @@ import { CONFIG, investedValue, LEVEL_NAMES, netWorth, ownedTiles, rentFor, upgr
 import type { GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
 import { ITEMS, SEASONS } from "../data/cards";
+import { music } from "../scene/music";
 import { sfx, Sound } from "../scene/sfx";
 import { Speed } from "../scene/tween";
 import { activeListings, listingFor } from "../core/trade";
@@ -82,6 +83,13 @@ export class Hud {
     muteBtn.addEventListener("click", () => {
       Sound.muted = !Sound.muted;
       muteBtn.textContent = Sound.muted ? "🔇" : "🔊";
+      music.sync();
+    });
+        const musicBtn = h("button", { class: "btn small white music-btn", title: "Musik latar (nyala/mati)" }, "🎵");
+    musicBtn.classList.toggle("off", !music.enabled);
+    musicBtn.addEventListener("click", () => {
+      music.toggle();
+      musicBtn.classList.toggle("off", !music.enabled);
     });
     const camBtn = h("button", { class: "btn small white", title: "Reset kamera" }, "🎥");
     camBtn.addEventListener("click", () => this.onResetCamera?.());
@@ -89,7 +97,7 @@ export class Hud {
       sfx.click();
       void viewMarket(this.state, this.localPlayers?.[0] ?? null);
     });
-    const toolbar = h("div", { class: "toolbar" }, speedBtn, muteBtn, camBtn, this.marketBtn);
+    const toolbar = h("div", { class: "toolbar" }, speedBtn, muteBtn, musicBtn, camBtn, this.marketBtn);
 
     root.append(this.round, toolbar, log, this.toasts, this.actionBar);
     this.refresh();

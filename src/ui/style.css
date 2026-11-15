@@ -879,3 +879,6 @@ body {
 .cb-row.price b { font-size: 18px; }
 .cb-row.low b { color: #c0392b; }
 .cb-warn { color: #c0392b; font-weight: 700; font-size: 14px; margin: 8px 0 0 !important; }
+
+/* Tombol musik latar: pudar + dicoret saat mati */
+.music-btn.off { opacity: 0.45; text-decoration: line-through; }

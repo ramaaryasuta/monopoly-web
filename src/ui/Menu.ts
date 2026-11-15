@@ -4,6 +4,7 @@ import { CODE_LEN, MAX_SEATS, normalizeCode, Room, type Seat } from "../net/Room
 import { Voice } from "../net/Voice";
 import type { PlayerSetup } from "../core/types";
 import { CRITTERS } from "../scene/Pawn";
+import { music } from "../scene/music";
 import { sfx, Sound } from "../scene/sfx";
 import { Speed } from "../scene/tween";
 import { h, uiRoot } from "./dom";
@@ -125,6 +126,14 @@ export function showMenu(): Promise<MenuResult> {
       soundBtn.addEventListener("click", () => {
         Sound.muted = !Sound.muted;
         soundBtn.textContent = Sound.muted ? "🔇 Suara mati" : "🔊 Suara nyala";
+        music.sync();
+        sfx.click();
+      });
+      const musicText = () => (music.enabled ? "🎵 Musik nyala" : "🎵 Musik mati");
+      const musicBtn = h("button", { class: "btn small white", title: "Musik latar" }, musicText());
+      musicBtn.addEventListener("click", () => {
+        music.toggle();
+        musicBtn.textContent = musicText();
         sfx.click();
       });
 
@@ -145,7 +154,7 @@ export function showMenu(): Promise<MenuResult> {
             big("🌐", "Main Online", "Buat room & ajak teman pakai kode", "blue", "mode-online", () => online()),
             big("📖", "Cara Main", "Aturan singkat & cara menang", "white", "mode-rules", rules),
           ),
-          h("div", { class: "menu-foot" }, soundBtn),
+          h("div", { class: "menu-foot" }, soundBtn, musicBtn),
         ),
       );
     };

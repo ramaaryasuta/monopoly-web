@@ -4,6 +4,7 @@ import { Game } from "./core/game";
 import { NullPresenter, type Decider } from "./core/interfaces";
 import { BroadcastDecider, RemoteDecider } from "./net/NetDecider";
 import { GameScene } from "./scene/GameScene";
+import { music } from "./scene/music";
 import { Speed } from "./scene/tween";
 import { modal } from "./ui/dom";
 import { HumanDecider } from "./ui/HumanDecider";
@@ -13,6 +14,7 @@ import { mountQaPanel } from "./ui/QaPanel";
 import { ScenePresenter } from "./ui/ScenePresenter";
 
 async function boot() {
+  music.init();
   const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
   const view = new GameScene(canvas);
   Object.assign(window as object, { __view: view });

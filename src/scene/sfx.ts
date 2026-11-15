@@ -4,8 +4,8 @@ import type { SeasonId } from "../data/cards";
 let ctx: AudioContext | null = null;
 export const Sound = { muted: false };
 
-function ac(): AudioContext | null {
-  if (Sound.muted) return null;
+/** AudioContext bersama (efek suara & musik latar), tanpa memeriksa mute. */
+export function audioCtx(): AudioContext | null {
   try {
     ctx ??= new AudioContext();
     if (ctx.state === "suspended") void ctx.resume();
@@ -13,6 +13,36 @@ function ac(): AudioContext | null {
   } catch {
     return null;
   }
+}
+
+function ac(): AudioContext | null {
+  if (Sound.muted) return null;
+  return audioCtx();
+}
+
+let duckGain: GainNode | null = null;
+
+/** Jalur musik latar: lewat gain "duck" supaya musik mengecil saat jingle penting. */
+export function musicBus(): GainNode | null {
+  const a = audioCtx();
+  if (!a) return null;
+  if (!duckGain || duckGain.context !== a) {
+    duckGain = a.createGain();
+    duckGain.connect(a.destination);
+  }
+  return duckGain;
+}
+
+/** Kecilkan musik latar sebentar (detik) lalu kembalikan pelan-pelan. */
+export function duckMusic(dur: number, level = 0.25) {
+  if (!duckGain) return;
+  const t = duckGain.context.currentTime;
+  const g = duckGain.gain;
+  g.cancelScheduledValues(t);
+  g.setValueAtTime(g.value, t);
+  g.linearRampToValueAtTime(level, t + 0.15);
+  g.setValueAtTime(level, t + dur);
+  g.linearRampToValueAtTime(1, t + dur + 0.8);
 }
 
 function tone(freq: number, dur: number, type: OscillatorType = "square", vol = 0.08, slideTo?: number, delay = 0) {
@@ -113,6 +143,7 @@ export const tvSfx = {
   },
   /** Jingle pembuka berita. Berita heboh = dramatis (minor), musiman = ceria (mayor). */
   jingle: (kind: "event" | "season") => {
+    duckMusic(1.6);
     if (kind === "event") {
       // da-da-da-DAAAM!
       [0, 0.12, 0.24].forEach((d) => chord([392, 466, 587], 0.1, "square", 0.09, d + 0.1));
@@ -288,6 +319,9 @@ export const sfx = {
   build: () => [523, 659, 784].forEach((f, i) => tone(f, 0.12, "square", 0.05, undefined, i * 0.07)),
   fly: () => tone(300, 0.9, "sine", 0.06, 1200),
   bad: () => [392, 330, 262].forEach((f, i) => tone(f, 0.2, "triangle", 0.07, undefined, i * 0.15)),
-  win: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.18, "square", 0.06, undefined, i * 0.12)),
+  win: () => {
+    duckMusic(2);
+    [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.18, "square", 0.06, undefined, i * 0.12));
+  },
   click: () => tone(700, 0.05, "square", 0.04),
 };
