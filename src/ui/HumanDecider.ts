@@ -147,7 +147,7 @@ export class HumanDecider implements Decider {
         if (target === null) continue;
         return { item: picked.item, target };
       }
-      this.hud.showPickBanner(`Klik bangunan lawan untuk dilepasi kecoak ${def.icon}`);
+      this.hud.showPickBanner(`Klik bangunan lawan yang karyawannya mau dibikin resign ${def.icon}`);
       try {
         const tile = await this.scene.pickTile(picked.targets);
         return { item: picked.item, target: tile };

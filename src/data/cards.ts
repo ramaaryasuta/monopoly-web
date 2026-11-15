@@ -36,11 +36,11 @@ export interface Card {
 }
 
 export const CARDS: Card[] = [
-  { id: "coinRain", title: "Hujan Duit!", text: "Ada pesawat bocor lewat. Duit berjatuhan. Terima Rp150 jt.", icon: "💸", effect: { type: "gain", amount: 150 }, fx: "rain" },
-  { id: "harvest", title: "Nemu di Celana", text: "Nyuci celana jeans, nemu duit lecek. Terima Rp100 jt.", icon: "👖", effect: { type: "gain", amount: 100 }, fx: "dance" },
-  { id: "leakyWallet", title: "Dompet Dimakan Kambing", text: "Kambing tetangga lapar. Bayar Rp100 jt.", icon: "🐐", effect: { type: "pay", amount: 100 }, fx: "cry" },
+  { id: "coinRain", title: "Mendapat Bansos", text: "Namamu masuk daftar penerima bantuan. Terima Rp150 jt.", icon: "💸", effect: { type: "gain", amount: 150 }, fx: "rain" },
+  { id: "harvest", title: "Ada yang Salah Transfer", text: "Saldo tiba-tiba nambah, pengirimnya nggak bisa dihubungi. Terima Rp100 jt.", icon: "🏦", effect: { type: "gain", amount: 100 }, fx: "dance" },
+  { id: "leakyWallet", title: "IHSG Anjlok", text: "Portofolio sahammu merah semua. Rugi Rp100 jt.", icon: "📉", effect: { type: "pay", amount: 100 }, fx: "cry" },
   { id: "repair", title: "Atap Bocor Semua", text: "Musim hujan! Bayar Rp20 jt untuk setiap level bangunanmu.", icon: "🪣", effect: { type: "repair", perLevel: 20 }, fx: "cry" },
-  { id: "shield", title: "Jimat Kolor Sakti", text: "Kolor warisan kakek. Bebas bayar sewa satu kali.", icon: "🩲", effect: { type: "shield" }, fx: "dance" },
+  { id: "shield", title: "Kolor Mas Amba", text: "Penagih ketakutan melihat bekas Mas Amba. Bebas bayar sewa satu kali.", icon: "🩲", effect: { type: "shield" }, fx: "dance" },
   { id: "toStart", title: "Ketapel Raksasa", text: "Kamu ditembakkan pakai ketapel ke petak Mulai!", icon: "🪃", effect: { type: "goto", tile: 0 }, fx: "dizzy" },
   { id: "toIsland", title: "Digrebek Polisi", text: "Ketahuan main judi online. Langsung digiring ke Nusakambangan!", icon: "🚓", effect: { type: "island" }, fx: "cry" },
   { id: "birthday", title: "Ultah Dadakan", text: "Ngaku ulang tahun (padahal bukan). Setiap pemain memberimu Rp50 jt.", icon: "🎂", effect: { type: "collectFromAll", amount: 50 }, fx: "dance" },
@@ -50,17 +50,17 @@ export const CARDS: Card[] = [
   { id: "heli", title: "Nebeng Heli Pejabat", text: "Disangka ajudan, kamu ikut terbang lalu diturunkan di petak acak.", icon: "🚁", effect: { type: "randomTile" }, fx: "heli" },
   { id: "swap", title: "Tukar Jiwa", text: "Kesamber petir bareng pemain lain. Kalian tukar posisi!", icon: "⚡", effect: { type: "swap" }, fx: "shake" },
   { id: "treat", title: "Kalah Taruhan Bola", text: "Timmu kalah 7-0. Traktir semua pemain, masing-masing Rp50 jt.", icon: "⚽", effect: { type: "payAll", amount: 50 }, fx: "cry" },
-  { id: "steal", title: "Pinjam Dulu Seratus", text: "Kamu pinjam ke pemain terkaya. Nggak bakal dibalikin. Ambil Rp120 jt.", icon: "🤝", effect: { type: "stealRichest", amount: 120 }, fx: "dance" },
+  { id: "steal", title: "Pinjam Dulu Seratus", text: "Kamu pinjam ke pemain terkaya. Nggak bakal dibalikin. Ambil Rp100 jt.", icon: "🤝", effect: { type: "stealRichest", amount: 100 }, fx: "dance" },
   { id: "claw", title: "Mesin Capit Warung", text: "Coba peruntungan! Bisa untung, bisa boncos.", icon: "🕹️", effect: { type: "gacha", min: -150, max: 250 }, fx: "shake" },
   { id: "duck", title: "Bebek Karet Ajaib", text: "Bebek karet raksasa mendorongmu maju 4 petak. Kwek!", icon: "🦆", effect: { type: "forward", steps: 4 }, fx: "duck" },
-  { id: "sandal", title: "Sendal Ketuker di Kondangan", text: "Sendal swallow-mu jadi sendal kulit mahal. Jual! Terima Rp80 jt.", icon: "🩴", effect: { type: "gain", amount: 80 }, fx: "dance" },
-  { id: "gorengan", title: "Ngutang Gorengan", text: "Ketahuan ambil 5 bayar 1. Bayar Rp60 jt.", icon: "🍤", effect: { type: "pay", amount: 60 }, fx: "cry" },
-  { id: "mancing", title: "Mancing Dapat Ban", text: "Ban bekasnya dijual ke bengkel. Terima Rp70 jt.", icon: "🎣", effect: { type: "gain", amount: 70 }, fx: "dance" },
-  { id: "cukur", title: "Salah Potong Rambut", text: "Kepala botak sebelah. Beli topi, bayar Rp50 jt.", icon: "💈", effect: { type: "pay", amount: 50 }, fx: "dizzy" },
+  { id: "sandal", title: "Mendapat Dividen", text: "Saham yang kamu lupa pernah beli ternyata bagi dividen. Terima Rp80 jt.", icon: "📈", effect: { type: "gain", amount: 80 }, fx: "dance" },
+  { id: "gorengan", title: "Bayar Karyawan Lembur", text: "Proyek dikejar deadline, semua lembur. Bayar Rp60 jt.", icon: "⏰", effect: { type: "pay", amount: 60 }, fx: "cry" },
+  { id: "mancing", title: "Teman Lama Bayar Hutang", text: "Utang sepuluh tahun lalu akhirnya dilunasi. Terima Rp70 jt.", icon: "💌", effect: { type: "gain", amount: 70 }, fx: "dance" },
+  { id: "cukur", title: "Bayar Pajak PPh 21", text: "Potongan pajak penghasilan datang. Bayar Rp50 jt.", icon: "📑", effect: { type: "pay", amount: 50 }, fx: "dizzy" },
   { id: "itemSandal", title: "Nemu Sendal Terbang", text: "Sendal jepit bersayap! Simpan di kantong, lempar ke lawan kapan saja.", icon: "🩴", effect: { type: "item", item: "sandal" }, fx: "dance" },
   { id: "itemUtang", title: "Nemu Surat Utang", text: "Surat utang palsu tapi meyakinkan. Simpan, tagih ke lawan nanti!", icon: "📜", effect: { type: "item", item: "utang" }, fx: "dance" },
   { id: "itemTurbo", title: "Sepatu Roda Turbo", text: "Simpan buat giliran penting: langkahmu +3.", icon: "🛼", effect: { type: "item", item: "turbo" }, fx: "duck" },
-  { id: "itemKecoak", title: "Toples Kecoak", text: "Isinya kecoak terbang. Lepas di bangunan lawan biar penghuninya kabur!", icon: "🪳", effect: { type: "item", item: "kecoak" }, fx: "shake" },
+  { id: "itemKecoak", title: "Karyawan Resign", text: "Karyawan sedikit, terjadi efisiensi! Simpan, pakai untuk turunkan 1 level bangunan lawan.", icon: "🏃", effect: { type: "item", item: "kecoak" }, fx: "shake" },
   { id: "orangDalam", title: "Kartu Orang Dalam", text: "Punya kenalan orang dalam. Bebas bayar sewa satu kali.", icon: "🕴️", effect: { type: "shield" }, fx: "dance" },
   { id: "tilang", title: "Kartu Kena Tilang", text: "Lupa bawa SIM, helm cuma ditenteng. Bayar denda Rp75 jt.", icon: "👮", effect: { type: "pay", amount: 75 }, fx: "cry" },
   { id: "pajak", title: "Kartu Bayar PAJAK", text: "Orang bijak taat pajak! Bayar Rp25 jt untuk setiap level bangunanmu.", icon: "🧾", effect: { type: "repair", perLevel: 25 }, fx: "cry" },
@@ -131,7 +131,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   sandal: { id: "sandal", name: "Sendal Terbang", icon: "🩴", text: "Lempar ke satu lawan: dia mundur 3 petak.", target: "player" },
   utang: { id: "utang", name: "Surat Utang Palsu", icon: "📜", text: "Tagih satu lawan: ambil Rp100 jt darinya.", target: "player" },
   turbo: { id: "turbo", name: "Sepatu Roda Turbo", icon: "🛼", text: "Lemparan dadu giliran ini +3 langkah.", target: null },
-  kecoak: { id: "kecoak", name: "Toples Kecoak", icon: "🪳", text: "Turunkan 1 level bangunan lawan (tanah tidak bisa).", target: "tile" },
+  kecoak: { id: "kecoak", name: "Karyawan Resign", icon: "🏃", text: "Karyawan lawan resign, terjadi efisiensi: turunkan 1 level bangunannya (tanah tidak bisa).", target: "tile" },
 };
 
 /** Maksimal kartu simpanan per pemain. Kalau penuh, kartu baru dijual Rp50 jt. */

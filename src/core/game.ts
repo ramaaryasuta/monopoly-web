@@ -335,7 +335,7 @@ export class Game {
     const rent = rentFor(this.state, tile);
     if (p.shields > 0) {
       p.shields--;
-      this.presenter.message(`Jimat Kolor Sakti melindungi ${p.name} dari sewa ${fmt(rent)}!`, "good");
+      this.presenter.message(`Kartu pelindung menyelamatkan ${p.name} dari sewa ${fmt(rent)}!`, "good");
     } else {
       this.presenter.message(`${p.name} membayar sewa ${fmt(rent)} ke ${owner.name}.`, "bad");
       await this.charge(pid, rent, owner.id);
@@ -635,7 +635,7 @@ export class Game {
         const owner = this.state.players[ts.owner!];
         ts.level = (ts.level - 1) as BuildLevel;
         this.presenter.message(
-          `${p.name} melepas kecoak di ${BOARD[tile].name}! Bangunan ${owner.name} turun jadi ${LEVEL_NAMES[ts.level]}.`,
+          `Karyawan ${owner.name} di ${BOARD[tile].name} resign! Terjadi efisiensi, bangunan turun jadi ${LEVEL_NAMES[ts.level]}.`,
           "bad",
         );
         await this.presenter.tileChanged(this.state, tile);
