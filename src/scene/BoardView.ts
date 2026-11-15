@@ -15,6 +15,7 @@ import type { GameState } from "../core/types";
 import { BOARD, isCorner } from "../data/board";
 import { GRID, gridOf, HALF, inwardDir, TILE, TILE_HEIGHT, tilePosition, tileYaw, WORLD_SCALE } from "./layout";
 import { buildLandmark } from "./landmarks";
+import { LOW_GFX } from "./quality";
 import { createTileTexture, drawTile, FONT } from "./tileArt";
 import { outline, toon } from "./toon";
 import { Ease, tween } from "./tween";
@@ -39,6 +40,7 @@ export class BoardView {
     private shadows: ShadowGenerator,
   ) {
     this.buildEnvironment();
+    this.freezeStaticDecor();
     this.buildTiles();
     this.festivalStar = this.makeStar();
     this.festivalStar.setEnabled(false);
@@ -162,14 +164,7 @@ export class BoardView {
       else this.makeMushroom(new Vector3(x, 0, z), 0.7 + rnd() * 0.4, i);
     }
 
-    // Pohon kecil di sudut area dalam
-    const c = TILE * (HALF - 1.4);
-    [
-      [-c, -c],
-      [c, -c],
-      [-c, c],
-      [c, c],
-    ].forEach(([x, z], i) => this.makeTree(new Vector3(x, 0.15, z), 0.9, 100 + i));
+    // (Pohon di sudut area dalam dihapus: menutupi bangunan di petak.)
 
     this.buildWackyDecor();
 
@@ -182,7 +177,7 @@ export class BoardView {
         puff.position.set(k * 1.3 - n * 0.6, rnd() * 0.5, rnd() * 0.8);
         puff.material = toon(s, "#ffffff");
         puff.parent = cloud;
-        outline(puff, 0.05);
+        if (!LOW_GFX) outline(puff, 0.05);
       }
       // Awan di cakrawala (jauh dari papan) supaya tidak menghalangi kamera
       const y = 5 + rnd() * 6;
@@ -191,6 +186,27 @@ export class BoardView {
       cloud.position.set(Math.cos(ang) * dist, y, Math.abs(Math.sin(ang)) * dist + 5);
       cloud.metadata = { kind: "cloud", phase: rnd() * 6, baseY: y, speed: 0.3 + rnd() * 0.5 };
       this.decor.push(cloud);
+    }
+  }
+
+  /** Mesh lingkungan yang tidak bergerak: bekukan matriks & matikan picking (hemat CPU). */
+  private freezeStaticDecor() {
+    const animated = new Set<TransformNode>(this.decor);
+    for (const m of this.scene.meshes) {
+      m.isPickable = false;
+      let n: TransformNode | null = m;
+      let moving = false;
+      while (n) {
+        if (animated.has(n)) {
+          moving = true;
+          break;
+        }
+        n = n.parent as TransformNode | null;
+      }
+      if (!moving) {
+        m.freezeWorldMatrix();
+        m.doNotSyncBoundingInfo = true;
+      }
     }
   }
 
@@ -251,7 +267,7 @@ export class BoardView {
     this.shadows.addShadowCaster(crown);
     this.shadows.addShadowCaster(trunk);
     // Wajah konyol menghadap kamera (sebagian pohon saja)
-    if (id % 2 === 0 || id >= 100) this.addFace(root, new Vector3(0, 2.05, -0.86), 0.32, id % 4 === 0 ? "grin" : "o");
+    if (!LOW_GFX && id % 2 === 0) this.addFace(root, new Vector3(0, 2.05, -0.86), 0.32, id % 4 === 0 ? "grin" : "o");
     root.metadata = { kind: "sway", phase: id, baseY: pos.y };
     this.decor.push(root);
   }
@@ -271,7 +287,7 @@ export class BoardView {
     cap.material = toon(s, id % 2 ? "#ff5b7a" : "#ff8c3d");
     cap.parent = root;
     outline(cap, 0.04);
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < (LOW_GFX ? 0 : 4); k++) {
       const dot = MeshBuilder.CreateSphere(`dot${id}_${k}`, { diameter: 0.3, segments: 8 }, s);
       const a = (k / 4) * Math.PI * 2;
       dot.position.set(Math.cos(a) * 0.5, 1.15, Math.sin(a) * 0.5);
@@ -280,7 +296,7 @@ export class BoardView {
       dot.parent = root;
     }
     this.shadows.addShadowCaster(cap);
-    this.addFace(root, new Vector3(0, 0.5, -0.3), 0.18, "grin");
+    if (!LOW_GFX) this.addFace(root, new Vector3(0, 0.5, -0.3), 0.18, "grin");
   }
 
   /** Mata googly juling + mulut di permukaan objek (menghadap -z). */
@@ -414,7 +430,7 @@ export class BoardView {
     frost.position.y = 0.18;
     frost.scaling.y = 0.75;
     const sprCols = ["#ffe14d", "#5bb8ff", "#7ee06b", "#ffffff"];
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < (LOW_GFX ? 0 : 16); i++) {
       const a = (i / 16) * Math.PI * 2;
       const r = 1.45 + (i % 3) * 0.15;
       const sp = mk(MeshBuilder.CreateCapsule("spr", { radius: 0.06, height: 0.3 }, s), sprCols[i % 4], donut, 0);

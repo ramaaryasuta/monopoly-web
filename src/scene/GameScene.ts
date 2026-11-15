@@ -23,6 +23,7 @@ import { Dice } from "./Dice";
 import { Effects } from "./Effects";
 import { EventView } from "./EventView";
 import { pawnSlot, TILE } from "./layout";
+import { LOW_GFX } from "./quality";
 import { CRITTERS, Pawn } from "./Pawn";
 import { sfx } from "./sfx";
 import { clearToonCache } from "./toon";
@@ -46,8 +47,16 @@ export class GameScene {
   onTileClick: ((index: number) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true }, true);
+    // preserveDrawingBuffer tidak dipakai (tak ada screenshot) dan memperlambat GPU HP.
+    this.engine = new Engine(canvas, true, { stencil: true, powerPreference: "high-performance" }, true);
+    if (LOW_GFX) {
+      // Layar HP ber-DPR 2–3 = 4–9x piksel. Batasi resolusi render ke ~1.5x.
+      const dpr = window.devicePixelRatio || 1;
+      this.engine.setHardwareScalingLevel(Math.max(1, dpr / 1.5));
+    }
     const scene = (this.scene = new Scene(this.engine));
+    // Tidak ada efek hover: jangan picking tiap gerakan pointer (ratusan mesh).
+    scene.skipPointerMovePicking = true;
     clearToonCache();
     scene.clearColor = Color4.FromHexString("#8fd8ffff");
     scene.fogMode = Scene.FOGMODE_LINEAR;
@@ -73,17 +82,25 @@ export class GameScene {
     const sun = new DirectionalLight("sun", new Vector3(-0.5, -1, 0.6), scene);
     sun.position = new Vector3(20, 40, -20);
     sun.intensity = 0.9;
-    this.shadows = new ShadowGenerator(2048, sun);
-    this.shadows.useBlurExponentialShadowMap = true;
-    this.shadows.blurKernel = 16;
+    if (LOW_GFX) {
+      // Tanpa pass blur tiap frame; PCF bawaan cukup halus di layar kecil.
+      this.shadows = new ShadowGenerator(1024, sun);
+      this.shadows.usePercentageCloserFiltering = true;
+      this.shadows.filteringQuality = ShadowGenerator.QUALITY_LOW;
+    } else {
+      this.shadows = new ShadowGenerator(2048, sun);
+      this.shadows.useBlurExponentialShadowMap = true;
+      this.shadows.blurKernel = 16;
+    }
     this.shadows.darkness = 0.45;
 
     // Post-processing: anti-alias, bloom ringan, warna lebih "pop"
     const pipeline = new DefaultRenderingPipeline("pipe", true, scene, [cam]);
-    pipeline.samples = 4;
+    // HP: MSAA 2x & tanpa bloom (bloom = beberapa pass layar penuh tiap frame).
+    pipeline.samples = LOW_GFX ? 2 : 4;
     // FXAA dimatikan: MSAA 4x sudah cukup, FXAA bikin tulisan petak buram.
     pipeline.fxaaEnabled = false;
-    pipeline.bloomEnabled = true;
+    pipeline.bloomEnabled = !LOW_GFX;
     pipeline.bloomThreshold = 0.85;
     pipeline.bloomWeight = 0.25;
     pipeline.bloomKernel = 48;

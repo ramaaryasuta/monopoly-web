@@ -271,7 +271,7 @@ export class Pawn {
     for (const m of meshes) shadows.addShadowCaster(m);
 
     // Idle: bernapas, goyang anggota badan, mata googly gemetar
-    scene.onBeforeRenderObservable.add(() => {
+    const idleObs = scene.onBeforeRenderObservable.add(() => {
       const dt = scene.getEngine().getDeltaTime() / 1000;
       this.idleTime += dt;
       const t = this.idleTime;
@@ -288,6 +288,8 @@ export class Pawn {
       this.body.scaling.set(1 - s * 0.5, 1 + s, 1 - s * 0.5);
       this.head.rotation.z = Math.sin(t * 1.7) * 0.05;
     });
+    // Lepas loop idle saat pion dibuang (mis. setupPlayers dipanggil ulang)
+    this.root.onDisposeObservable.addOnce(() => scene.onBeforeRenderObservable.remove(idleObs));
   }
 
   setPosition(p: Vector3) {

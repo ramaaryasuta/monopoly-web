@@ -1,4 +1,5 @@
 import { Color4, DynamicTexture, MeshBuilder, ParticleSystem, TransformNode, Vector3, type Mesh, type Scene } from "@babylonjs/core";
+import { LOW_GFX } from "./quality";
 import { outline, toon } from "./toon";
 import { Ease, tween, wait } from "./tween";
 
@@ -61,6 +62,8 @@ export class Effects {
     dir?: [Vector3, Vector3];
     emitRate?: number;
   }) {
+    // HP: separuh partikel (overdraw transparan mahal di GPU mobile)
+    if (LOW_GFX) opts.count = Math.max(4, Math.ceil(opts.count / 2));
     const ps = new ParticleSystem("burst", opts.count, this.scene);
     ps.particleTexture = opts.texture;
     ps.emitter = opts.at.clone();
