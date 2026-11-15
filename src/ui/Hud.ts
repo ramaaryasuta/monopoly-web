@@ -40,6 +40,7 @@ export class Hud {
   private toasts = h("div", { class: "toasts" });
   private actionBar = h("div", { class: "action-bar" });
   private pickBanner: HTMLElement | null = null;
+  private toolbar = h("div", { class: "toolbar" });
   private marketBtn = h("button", { class: "btn small white market-btn", title: "Pasar Terbuka", "data-testid": "market" }, "🏪");
   /** Untuk memproyeksikan teks uang melayang di atas pion. */
   screenPosOfPlayer: ((pid: number) => { x: number; y: number } | null) | null = null;
@@ -97,10 +98,20 @@ export class Hud {
       sfx.click();
       void viewMarket(this.state, this.localPlayers?.[0] ?? null);
     });
-    const toolbar = h("div", { class: "toolbar" }, speedBtn, muteBtn, musicBtn, camBtn, this.marketBtn);
+    this.toolbar.append(speedBtn, muteBtn, musicBtn, camBtn, this.marketBtn);
 
-    root.append(this.round, toolbar, log, this.toasts, this.actionBar);
+    root.append(this.round, this.toolbar, log, this.toasts, this.actionBar);
     this.refresh();
+  }
+
+  /** Online: tombol 🤝 di toolbar untuk menawar kapan saja (tidak harus giliran sendiri). */
+  enableAnytimeTrade(onClick: () => void) {
+    const btn = h("button", { class: "btn small blue anytime-trade", title: "Negosiasi kapan saja", "data-testid": "anytime-trade" }, "🤝 Nego");
+    btn.addEventListener("click", () => {
+      sfx.click();
+      onClick();
+    });
+    this.toolbar.append(btn);
   }
 
   // ------------------------------------------------------------------ player cards

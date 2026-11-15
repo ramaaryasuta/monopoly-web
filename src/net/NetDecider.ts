@@ -2,6 +2,8 @@ import type {
   BuildChoice,
   DealAction,
   DealChoice,
+  DebtAction,
+  DebtChoice,
   Decider,
   IslandChoice,
   ItemChoice,
@@ -10,8 +12,9 @@ import type {
   TradeReply,
   TradeReplyChoice,
 } from "../core/interfaces";
+import type { Interjection } from "../core/interject";
 
-export type Kind = "roll" | "build" | "island" | "tile" | "item" | "deal" | "trade";
+export type Kind = "roll" | "build" | "island" | "tile" | "item" | "deal" | "trade" | "debt" | "sync";
 
 /** Membungkus decider lokal (manusia/bot) dan menyiarkan setiap keputusannya ke jaringan. */
 export class BroadcastDecider implements Decider {
@@ -52,6 +55,11 @@ export class BroadcastDecider implements Decider {
   async respondTrade(c: TradeReplyChoice) {
     const v = await this.inner.respondTrade(c);
     this.send("trade", v);
+    return v;
+  }
+  async chooseDebt(c: DebtChoice) {
+    const v = await this.inner.chooseDebt(c);
+    this.send("debt", v);
     return v;
   }
 }
@@ -135,5 +143,15 @@ export class RemoteDecider implements Decider {
   }
   respondTrade(c: TradeReplyChoice) {
     return this.next<TradeReply>("trade", (d) => d.respondTrade(c));
+  }
+  chooseDebt(c: DebtChoice) {
+    return this.next<DebtAction>("debt", (d) => d.chooseDebt(c));
+  }
+  /**
+   * Checkpoint aksi kapan saja saat pemain ini sedang giliran: daftar aksinya ditentukan
+   * perangkat pemilik kursi. Setelah diambil alih bot, host yang menentukan (`fallback`).
+   */
+  sync(fallback: () => Promise<Interjection[]>) {
+    return this.next<Interjection[]>("sync", fallback);
   }
 }

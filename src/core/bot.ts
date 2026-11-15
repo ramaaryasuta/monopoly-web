@@ -2,6 +2,8 @@ import { BOARD, PROPERTY_GROUPS } from "../data/board";
 import type {
   BuildChoice,
   DealAction,
+  DebtAction,
+  DebtChoice,
   DealChoice,
   Decider,
   IslandChoice,
@@ -12,11 +14,14 @@ import type {
   TradeReply,
   TradeReplyChoice,
 } from "./interfaces";
-import { investedValue, ownsGroup, rentFor } from "./rules";
+import { CONFIG, investedValue, ownsGroup, rentFor } from "./rules";
 import { activeListings, flipOffer, MAX_TRADES_PER_TURN, offerGainFor, tradeError } from "./trade";
 import type { GameState } from "./types";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Ambang uang bot ditulis untuk modal 1.500; skala mengikuti modal awal saat ini. */
+const cash = (n: number) => Math.round((n * CONFIG.startMoney) / 1500);
 
 /** Bot sederhana: menjaga cadangan uang, lebih agresif bila hampir monopoli. */
 export class BotDecider implements Decider {
@@ -33,7 +38,7 @@ export class BotDecider implements Decider {
 
   private reserve(player: number) {
     // Cadangan naik seiring ronde, karena sewa makin mahal
-    return 150 + this.state.round * 15 + (this.state.players[player].money > 2500 ? 0 : 50);
+    return cash(150 + this.state.round * 15 + (this.state.players[player].money > cash(2500) ? 0 : 50));
   }
 
   async waitForRoll() {
@@ -51,13 +56,19 @@ export class BotDecider implements Decider {
     if (affordable.length > 0) return affordable[affordable.length - 1].level;
     // Tanah murah tetap dibeli walau mepet, asal tidak habis total
     const first = c.options[0];
-    if (c.currentLevel === 0 && c.money - first.cost >= 50) return first.level;
+    if (c.currentLevel === 0 && c.money - first.cost >= cash(50)) return first.level;
     return c.currentLevel;
+  }
+
+  async chooseDebt(c: DebtChoice): Promise<DebtAction> {
+    await this.think();
+    // Jual wilayah termurah dulu; tidak ada lagi yang bisa dijual → menyerah
+    return c.tiles.length ? { type: "sell", tile: c.tiles[0].tile } : { type: "giveUp" };
   }
 
   async chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll"> {
     await this.think();
-    return c.canPay && this.state.players[c.player].money > 600 ? "pay" : "roll";
+    return c.canPay && this.state.players[c.player].money > cash(600) ? "pay" : "roll";
   }
 
   async chooseItem(c: ItemChoice): Promise<ItemUse | null> {
@@ -93,7 +104,7 @@ export class BotDecider implements Decider {
       const def = BOARD[t];
       const ts = this.state.tiles[t];
       let score = 0;
-      if ((def.kind === "property" || def.kind === "resort") && ts.owner === null && (def.price ?? 0) <= me.money - 100)
+      if ((def.kind === "property" || def.kind === "resort") && ts.owner === null && (def.price ?? 0) <= me.money - cash(100))
         score = 100 + (def.price ?? 0) / 10;
       else if (ts.owner === c.player && ts.level < 5) score = 80 + ts.level;
       else if (def.kind === "start") score = 60;

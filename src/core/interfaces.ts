@@ -55,7 +55,9 @@ export type DealAction =
   | { type: "trade"; offer: TradeOffer }
   | { type: "list"; tile: number; price: number }
   | { type: "unlist"; tile: number }
-  | { type: "buy"; tile: number };
+  | { type: "buy"; tile: number }
+  /** Hanya dari menu yang disela aksi kapan saja: proses antrian dulu, lalu tanya lagi. */
+  | { type: "sync" };
 
 export interface DealChoice {
   player: number;
@@ -77,6 +79,22 @@ export interface TradeReplyChoice {
   canCounter: boolean;
 }
 
+/** Uang tidak cukup untuk membayar: pemain memilih cara mencari uang. */
+export interface DebtChoice {
+  player: number;
+  /** Total yang harus dibayar. */
+  amount: number;
+  money: number;
+  /** Penerima uang (null = bank). */
+  creditor: number | null;
+  /** Wilayah yang bisa dijual ke bank beserta hasilnya, termurah dulu. */
+  tiles: { tile: number; value: number }[];
+  /** Sisa jatah menawar ke pemain lain selama mencari uang. */
+  tradesLeft: number;
+}
+
+export type DebtAction = { type: "sell"; tile: number } | { type: "trade"; offer: TradeOffer } | { type: "giveUp" };
+
 /** Sumber keputusan: pemain manusia (UI) atau bot (AI). */
 export interface Decider {
   waitForRoll(player: number): Promise<void>;
@@ -90,6 +108,8 @@ export interface Decider {
   chooseDeal(c: DealChoice): Promise<DealAction | null>;
   /** Menjawab tawaran negosiasi: terima, tolak, atau tawar balik. */
   respondTrade(c: TradeReplyChoice): Promise<TradeReply>;
+  /** Uang kurang untuk membayar: jual wilayah ke bank, nego, atau menyerah (bangkrut). */
+  chooseDebt(c: DebtChoice): Promise<DebtAction>;
 }
 
 export type MessageKind = "info" | "good" | "bad";

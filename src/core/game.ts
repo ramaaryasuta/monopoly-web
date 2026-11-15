@@ -19,6 +19,7 @@ import {
   type SeasonId,
 } from "../data/cards";
 import type { DealAction, Decider, ItemChoice, ItemUse, Presenter, TradeOffer } from "./interfaces";
+import { InterjectionPool, type Interjection } from "./interject";
 import { createRng, rollDie, type Rng } from "./rng";
 import {
   activePlayers,
@@ -65,6 +66,15 @@ export class Game {
   forcedChaos: string | null = null;
   /** Event musiman paksa (fitur QA): mulai di awal giliran berikutnya. */
   forcedSeason: SeasonId | null = null;
+  /** Aksi kapan saja (nego / pasar di luar giliran) yang menunggu diterapkan. */
+  readonly pool = new InterjectionPool();
+  /**
+   * Ambil aksi kapan saja untuk satu checkpoint. Default (main lokal): kuras pool.
+   * Online: pemilik keputusan pemain giliran (`current`) yang menentukan, lalu disiarkan.
+   */
+  syncInterjections: (current: number) => Promise<Interjection[]> = async () => this.pool.drain();
+  /** Jumlah tawaran kapan saja per pemain di giliran ini (dibatasi seperti jatah giliran). */
+  private interjectTrades = new Map<number, number>();
   private chaosRound = 1;
   private turns = 0;
   private stopped = false;
@@ -110,10 +120,14 @@ export class Game {
       return;
     }
     await this.presenter.turnStart(this.state, p.id);
+    this.interjectTrades.clear();
+    await this.checkpoint();
+    if (this.state.winner !== null) return;
 
     if (p.pendingTour) {
       p.pendingTour = false;
       await this.doTour(p.id);
+      await this.checkpoint();
       this.endTurn();
       return;
     }
@@ -159,9 +173,12 @@ export class Game {
 
       if (this.state.winner !== null || p.bankrupt) break;
       if (!isDouble || p.islandTurns > 0 || p.pendingTour) break;
+      await this.checkpoint();
+      if (this.state.winner !== null) break;
       this.presenter.message(`Dadu kembar! ${p.name} melempar lagi.`, "good");
     }
 
+    await this.checkpoint();
     this.endTurn();
   }
 
@@ -638,6 +655,12 @@ export class Game {
         inIsland: p.islandTurns > 0,
       });
       if (!act) return;
+      if (act.type === "sync") {
+        n--; // bukan aksi pemain giliran: tidak memakan jatah putaran
+        await this.checkpoint();
+        if (this.state.winner !== null || p.bankrupt) return;
+        continue;
+      }
       if (act.type === "trade") {
         if (trades >= MAX_TRADES_PER_TURN) {
           this.presenter.message(`${p.name} sudah ${MAX_TRADES_PER_TURN}x menawar di giliran ini.`);
@@ -741,6 +764,34 @@ export class Game {
     // Pemain giliran dicek dulu, lalu lawannya
     const order = o.from === this.state.current ? [o.from, o.to] : [o.to, o.from];
     for (const pid of order) if (this.checkMonopoly(pid)) return;
+  }
+
+  /**
+   * Titik sinkron untuk aksi kapan saja. Dipanggil di titik yang sama di semua perangkat;
+   * isinya ditentukan oleh `syncInterjections` (pemilik keputusan pemain giliran).
+   */
+  private async checkpoint() {
+    if (this.state.winner !== null || this.stopped) return;
+    const list = await this.syncInterjections(this.state.current);
+    for (const it of list) {
+      await this.applyInterjection(it);
+      if (this.state.winner !== null || this.stopped) return;
+    }
+  }
+
+  async applyInterjection(it: Interjection) {
+    const p = this.state.players[it.player];
+    if (!p || p.bankrupt || !it.act || it.act.type === "sync") return;
+    this.cleanMarket();
+    if (it.act.type === "trade") {
+      const used = this.interjectTrades.get(it.player) ?? 0;
+      if (used >= MAX_TRADES_PER_TURN) {
+        this.presenter.message(`${p.name} sudah ${MAX_TRADES_PER_TURN}x menawar di giliran ini. Tunggu giliran berikutnya ya.`);
+        return;
+      }
+      this.interjectTrades.set(it.player, used + 1);
+    }
+    await this.applyDeal(it.player, it.act);
   }
 
   /** Buang listing yang sudah tidak sah (wilayah pindah tangan / penjual bangkrut). */
@@ -865,10 +916,10 @@ export class Game {
     this.presenter.moneyChanged(this.state, pid, delta);
   }
 
-  /** Tagih pemain. Jika kurang, properti dijual otomatis; jika masih kurang → bangkrut. */
+  /** Tagih pemain. Jika kurang, pemain mencari uang dulu (jual aset / nego); jika masih kurang → bangkrut. */
   async charge(pid: number, amount: number, creditor: number | null) {
     const p = this.state.players[pid];
-    if (p.money < amount) await this.liquidate(pid, amount);
+    if (p.money < amount) await this.raiseFunds(pid, amount, creditor);
 
     if (p.money >= amount) {
       this.addMoney(pid, -amount);
@@ -889,15 +940,41 @@ export class Game {
     if (alive.length === 1) this.declareWinner(alive[0], "lastStanding");
   }
 
-  private async liquidate(pid: number, needed: number) {
+  /** Uang kurang: pemain memilih wilayah yang dijual ke bank, menawar ke pemain lain, atau menyerah. */
+  private async raiseFunds(pid: number, needed: number, creditor: number | null) {
     const p = this.state.players[pid];
-    const tiles = ownedTiles(this.state, pid).sort((a, b) => sellValue(this.state, a) - sellValue(this.state, b));
-    for (const t of tiles) {
-      if (p.money >= needed) break;
-      const value = sellValue(this.state, t);
-      this.presenter.message(`${p.name} menjual ${BOARD[t].name} seharga ${fmt(value)}.`, "bad");
-      this.addMoney(pid, value);
-      await this.releaseTile(t);
+    let trades = 0;
+    let announced = false;
+    for (let n = 0; n < 80 && p.money < needed && !this.stopped && this.state.winner === null; n++) {
+      const tiles = ownedTiles(this.state, pid)
+        .map((tile) => ({ tile, value: sellValue(this.state, tile) }))
+        .sort((a, b) => a.value - b.value);
+      if (tiles.length === 0) return;
+      if (!announced) {
+        announced = true;
+        this.presenter.message(`💸 Uang ${p.name} kurang ${fmt(needed - p.money)}! Jual aset atau nego dulu...`, "bad");
+      }
+      const act = await this.deciders[pid].chooseDebt({
+        player: pid,
+        amount: needed,
+        money: p.money,
+        creditor,
+        tiles,
+        tradesLeft: Math.max(0, MAX_TRADES_PER_TURN - trades),
+      });
+      if (act?.type === "giveUp") return;
+      if (act?.type === "sell") {
+        const t = tiles.find((x) => x.tile === act.tile);
+        if (!t) continue;
+        this.presenter.message(`${p.name} menjual ${BOARD[t.tile].name} ke bank seharga ${fmt(t.value)}.`, "bad");
+        this.addMoney(pid, t.value);
+        await this.releaseTile(t.tile);
+        continue;
+      }
+      if (act?.type === "trade" && trades < MAX_TRADES_PER_TURN && act.offer?.from === pid) {
+        trades++;
+        await this.negotiate(act.offer);
+      }
     }
   }
 

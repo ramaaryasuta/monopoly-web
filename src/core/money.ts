@@ -1,6 +1,6 @@
 /**
  * Tampilan uang dalam Rupiah. Logika game tetap memakai angka kecil
- * (1 poin = Rp1 juta), jadi modal 1.500 tampil sebagai "Rp1,5 M".
+ * (1 poin = Rp1 juta), jadi modal 300 tampil sebagai "Rp300 jt".
  */
 export const RUPIAH_PER_POINT = 1_000_000;
 

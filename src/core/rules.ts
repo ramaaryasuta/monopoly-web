@@ -2,22 +2,22 @@ import { BOARD, PROPERTY_GROUPS, RESORTS, SIDE_PROPERTIES } from "../data/board"
 import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
 
 export const CONFIG = {
-  startMoney: 1500,
-  salary: 200,
+  startMoney: 300,
+  salary: 100,
   islandTurns: 3,
-  islandBail: 100,
+  islandBail: 50,
   tourFee: 50,
   taxRate: 0.1,
   roundLimit: 30,
   sellRate: 0.5,
   festivalMultiplier: 2,
-  resortBaseRent: 50,
+  resortBaseRent: 30,
 };
 
 /** Biaya untuk naik KE level tertentu, sebagai pengali harga tanah. */
 const LEVEL_COST_FACTOR = [0, 1, 0.5, 0.5, 0.75, 1.0];
 /** Sewa per level, sebagai pengali harga tanah. */
-const RENT_FACTOR = [0, 0.3, 1.0, 2.0, 3.2, 5.0];
+const RENT_FACTOR = [0, 0.25, 0.8, 1.6, 2.6, 4.0];
 
 export const LEVEL_NAMES = ["Kosong", "Tanah", "Rumah 1", "Rumah 2", "Vila", "Landmark"];
 

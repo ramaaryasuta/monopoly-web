@@ -34,6 +34,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 - Koneksi langsung antar browser (WebRTC lewat [PeerJS](https://peerjs.com)). Server publik PeerJS hanya dipakai untuk "jabat tangan" awal; data game tidak lewat server.
 - **Host** = pusat room: tamu tersambung ke host, host meneruskan pesan dan menjalankan bot. Host harus tetap membuka game sampai selesai.
 - **Lockstep deterministik**: semua perangkat menjalankan game dengan seed yang sama; yang dikirim hanya keputusan (lempar dadu, beli, pilih petak, negosiasi). Karena itu panel QA (`?qa=1`) dimatikan saat online.
+- **🤝 Nego kapan saja**: tombol di toolbar mengirim tawaran walau bukan giliranmu. Tawaran diantrekan lalu diproses di titik sinkron berikutnya (awal giliran, setelah tiap lemparan, akhir giliran, atau langsung menyela menu giliran pemain manusia). Urutannya ditentukan perangkat pemilik pemain yang sedang giliran, jadi semua peer tetap identik. Maks 3 tawaran per pemain per giliran.
 - Tamu terputus di tengah game → kursinya diambil alih bot oleh host. Host terputus → room bubar.
 - Tab yang disembunyikan menjeda animasinya sendiri; saat dibuka lagi game mengejar ketertinggalan, tidak ada langkah yang hilang.
 - Tanpa server TURN, sebagian jaringan (NAT ketat, beberapa operator seluler / Wi-Fi kantor) bisa gagal tersambung.
@@ -41,15 +42,15 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 
 ## Aturan singkat
 
-- Mulai dengan 🪙1.500. Lewat **Mulai** +200.
+- Mulai dengan Rp300 jt. Lewat **Mulai** +Rp100 jt.
 - Mendarat di tanah kosong → beli & langsung bangun hingga **Vila**. **Landmark** dibangun saat mendarat lagi di Vila sendiri.
 - Mendarat di properti lawan → bayar **sewa**. Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).
 - **Tempat wisata** 🌴: sewa berlipat untuk setiap wisata milik pemilik yang sama.
-- **Dadu kembar** = lempar lagi; kembar 3x = dijebloskan ke **Nusakambangan** (3 giliran / sogok sipir Rp100 jt / dadu kembar).
+- **Dadu kembar** = lempar lagi; kembar 3x = dijebloskan ke **Nusakambangan** (3 giliran / sogok sipir Rp50 jt / dadu kembar).
 - **Pesta Pejabat** 🥂: sewa satu propertimu x2. **Naik Pesawat Negara** ✈️: giliran berikutnya terbang ke petak mana saja.
 - **Paket Shopee / Tokopedia / Blibli / Lazada** 📦: 34 kartu konyol (kentut nuklir, nebeng heli pejabat, tukar jiwa, mesin capit, dll).
 - **Berita Heboh** 📢: di awal ronde baru (peluang 45%) muncul event sepulau — heli pejabat salah jemput, gempa kentut, maling budiman, bansos, dll.
-- Uang kurang → properti dijual otomatis (50%) → kalau masih kurang, **bangkrut**.
+- Uang kurang → pilih sendiri wilayah yang dijual ke bank (50%), atau **nego jual** ke pemain lain (maks 3x). Masih kurang / menyerah → **bangkrut**.
 - **Menang**: lawan bangkrut semua · monopoli 3 grup warna · kuasai 1 sisi papan · kuasai 4 wisata · terkaya di ronde 30.
 
 ## Struktur

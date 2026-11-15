@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { BotDecider } from "../src/core/bot";
 import { Game } from "../src/core/game";
-import { NullPresenter, type Decider } from "../src/core/interfaces";
+import { NullPresenter, type DebtAction, type DebtChoice, type Decider } from "../src/core/interfaces";
+import { interruptibleDeals } from "../src/core/interject";
 import { checkMonopolyWin, CONFIG, createGame, rentFor, salaryFor, seasonalCost, upgradeCost } from "../src/core/rules";
 import type { PlayerSetup } from "../src/core/types";
 import { BOARD, PROPERTY_GROUPS, RESORTS } from "../src/data/board";
@@ -38,29 +39,29 @@ describe("rules", () => {
   it("sewa naik sesuai level dan festival", () => {
     const s = createGame(setups(2));
     s.tiles[39] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 39)).toBe(120);
+    expect(rentFor(s, 39)).toBe(100);
     s.tiles[39].level = 5;
-    expect(rentFor(s, 39)).toBe(2000);
+    expect(rentFor(s, 39)).toBe(1600);
     s.tiles[39].festival = true;
-    expect(rentFor(s, 39)).toBe(4000);
+    expect(rentFor(s, 39)).toBe(3200);
   });
 
   it("sewa tanah x2 jika satu grup lengkap", () => {
     const s = createGame(setups(2));
     s.tiles[37] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(110);
+    expect(rentFor(s, 37)).toBe(90);
     s.tiles[38] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(110);
+    expect(rentFor(s, 37)).toBe(90);
     s.tiles[39] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(210);
+    expect(rentFor(s, 37)).toBe(180);
   });
 
   it("sewa resort berlipat sesuai jumlah resort", () => {
     const s = createGame(setups(2));
     s.tiles[2] = { owner: 1, level: 1, festival: false };
-    expect(rentFor(s, 2)).toBe(50);
+    expect(rentFor(s, 2)).toBe(30);
     s.tiles[16] = { owner: 1, level: 1, festival: false };
-    expect(rentFor(s, 2)).toBe(100);
+    expect(rentFor(s, 2)).toBe(60);
   });
 
   it("deteksi monopoli resort", () => {
@@ -104,6 +105,89 @@ describe("game flow", () => {
     await g.charge(1, 100, 0);
     expect(g.state.players[1].bankrupt).toBe(false);
     expect(g.state.tiles[39].owner).toBeNull();
+  });
+
+  it("pemain memilih sendiri wilayah yang dijual saat uang kurang", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[1] = { owner: 1, level: 1, festival: false };
+    g.state.tiles[39] = { owner: 1, level: 4, festival: false };
+    g.state.players[1].money = 0;
+    const seen: DebtChoice[] = [];
+    g.deciders[1] = Object.assign(Object.create(g.deciders[1]), {
+      chooseDebt: async (c: DebtChoice): Promise<DebtAction> => {
+        seen.push(c);
+        return { type: "sell", tile: 39 }; // bukan yang termurah
+      },
+    });
+    await g.charge(1, 100, 0);
+    expect(seen[0].tiles.map((t) => t.tile)).toEqual([1, 39]);
+    expect(g.state.tiles[39].owner).toBeNull();
+    expect(g.state.tiles[1].owner).toBe(1);
+    expect(g.state.players[1].bankrupt).toBe(false);
+  });
+
+  it("menyerah saat utang langsung bangkrut, wilayah kembali ke bank", async () => {
+    const g = botGame(3, 1);
+    g.state.tiles[39] = { owner: 1, level: 4, festival: false };
+    g.state.players[1].money = 0;
+    g.deciders[1] = Object.assign(Object.create(g.deciders[1]), { chooseDebt: async () => ({ type: "giveUp" }) });
+    await g.charge(1, 100, 0);
+    expect(g.state.players[1].bankrupt).toBe(true);
+    expect(g.state.tiles[39].owner).toBeNull();
+  });
+
+  it("bisa nego jual ke pemain lain saat utang", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[39] = { owner: 1, level: 1, festival: false };
+    g.state.players[1].money = 0;
+    let asked = 0;
+    g.deciders[1] = Object.assign(Object.create(g.deciders[1]), {
+      chooseDebt: async (): Promise<DebtAction> =>
+        asked++ === 0
+          ? { type: "trade", offer: { from: 1, to: 0, giveTiles: [39], giveMoney: 0, takeTiles: [], takeMoney: 300 } }
+          : { type: "giveUp" },
+    });
+    g.deciders[0] = Object.assign(Object.create(g.deciders[0]), { respondTrade: async () => ({ type: "accept" }) });
+    await g.charge(1, 250, 0);
+    expect(asked).toBe(1);
+    expect(g.state.tiles[39].owner).toBe(0);
+    expect(g.state.players[1].bankrupt).toBe(false);
+    expect(g.state.players[1].money).toBe(50);
+  });
+
+  it("tawaran kapan saja diproses di checkpoint giliran pemain lain", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[39] = { owner: 0, level: 1, festival: false };
+    g.forcedDice.push([1, 2]);
+    g.deciders[0] = Object.assign(Object.create(g.deciders[0]), { respondTrade: async () => ({ type: "accept" }) });
+    g.pool.add({ id: "x", player: 1, act: { type: "trade", offer: { from: 1, to: 0, giveTiles: [], giveMoney: 100, takeTiles: [39], takeMoney: 0 } } });
+    await g.playTurn(); // giliran pemain 0
+    expect(g.state.tiles[39].owner).toBe(1);
+    expect(g.pool.size).toBe(0);
+  });
+
+  it("menu giliran manusia disela tawaran kapan saja lalu lanjut", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[39] = { owner: 1, level: 1, festival: false };
+    g.forcedDice.push([1, 2]);
+    let release: (v: null) => void = () => {};
+    let menus = 0;
+    const human = Object.assign(Object.create(g.deciders[0]), {
+      chooseDeal: () => {
+        menus++;
+        return new Promise<null>((r) => (release = r));
+      },
+    });
+    g.deciders[0] = interruptibleDeals(human, g.pool);
+    g.deciders[1] = Object.assign(Object.create(g.deciders[1]), { respondTrade: async () => ({ type: "accept" }) });
+    const turn = g.playTurn();
+    await new Promise((r) => setTimeout(r, 0));
+    g.pool.add({ id: "y", player: 0, act: { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [39], takeMoney: 0 } } });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(g.state.tiles[39].owner).toBe(0); // diproses walau menu masih terbuka
+    release(null);
+    await turn;
+    expect(menus).toBe(1); // menu yang sama dipakai lagi, tidak dibuka ulang
   });
 
   it("semua kartu konyol bisa dimainkan tanpa merusak state", async () => {
@@ -278,10 +362,10 @@ describe("kartu simpanan & event musiman", () => {
 
   it("musim turis menggandakan sewa, harbolnas mendiskon, THR gaji x2", () => {
     const s = createGame(setups(2));
-    s.tiles[1] = { owner: 0, level: 2, festival: false };
-    const normal = rentFor(s, 1);
+    s.tiles[39] = { owner: 0, level: 2, festival: false };
+    const normal = rentFor(s, 39);
     s.season = { id: "turis", untilRound: 2 };
-    expect(rentFor(s, 1)).toBe(normal * 2);
+    expect(rentFor(s, 39)).toBe(normal * 2);
     s.season = { id: "diskon", untilRound: 2 };
     expect(seasonalCost(s, 200)).toBe(100);
     s.season = { id: "thr", untilRound: 2 };

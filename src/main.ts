@@ -2,6 +2,7 @@ import "./ui/style.css";
 import { BotDecider } from "./core/bot";
 import { Game } from "./core/game";
 import { NullPresenter, type Decider } from "./core/interfaces";
+import { interruptibleDeals, isInterjection, type Interjection } from "./core/interject";
 import { BroadcastDecider, RemoteDecider } from "./net/NetDecider";
 import { GameScene } from "./scene/GameScene";
 import { music } from "./scene/music";
@@ -12,6 +13,7 @@ import { Hud } from "./ui/Hud";
 import { showMenu } from "./ui/Menu";
 import { mountQaPanel } from "./ui/QaPanel";
 import { ScenePresenter } from "./ui/ScenePresenter";
+import { editOffer, pickTradeTarget } from "./ui/TradeUi";
 
 async function boot() {
   music.init();
@@ -49,7 +51,7 @@ async function boot() {
   hud.onResetCamera = () => void view.goHome();
   view.onTileClick = (i) => void hud.showTileInfo(i);
 
-  const human = new HumanDecider(game.state, hud, view);
+  const human = new HumanDecider(game.state, hud, view, online ? localHumans : null);
   // Bot berpikir lebih cepat jika kecepatan dinaikkan
   const bot = new BotDecider(game.state, () => 450 / Speed.factor);
 
@@ -62,14 +64,21 @@ async function boot() {
     voicePanel.onSpeaking = (id, on) => seats.forEach((s, pid) => s.id === id && s.kind !== "bot" && hud.setSpeaking(pid, on));
     const remotes: (RemoteDecider | null)[] = [];
     const broadcastBot = (pid: number) => new BroadcastDecider(bot, (k, v) => room.sendAct(pid, k, v));
+    const pool = game.pool;
+    // Menu awal giliran manusia di perangkat ini bisa disela tawaran kapan saja dari pemain lain
+    const humanHere = interruptibleDeals(human, pool);
     game.deciders = seats.map((s, pid): Decider => {
       const ownedHere = s.kind === "bot" ? room.isHost : s.id === room.me;
       if (ownedHere) {
         remotes.push(null);
-        return new BroadcastDecider(s.kind === "bot" ? bot : human, (k, v) => room.sendAct(pid, k, v));
+        return new BroadcastDecider(s.kind === "bot" ? bot : humanHere, (k, v) => room.sendAct(pid, k, v));
       }
       const r = new RemoteDecider((waiting, kind) => {
-        if (kind === "roll" || kind === "deal") return; // label "Giliran X" sudah tampil
+        if (kind === "roll" || kind === "deal" || kind === "sync") return; // label "Giliran X" sudah tampil
+        if (kind === "debt") {
+          hud.setTurnLabel(waiting ? `💸 ${game.state.players[pid].name} lagi cari uang...` : null);
+          return;
+        }
         const name = game.state.players[pid].name;
         if (kind === "trade") {
           const cur = game.state.players[game.state.current];
@@ -81,7 +90,48 @@ async function boot() {
       remotes.push(r);
       return r;
     });
-    room.onAct = (pid, k, v) => remotes[pid]?.push(k, v);
+    // Checkpoint aksi kapan saja: pemilik kursi pemain giliran yang menentukan isinya, lalu menyiarkannya
+    const decideHere = async (cur: number) => {
+      const list = pool.drain();
+      room.sendAct(cur, "sync", list);
+      return list;
+    };
+    game.syncInterjections = async (cur) => {
+      const r = remotes[cur];
+      if (!r) return decideHere(cur);
+      const list = await r.sync(() => decideHere(cur));
+      pool.markApplied(list);
+      return list;
+    };
+    room.onAct = (pid, k, v) => {
+      if (k === "offer") {
+        if (isInterjection(v, pid)) pool.add(v);
+        return;
+      }
+      remotes[pid]?.push(k, v);
+    };
+
+    // Tombol 🤝 Nego kapan saja (bukan hanya saat giliran sendiri)
+    const me = localHumans[0];
+    let sent = 0;
+    if (me !== undefined) {
+      hud.enableAnytimeTrade(async () => {
+        const st = game.state;
+        if (st.winner !== null || st.players[me].bankrupt) return;
+        if (pool.has(me)) {
+          hud.toast("Tawaranmu sebelumnya masih antre, tunggu sebentar ya ⏳");
+          return;
+        }
+        const target = await pickTradeTarget(st, me);
+        if (target === null) return;
+        const offer = await editOffer(st, { from: me, to: target, giveTiles: [], giveMoney: 0, takeTiles: [], takeMoney: 0 }, `🤝 Tawaran ke ${st.players[target].name}`);
+        if (!offer || st.winner !== null) return;
+        const it: Interjection = { id: `${room.me}:${++sent}`, player: me, act: { type: "trade", offer } };
+        pool.add(it);
+        room.sendAct(me, "offer", it);
+        hud.toast(`🤝 Tawaran ke ${st.players[target].name} terkirim! Diproses sebentar lagi.`, "good");
+      });
+    }
     room.onPlayerLeft = (pid) => {
       const p = game.state.players[pid];
       p.isBot = true;

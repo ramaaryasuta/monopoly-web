@@ -2,6 +2,8 @@ import type {
   BuildChoice,
   DealAction,
   DealChoice,
+  DebtAction,
+  DebtChoice,
   Decider,
   IslandChoice,
   ItemChoice,
@@ -29,7 +31,15 @@ export class HumanDecider implements Decider {
     private state: GameState,
     private hud: Hud,
     private scene: GameScene,
+    /** Online: kursi yang dimainkan di perangkat ini (null = main bareng satu perangkat). */
+    private localSeats: number[] | null = null,
   ) {}
+
+  /** Beberapa manusia bergantian di perangkat ini → tunjukkan untuk siapa dialognya. */
+  private get hotseat() {
+    const humans = this.localSeats ?? this.state.players.filter((p) => !p.isBot).map((p) => p.id);
+    return humans.filter((id) => !this.state.players[id].bankrupt && !this.state.players[id].isBot).length > 1;
+  }
 
   /** Tombol dadu sudah diklik saat menawarkan kartu simpanan → jangan tunggu lagi. */
   private rollAlreadyClicked = false;
@@ -75,7 +85,7 @@ export class HumanDecider implements Decider {
     const from = this.state.players[o.from];
     const me = this.state.players[c.player];
     // Main bareng satu perangkat: tunjukkan untuk siapa tawaran ini
-    const hotseat = this.state.players.filter((p) => !p.isBot && !p.bankrupt).length > 1;
+    const hotseat = this.hotseat;
     for (;;) {
       const v = await modal<"accept" | "counter" | "reject">({
         title: `🤝 ${c.round === 0 ? "Tawaran" : "Tawar balik"} dari ${from.name}`,
@@ -187,6 +197,75 @@ export class HumanDecider implements Decider {
       body: `<p>${levelText}Uangmu: <b>${fmt(c.money)}</b></p>`,
       buttons,
     });
+  }
+
+  async chooseDebt(c: DebtChoice): Promise<DebtAction> {
+    const me = this.state.players[c.player];
+    const to = c.creditor === null ? "bank" : this.state.players[c.creditor].name;
+    const short = c.amount - c.money;
+    const totalSell = c.tiles.reduce((s, t) => s + t.value, 0);
+    const hopeless = c.money + totalSell < c.amount;
+    const hotseat = this.hotseat;
+    const canTrade = c.tradesLeft > 0 && this.state.players.some((p) => p.id !== c.player && !p.bankrupt);
+    for (;;) {
+      const v = await modal<DebtAction | "trade">({
+        title: "💸 Uangnya kurang!",
+        className: "debt-modal",
+        body: h(
+          "div",
+          {},
+          hotseat ? h("p", { class: "for-who" }, `Untuk ${me.name} 👀`) : null,
+          h("p", { html: `Harus bayar <b>${fmt(c.amount)}</b> ke <b>${to}</b>. Uangmu <b>${fmt(c.money)}</b>, kurang <b>${fmt(short)}</b>.` }),
+          h(
+            "p",
+            { class: "debt-hint" },
+            hopeless
+              ? `⚠️ Walau semua dijual ke bank (+${fmt(totalSell)}) masih kurang. Coba nego jual ke pemain lain, atau menyerah.`
+              : "Jual wilayah ke bank (50% nilai investasi), atau nego jual ke pemain lain biar dapat harga lebih bagus.",
+          ),
+        ),
+        buttons: [
+          ...c.tiles.map((t) => {
+            const def = BOARD[t.tile];
+            const lvl = def.kind === "resort" ? "Wisata" : LEVEL_NAMES[this.state.tiles[t.tile].level];
+            return {
+              label: `🏦 Jual ${def.name} — +${fmt(t.value)}`,
+              sub: lvl,
+              value: { type: "sell", tile: t.tile } as DebtAction | "trade",
+              class: "orange",
+            };
+          }),
+          {
+            label: canTrade ? `🤝 Nego jual ke pemain (sisa ${c.tradesLeft}x)` : "🤝 Jatah nego habis",
+            value: "trade" as const,
+            class: "blue",
+            disabled: !canTrade,
+          },
+          { label: "🏳️ Menyerah (bangkrut)", value: { type: "giveUp" } as DebtAction, class: "white" },
+        ],
+      });
+      if (v === "trade") {
+        const target = await pickTradeTarget(this.state, c.player);
+        if (target === null) continue;
+        const draft: TradeOffer = { from: c.player, to: target, giveTiles: [], giveMoney: 0, takeTiles: [], takeMoney: 0 };
+        const offer = await editOffer(this.state, draft, `🤝 Jual ke ${this.state.players[target].name}`);
+        if (offer) return { type: "trade", offer };
+        continue;
+      }
+      if (v.type === "giveUp") {
+        const sure = await modal({
+          title: "🏳️ Yakin menyerah?",
+          body: `<p>${me.name} akan bangkrut dan semua wilayahnya kembali ke bank.</p>`,
+          row: true,
+          buttons: [
+            { label: "Batal", value: false, class: "white" },
+            { label: "Ya, bangkrut", value: true, class: "pink" },
+          ],
+        });
+        if (!sure) continue;
+      }
+      return v;
+    }
   }
 
   async chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll"> {

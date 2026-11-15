@@ -6,6 +6,8 @@ import {
   type BuildChoice,
   type DealAction,
   type DealChoice,
+  type DebtAction,
+  type DebtChoice,
   type Decider,
   type IslandChoice,
   type ItemChoice,
@@ -17,6 +19,7 @@ import { activeListings, flipOffer, tradeableTiles } from "../src/core/trade";
 import type { GameState } from "../src/core/types";
 import type { PlayerSetup } from "../src/core/types";
 import { BroadcastDecider, RemoteDecider } from "../src/net/NetDecider";
+import { interruptibleDeals, type Interjection } from "../src/core/interject";
 import { normalizeCode } from "../src/net/Room";
 
 /** "Manusia" yang pilihannya tidak bisa ditebak (Math.random) — hanya pesan jaringan yang menyamakan peer lain. */
@@ -60,6 +63,31 @@ class RandomHuman implements Decider {
     const all = [c.currentLevel, ...c.options.map((o) => o.level)];
     return all[Math.floor(Math.random() * all.length)];
   }
+  async chooseDebt(c: DebtChoice): Promise<DebtAction> {
+    const r = Math.random();
+    if (r < 0.1) return { type: "giveUp" };
+    if (r < 0.25 && c.tradesLeft > 0) {
+      const others = this.state.players.filter((p) => p.id !== c.player && !p.bankrupt);
+      const mine = tradeableTiles(this.state, c.player);
+      if (others.length && mine.length) {
+        const to = others[Math.floor(Math.random() * others.length)].id;
+        return { type: "trade", offer: { from: c.player, to, giveTiles: [mine[0]], giveMoney: 0, takeTiles: [], takeMoney: 10 } };
+      }
+    }
+    return { type: "sell", tile: c.tiles[Math.floor(Math.random() * c.tiles.length)].tile };
+  }
+  /** Tawaran acak di luar giliran (atau null). */
+  randomOffer(me: number): DealAction | null {
+    const s = this.state;
+    if (s.players[me].bankrupt) return null;
+    const others = s.players.filter((p) => p.id !== me && !p.bankrupt);
+    if (!others.length) return null;
+    const to = others[Math.floor(Math.random() * others.length)].id;
+    const theirs = tradeableTiles(s, to);
+    if (!theirs.length) return null;
+    const money = Math.min(s.players[me].money, 10 * (1 + Math.floor(Math.random() * 20)));
+    return { type: "trade", offer: { from: me, to, giveTiles: [], giveMoney: money, takeTiles: [theirs[0]], takeMoney: 0 } };
+  }
   async chooseIslandAction(c: IslandChoice) {
     return c.canPay && Math.random() < 0.5 ? ("pay" as const) : ("roll" as const);
   }
@@ -81,7 +109,7 @@ const HOST: Owner = "A";
  * Simulasi 3 perangkat. Kursi: 0 = manusia di A (host), 1 = manusia di B, 2 = bot (dijalankan host), 3 = manusia di C.
  * Pesan dikirim asinkron dengan jeda acak agar urutan eksekusi antar peer berbeda-beda.
  */
-function simulate(seed: number, opts: { dropBAfterActs?: number } = {}) {
+function simulate(seed: number, opts: { dropBAfterActs?: number; anytime?: boolean } = {}) {
   const owners: Owner[] = ["A", "B", HOST, "C"];
   const kinds = ["human", "human", "bot", "human"] as const;
   const setups: PlayerSetup[] = owners.map((_, i) => ({ name: `P${i}`, color: "#fff", isBot: kinds[i] === "bot" }));
@@ -97,18 +125,41 @@ function simulate(seed: number, opts: { dropBAfterActs?: number } = {}) {
       if (to === from || !alive.has(to)) continue;
       lane[to] = lane[to]
         .then(() => (Math.random() < 0.2 ? new Promise<void>((r) => setTimeout(r, 0)) : undefined))
-        .then(() => remotes[to][p]?.push(k, v));
+        .then(() => (k === "offer" ? games[to].pool.add(v as Interjection) : remotes[to][p]?.push(k, v)));
     }
   };
 
+  let offerSeq = 0;
   for (const peer of PEERS) {
     const g = new Game(setups, [], new NullPresenter(), { seed, maxTurns: 300 });
     const bot = new BotDecider(g.state);
+    const decideHere = async (cur: number) => {
+      const list = g.pool.drain();
+      if (alive.has(peer)) deliver(peer, cur, "sync", list);
+      return list;
+    };
+    g.syncInterjections = async (cur) => {
+      const r = remotes[peer][cur];
+      if (!r) return decideHere(cur);
+      const list = await r.sync(() => decideHere(cur));
+      g.pool.markApplied(list);
+      return list;
+    };
     g.deciders = owners.map((o, pid) => {
       if (o === peer) {
         remotes[peer].push(null);
-        const inner = kinds[pid] === "bot" ? bot : new RandomHuman(g.state);
+        const human = new RandomHuman(g.state);
+        const inner = kinds[pid] === "bot" ? bot : interruptibleDeals(human, g.pool);
         return new BroadcastDecider(inner, (k, v) => {
+          // Manusia kadang mengirim tawaran kapan saja (di luar gilirannya)
+          if (kinds[pid] === "human" && opts.anytime && alive.has(peer) && Math.random() < 0.15) {
+            const act = human.randomOffer(pid);
+            if (act) {
+              const it: Interjection = { id: `${peer}:${++offerSeq}`, player: pid, act };
+              g.pool.add(it);
+              deliver(peer, pid, "offer", it);
+            }
+          }
           if (peer === "B" && opts.dropBAfterActs !== undefined) {
             if (!alive.has("B")) return;
             if (++bActs > opts.dropBAfterActs) {
@@ -138,7 +189,7 @@ function simulate(seed: number, opts: { dropBAfterActs?: number } = {}) {
 
 const snapshot = (g: Game) => JSON.stringify(g.state);
 
-describe("online lockstep", () => {
+describe("online lockstep", { timeout: 60000 }, () => {
   it("semua peer berakhir dengan state yang identik", async () => {
     for (const seed of [1, 42, 777]) {
       const { games, run } = simulate(seed);
@@ -146,6 +197,22 @@ describe("online lockstep", () => {
       expect(snapshot(games.B)).toBe(snapshot(games.A));
       expect(snapshot(games.C)).toBe(snapshot(games.A));
     }
+  });
+
+  it("tawaran kapan saja & jual aset saat utang tetap sinkron di semua peer", async () => {
+    for (const seed of [3, 99, 2024, 31337]) {
+      const { games, run } = simulate(seed, { anytime: true });
+      await run();
+      expect(snapshot(games.B)).toBe(snapshot(games.A));
+      expect(snapshot(games.C)).toBe(snapshot(games.A));
+    }
+  });
+
+  it("tawaran kapan saja + pemain terputus tetap sinkron", async () => {
+    const { games, run } = simulate(8, { dropBAfterActs: 25, anytime: true });
+    await run(["A", "C"]);
+    expect(games.A.state.winner).not.toBeNull();
+    expect(snapshot(games.C)).toBe(snapshot(games.A));
   });
 
   it("pemain terputus diambil alih bot oleh host, peer lain tetap sinkron", async () => {

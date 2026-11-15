@@ -155,6 +155,7 @@ export function showMenu(): Promise<MenuResult> {
             big("📖", "Cara Main", "Aturan singkat & cara menang", "white", "mode-rules", rules),
           ),
           h("div", { class: "menu-foot" }, soundBtn, musicBtn),
+          h("div", { class: "menu-version", "data-testid": "version" }, `v${__APP_VERSION__}`),
         ),
       );
     };
