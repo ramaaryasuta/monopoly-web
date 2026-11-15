@@ -113,9 +113,19 @@ describe("game flow", () => {
     expect(g.state.winReason).toBe("lastStanding");
   });
 
-  it("menjual properti sebelum bangkrut", async () => {
+  it("mencari uang dari aset sebelum bangkrut (bot turunkan bangunan dulu)", async () => {
     const g = botGame(2, 1);
     g.state.tiles[39] = { owner: 1, level: 4, festival: false };
+    g.state.players[1].money = 0;
+    await g.charge(1, 100, 0);
+    expect(g.state.players[1].bankrupt).toBe(false);
+    expect(g.state.tiles[39].owner).toBe(1);
+    expect(g.state.tiles[39].level).toBeLessThan(4);
+  });
+
+  it("menjual wilayah bila bangunan sudah habis", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[39] = { owner: 1, level: 1, festival: false };
     g.state.players[1].money = 0;
     await g.charge(1, 100, 0);
     expect(g.state.players[1].bankrupt).toBe(false);
@@ -181,6 +191,54 @@ describe("game flow", () => {
     expect(seen[0].tiles.map((t) => t.tile)).toEqual([1, 39]);
     expect(g.state.tiles[39].owner).toBeNull();
     expect(g.state.tiles[1].owner).toBe(1);
+    expect(g.state.players[1].bankrupt).toBe(false);
+  });
+
+  it("bisa menurunkan bangunan saat utang, wilayah tetap dimiliki", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[39] = { owner: 1, level: 4, festival: false };
+    g.state.players[1].money = 0;
+    const seen: DebtChoice[] = [];
+    g.deciders[1] = Object.assign(Object.create(g.deciders[1]), {
+      chooseDebt: async (c: DebtChoice): Promise<DebtAction> => {
+        seen.push(c);
+        return { type: "downgrade", tile: 39, level: 2 }; // Vila → Rumah 1
+      },
+    });
+    const gain = Math.round((upgradeCost(39, 2, 4) * CONFIG.sellRate) / 10) * 10;
+    await g.charge(1, 10, 0);
+    expect(seen[0].downgrades.find((d) => d.tile === 39)!.options.map((o) => o.level)).toEqual([3, 2, 1]);
+    expect(g.state.tiles[39].owner).toBe(1);
+    expect(g.state.tiles[39].level).toBe(2);
+    expect(g.state.players[1].money).toBe(gain - 10);
+    expect(g.state.players[1].bankrupt).toBe(false);
+  });
+
+  it("downgrade tidak valid diabaikan; tanah & wisata tidak bisa diturunkan", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[1] = { owner: 1, level: 1, festival: false };
+    g.state.tiles[RESORTS[0]] = { owner: 1, level: 1, festival: false };
+    g.state.players[1].money = 0;
+    const seen: DebtChoice[] = [];
+    g.deciders[1] = Object.assign(Object.create(g.deciders[1]), {
+      chooseDebt: async (c: DebtChoice): Promise<DebtAction> => {
+        seen.push(c);
+        return seen.length === 1 ? { type: "downgrade", tile: 1, level: 0 } : { type: "giveUp" };
+      },
+    });
+    await g.charge(1, 10, 0);
+    expect(seen[0].downgrades).toEqual([]);
+    expect(seen.length).toBe(2);
+    expect(g.state.players[1].bankrupt).toBe(true);
+  });
+
+  it("bot memilih penurunan bangunan terkecil yang cukup, bukan jual wilayah", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[39] = { owner: 1, level: 5, festival: false };
+    g.state.players[1].money = 0;
+    await g.charge(1, 10, 0);
+    expect(g.state.tiles[39].owner).toBe(1);
+    expect(g.state.tiles[39].level).toBe(4); // cukup bongkar Landmark saja
     expect(g.state.players[1].bankrupt).toBe(false);
   });
 

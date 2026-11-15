@@ -35,6 +35,7 @@ import {
   salaryFor,
   seasonalCost,
   sellValue,
+  downgradeOptions,
   upgradeCost,
 } from "./rules";
 import {
@@ -963,6 +964,9 @@ export class Game {
         .map((tile) => ({ tile, value: sellValue(this.state, tile) }))
         .sort((a, b) => a.value - b.value);
       if (tiles.length === 0) return;
+      const downgrades = tiles
+        .map(({ tile }) => ({ tile, level: this.state.tiles[tile].level, options: downgradeOptions(this.state, tile) }))
+        .filter((d) => d.options.length > 0);
       if (!announced) {
         announced = true;
         this.presenter.message(`💸 Uang ${p.name} kurang ${fmt(needed - p.money)}! Jual aset atau nego dulu...`, "bad");
@@ -973,9 +977,28 @@ export class Game {
         money: p.money,
         creditor,
         tiles,
+        downgrades,
         tradesLeft: Math.max(0, MAX_TRADES_PER_TURN - trades),
       });
       if (act?.type === "giveUp") return;
+      if (act?.type === "downgrade") {
+        const opt = downgrades.find((d) => d.tile === act.tile)?.options.find((o) => o.level === act.level);
+        if (!opt) continue;
+        const ts = this.state.tiles[act.tile];
+        this.presenter.message(
+          `${p.name} menurunkan ${BOARD[act.tile].name} jadi ${LEVEL_NAMES[opt.level]}, dapat ${fmt(opt.value)} dari bank.`,
+          "bad",
+        );
+        this.addMoney(pid, opt.value);
+        ts.level = opt.level as typeof ts.level;
+        // Harga pajangan di pasar dibuat untuk level lama: tarik dari pasar
+        if (this.state.market.some((l) => l.tile === act.tile)) {
+          this.state.market = this.state.market.filter((l) => l.tile !== act.tile);
+          await this.presenter.marketChanged(this.state);
+        }
+        await this.presenter.tileChanged(this.state, act.tile);
+        continue;
+      }
       if (act?.type === "sell") {
         const t = tiles.find((x) => x.tile === act.tile);
         if (!t) continue;

@@ -91,11 +91,17 @@ export interface DebtChoice {
   creditor: number | null;
   /** Wilayah yang bisa dijual ke bank beserta hasilnya, termurah dulu. */
   tiles: { tile: number; value: number }[];
+  /** Wilayah yang bangunannya bisa diturunkan (wilayah tetap milikmu), per level tujuan. */
+  downgrades: { tile: number; level: number; options: { level: number; value: number }[] }[];
   /** Sisa jatah menawar ke pemain lain selama mencari uang. */
   tradesLeft: number;
 }
 
-export type DebtAction = { type: "sell"; tile: number } | { type: "trade"; offer: TradeOffer } | { type: "giveUp" };
+export type DebtAction =
+  | { type: "sell"; tile: number }
+  | { type: "downgrade"; tile: number; level: number }
+  | { type: "trade"; offer: TradeOffer }
+  | { type: "giveUp" };
 
 /** Sumber keputusan: pemain manusia (UI) atau bot (AI). */
 export interface Decider {

@@ -143,6 +143,20 @@ export function sellValue(state: GameState, tileIndex: number): number {
   return round10(investedValue(state, tileIndex) * CONFIG.sellRate);
 }
 
+/**
+ * Opsi menurunkan bangunan ke bank (wilayah tetap dimiliki): untuk tiap level
+ * tujuan di bawah level sekarang (minimal Tanah), dapat 50% biaya bangunan yang dibongkar.
+ */
+export function downgradeOptions(state: GameState, tileIndex: number): { level: number; value: number }[] {
+  if (BOARD[tileIndex].kind !== "property") return [];
+  const cur = state.tiles[tileIndex].level;
+  const out: { level: number; value: number }[] = [];
+  for (let to = cur - 1; to >= 1; to--) {
+    out.push({ level: to, value: round10(upgradeCost(tileIndex, to, cur) * CONFIG.sellRate) });
+  }
+  return out;
+}
+
 export function checkMonopolyWin(state: GameState, player: number): WinReason | null {
   const groups = PROPERTY_GROUPS.filter((_, g) => ownsGroup(state, player, g)).length;
   if (groups >= 3) return "tripleMonopoly";

@@ -208,8 +208,9 @@ export class HumanDecider implements Decider {
     const hopeless = c.money + totalSell < c.amount;
     const hotseat = this.hotseat;
     const canTrade = c.tradesLeft > 0 && this.state.players.some((p) => p.id !== c.player && !p.bankrupt);
+    type V = DebtAction | "trade" | { type: "pickDown"; tile: number };
     for (;;) {
-      const v = await modal<DebtAction | "trade">({
+      const v = await modal<V>({
         title: "💸 Uangnya kurang!",
         className: "debt-modal",
         body: h(
@@ -222,29 +223,65 @@ export class HumanDecider implements Decider {
             { class: "debt-hint" },
             hopeless
               ? `⚠️ Walau semua dijual ke bank (+${fmt(totalSell)}) masih kurang. Coba nego jual ke pemain lain, atau menyerah.`
-              : "Jual wilayah ke bank (50% nilai investasi), atau nego jual ke pemain lain biar dapat harga lebih bagus.",
+              : "Turunkan bangunan (wilayah tetap milikmu), jual wilayah ke bank (50% nilai investasi), atau nego jual ke pemain lain.",
           ),
         ),
         buttons: [
+          ...(c.downgrades ?? []).map((d) => {
+            const def = BOARD[d.tile];
+            const best = d.options[d.options.length - 1];
+            return {
+              label: `⬇️ Turunkan ${def.name} — maks +${fmt(best.value)}`,
+              sub: `${LEVEL_NAMES[d.level]} → ?`,
+              value: { type: "pickDown", tile: d.tile } as V,
+              class: "green",
+            };
+          }),
           ...c.tiles.map((t) => {
             const def = BOARD[t.tile];
             const lvl = def.kind === "resort" ? "Wisata" : LEVEL_NAMES[this.state.tiles[t.tile].level];
             return {
               label: `🏦 Jual ${def.name} — +${fmt(t.value)}`,
               sub: lvl,
-              value: { type: "sell", tile: t.tile } as DebtAction | "trade",
+              value: { type: "sell", tile: t.tile } as V,
               class: "orange",
             };
           }),
           {
             label: canTrade ? `🤝 Nego jual ke pemain (sisa ${c.tradesLeft}x)` : "🤝 Jatah nego habis",
-            value: "trade" as const,
+            value: "trade" as V,
             class: "blue",
             disabled: !canTrade,
           },
-          { label: "🏳️ Menyerah (bangkrut)", value: { type: "giveUp" } as DebtAction, class: "white" },
+          { label: "🏳️ Menyerah (bangkrut)", value: { type: "giveUp" } as V, class: "white" },
         ],
       });
+      if (v !== "trade" && v.type === "pickDown") {
+        const d = c.downgrades.find((x) => x.tile === v.tile)!;
+        const def = BOARD[d.tile];
+        const level = await modal<number | null>({
+          title: `⬇️ Turunkan ${def.name}`,
+          body: h(
+            "div",
+            {},
+            hotseat ? h("p", { class: "for-who" }, `Untuk ${me.name} 👀`) : null,
+            h("p", {
+              html: `Sekarang <b>${LEVEL_NAMES[d.level]}</b>. Bangunan dijual ke bank 50% harga, wilayah tetap milikmu. Kurang <b>${fmt(short)}</b>.`,
+            }),
+          ),
+          buttons: [
+            ...d.options.map((o) => ({
+              label: `Jadi ${LEVEL_NAMES[o.level]} — +${fmt(o.value)}`,
+              sub: o.value >= short ? "✅ cukup" : "",
+              value: o.level as number | null,
+              class: o.value >= short ? "green" : "orange",
+            })),
+            { label: "↩️ Kembali", value: null, class: "white" },
+          ],
+        });
+        if (level === null) continue;
+        return { type: "downgrade", tile: d.tile, level };
+      }
       if (v === "trade") {
         const target = await pickTradeTarget(this.state, c.player);
         if (target === null) continue;

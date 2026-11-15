@@ -62,7 +62,16 @@ export class BotDecider implements Decider {
 
   async chooseDebt(c: DebtChoice): Promise<DebtAction> {
     await this.think();
-    // Jual wilayah termurah dulu; tidak ada lagi yang bisa dijual → menyerah
+    // Utamakan menurunkan bangunan (wilayah tetap dimiliki): pilih penurunan
+    // terkecil yang sudah menutup kekurangan.
+    const short = c.amount - c.money;
+    const downs = (c.downgrades ?? []).flatMap((d) => d.options.map((o) => ({ tile: d.tile, ...o })));
+    const enough = downs.filter((o) => o.value >= short).sort((a, b) => a.value - b.value)[0];
+    if (enough) return { type: "downgrade", tile: enough.tile, level: enough.level };
+    // Tidak ada yang cukup sendirian: bongkar bangunan termahal dulu sampai tinggal tanah
+    const biggest = downs.filter((o) => o.level === 1).sort((a, b) => b.value - a.value)[0];
+    if (biggest) return { type: "downgrade", tile: biggest.tile, level: 1 };
+    // Jual wilayah termurah; tidak ada lagi yang bisa dijual → menyerah
     return c.tiles.length ? { type: "sell", tile: c.tiles[0].tile } : { type: "giveUp" };
   }
 
