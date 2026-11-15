@@ -136,7 +136,7 @@ body {
 .tagline { margin: 8px 0 18px; font-size: 17px; }
 
 /* parade karakter di beranda */
-.parade { display: flex; justify-content: center; gap: 10px; margin-bottom: 8px; }
+.parade { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 8px; }
 .parade span {
   width: 52px; height: 52px; border-radius: 50%;
   border: 3px solid var(--ink);
@@ -145,6 +145,10 @@ body {
   box-shadow: 0 4px 0 var(--ink);
   animation: hop 1.6s ease-in-out infinite;
   animation-delay: calc(var(--i) * 0.18s);
+}
+@media (max-width: 420px) {
+  .parade { gap: 4px; }
+  .parade span { width: 38px; height: 38px; font-size: 22px; }
 }
 
 .choices { display: flex; flex-direction: column; gap: 12px; }

@@ -32,13 +32,15 @@ const CHAR_BLURB = [
   "Satu mata, fokus ke cuan.",
   "Pedasnya bikin lawan kepanasan.",
   "Kalem di luar, segar di dalam.",
+  "Badan gede, hati lembut, kantong tebal.",
+  "Tujuh nyawa, nol rasa kasihan.",
 ];
 
 /** Nama bawaan karakter lama → nama barunya (untuk data tersimpan). */
 const RENAMED: Record<string, string> = { Jago: "Cabai", Burger: "Timun" };
 
 /** Nama bawaan per karakter (bukan per slot). */
-const DEFAULT_NAMES = ["Kentang", "Om Mata", "Cabai", "Timun"];
+const DEFAULT_NAMES = ["Kentang", "Om Mata", "Cabai", "Timun", "Paus", "Kucing"];
 
 const DEFAULT_SLOTS: Slot[] = [
   { type: "human", name: "Kamu", char: 0 },
@@ -56,7 +58,7 @@ function loadSaved(): { slots: Slot[]; speed: number } {
         const slots = d.slots.map((s, i) => ({
           type: (["human", "bot", "off"] as const).includes(s.type) ? s.type : DEFAULT_SLOTS[i].type,
           name: typeof s.name === "string" ? (RENAMED[s.name] ?? s.name).slice(0, 12) : DEFAULT_SLOTS[i].name,
-          char: Number.isInteger(s.char) && s.char >= 0 && s.char < 4 ? s.char : i,
+          char: Number.isInteger(s.char) && s.char >= 0 && s.char < CRITTERS.length ? s.char : i,
         }));
         // Karakter harus unik; kalau data lama bentrok, pakai default
         if (new Set(slots.map((s) => s.char)).size === 4) return { slots, speed: d.speed ?? 1 };
@@ -173,8 +175,8 @@ export function showMenu(): Promise<MenuResult> {
 
       const freeChar = (i: number, dir: 1 | -1) => {
         const s = slots[i];
-        for (let k = 1; k <= 4; k++) {
-          const next = (s.char + dir * k + 8) % 4;
+        for (let k = 1; k <= CRITTERS.length; k++) {
+          const next = (s.char + dir * k + CRITTERS.length * 2) % CRITTERS.length;
           if (!slots.some((o, j) => j !== i && o.type !== "off" && o.char === next)) return next;
         }
         return s.char;
@@ -463,8 +465,8 @@ export function showMenu(): Promise<MenuResult> {
       });
 
       const freeCharFrom = (seats: Seat[], i: number, dir: 1 | -1) => {
-        for (let k = 1; k <= 4; k++) {
-          const next = (seats[i].char + dir * k + 8) % 4;
+        for (let k = 1; k <= CRITTERS.length; k++) {
+          const next = (seats[i].char + dir * k + CRITTERS.length * 2) % CRITTERS.length;
           if (!seats.some((o, j) => j !== i && o.char === next)) return next;
         }
         return seats[i].char;

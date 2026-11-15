@@ -63,7 +63,8 @@ type Msg =
   | { t: "ping" }
   | { t: "pong" };
 
-const BOT_NAMES = ["Kentang", "Om Mata", "Cabai", "Timun"];
+/** Satu nama bawaan per karakter (urutannya sama dengan CRITTERS). */
+const BOT_NAMES = ["Kentang", "Om Mata", "Cabai", "Timun", "Paus", "Kucing"];
 
 const PING_EVERY_MS = 3000;
 const DEAD_AFTER_MS = 10000;
@@ -435,13 +436,13 @@ export class Room {
   }
 
   private freeChar(): number {
-    for (let c = 0; c < 4; c++) if (!this.seats.some((s) => s.char === c)) return c;
+    for (let c = 0; c < BOT_NAMES.length; c++) if (!this.seats.some((s) => s.char === c)) return c;
     return 0;
   }
 
   private applySetMe(seat: Seat, m: { name?: string; char?: number }) {
     if (m.name !== undefined) seat.name = cleanName(m.name);
-    if (m.char !== undefined && Number.isInteger(m.char) && m.char >= 0 && m.char < 4 && !this.seats.some((s) => s !== seat && s.char === m.char)) {
+    if (m.char !== undefined && Number.isInteger(m.char) && m.char >= 0 && m.char < BOT_NAMES.length && !this.seats.some((s) => s !== seat && s.char === m.char)) {
       if (seat.kind === "bot" && BOT_NAMES.includes(seat.name)) seat.name = BOT_NAMES[m.char];
       seat.char = m.char;
     }

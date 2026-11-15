@@ -10,7 +10,7 @@ import { activeListings, listingFor } from "../core/trade";
 import { escapeHtml, fmt, h, modal, uiRoot } from "./dom";
 import { viewMarket } from "./TradeUi";
 
-export const AVATARS = ["🥔", "👾", "🌶️", "🥒"];
+export const AVATARS = ["🥔", "👾", "🌶️", "🥒", "🐳", "🐱"];
 
 const KIND_LABEL: Record<string, string> = {
   start: "Petak Mulai",

@@ -2,13 +2,15 @@ import { MeshBuilder, TransformNode, Vector3, type Mesh, type Scene, type Shadow
 import { outline, toon } from "./toon";
 import { Ease, lerp, tween } from "./tween";
 
-export type CritterKind = "potato" | "cyclops" | "chili" | "cucumber";
+export type CritterKind = "potato" | "cyclops" | "chili" | "cucumber" | "whale" | "cat";
 
 export const CRITTERS: { kind: CritterKind; label: string; color: string }[] = [
   { kind: "potato", label: "Bang Kentang Kumis", color: "#ff9f1c" },
   { kind: "cyclops", label: "Om Mata Satu", color: "#a55eea" },
   { kind: "chili", label: "Cabai Ngamuk", color: "#ef3b36" },
   { kind: "cucumber", label: "Timun Kalem", color: "#4cbf3f" },
+  { kind: "whale", label: "Paus Biru", color: "#3a86ff" },
+  { kind: "cat", label: "Kucing Garong", color: "#34343f" },
 ];
 
 const INK = "#2b1d3a";
@@ -55,8 +57,8 @@ export class Pawn {
       return m;
     };
     const sphere = (d: number, seg = 12) => MeshBuilder.CreateSphere("s", { diameter: d, segments: seg }, scene);
-    const googly = (x: number, y: number, z: number, d: number, parent: TransformNode = this.head) => {
-      const eye = part(sphere(d, 14), "#ffffff", parent, 0.02);
+    const googly = (x: number, y: number, z: number, d: number, parent: TransformNode = this.head, eyeHex = "#ffffff") => {
+      const eye = part(sphere(d, 14), eyeHex, parent, 0.02);
       eye.position.set(x, y, z);
       eye.scaling.z = 0.6;
       const pupil = part(sphere(d * 0.45, 8), INK, parent, 0);
@@ -344,6 +346,185 @@ export class Pawn {
           blush.position.set(sx, 1.02, 0.29);
           blush.scaling.z = 0.3;
         }
+        break;
+      }
+
+      // ------------------------------------------------------------ paus
+      case "whale": {
+        // Badan bulat besar (elips dengan semi-sumbu ex, ey, ez di ketinggian cy)
+        const cy = 0.72;
+        const [ex, ey, ez] = [0.54, 0.5, 0.6];
+        /** Titik di permukaan depan badan (+ jarak keluar). */
+        const front = (x: number, y: number, out = 0) => {
+          const k = 1 - (x / ex) ** 2 - ((y - cy) / ey) ** 2;
+          return ez * Math.sqrt(Math.max(0, k)) + out;
+        };
+        for (const sx of [-0.18, 0.18]) {
+          const leg = part(MeshBuilder.CreateCylinder("leg", { diameter: 0.07, height: 0.24 }, scene), INK, this.body, 0);
+          leg.position.set(sx, 0.12, 0.05);
+          const shoe = part(sphere(0.22, 8), "#ffffff", this.body, 0.02);
+          shoe.scaling.set(0.9, 0.5, 1.4);
+          shoe.position.set(sx, 0.04, 0.1);
+        }
+        const torso = part(sphere(1, 20), color);
+        torso.scaling.set(ex * 2, ey * 2, ez * 2);
+        torso.position.y = cy;
+        // Perut putih bergaris
+        const belly = part(sphere(1, 16), light, this.body, 0.02);
+        belly.scaling.set(0.72, 0.42, 0.4);
+        belly.position.set(0, 0.47, 0.4);
+        for (const y of [0.4, 0.5]) {
+          const groove = part(MeshBuilder.CreateBox("groove", { width: 0.34, height: 0.02, depth: 0.02 }, scene), lighten(color, 0.2), this.body, 0);
+          groove.position.set(0, y, front(0, y, 0.06) + 0.02);
+        }
+        // Sirip samping melambai
+        for (const sx of [-1, 1]) {
+          const arm = new TransformNode("fin", scene);
+          arm.parent = this.body;
+          arm.position.set(sx * 0.5, 0.62, 0.05);
+          const fin = part(sphere(0.34, 10), dark, arm, 0.02);
+          fin.scaling.set(0.28, 1, 0.6);
+          fin.position.set(sx * 0.1, -0.08, 0);
+          fin.rotation.z = sx * 0.7;
+          this.wiggles.push({ node: arm, phase: sx * 1.3, amp: 0.4, axis: "z" });
+        }
+        // Ekor di belakang
+        const tail = new TransformNode("tail", scene);
+        tail.parent = this.body;
+        tail.position.set(0, 0.55, -0.5);
+        const stalk = part(sphere(0.4, 12), color, tail, 0.02);
+        stalk.scaling.set(0.55, 0.55, 1.1);
+        stalk.position.set(0, 0.05, -0.15);
+        for (const sx of [-1, 1]) {
+          const fluke = part(sphere(0.36, 10), dark, tail, 0.02);
+          fluke.scaling.set(1, 0.2, 0.55);
+          fluke.position.set(sx * 0.17, 0.2, -0.36);
+          fluke.rotation.z = sx * 0.45;
+        }
+        this.wiggles.push({ node: tail, phase: 0.7, amp: 0.3, axis: "x" });
+        // Semburan air dari ubun-ubun
+        const spout = new TransformNode("spout", scene);
+        spout.parent = this.head;
+        spout.position.set(0, cy + ey - 0.04, -0.05);
+        const jet = part(MeshBuilder.CreateCylinder("jet", { diameterTop: 0.14, diameterBottom: 0.06, height: 0.32, tessellation: 10 }, scene), "#9ee6ff", spout, 0.015);
+        jet.position.y = 0.16;
+        const drops: [number, number, number][] = [
+          [0, 0.4, 0.17],
+          [-0.13, 0.35, 0.13],
+          [0.13, 0.35, 0.13],
+          [-0.22, 0.24, 0.09],
+          [0.22, 0.24, 0.09],
+        ];
+        for (const [x, y, d] of drops) {
+          const drop = part(sphere(d, 8), "#c9f2ff", spout, 0.015);
+          drop.position.set(x, y, 0);
+        }
+        this.wiggles.push({ node: spout, phase: 2.2, amp: 0.15, axis: "z" });
+        // Wajah: mata di samping, senyum lebar
+        googly(-0.23, 0.9, front(-0.23, 0.9) - 0.01, 0.2);
+        googly(0.23, 0.9, front(0.23, 0.9) - 0.01, 0.2);
+        const smilePath: Vector3[] = [];
+        for (let i = 0; i <= 14; i++) {
+          const x = -0.32 + (0.64 * i) / 14;
+          const y = 0.7 + 0.5 * x * x;
+          smilePath.push(new Vector3(x, y, front(x, y, 0.025)));
+        }
+        part(MeshBuilder.CreateTube("smile", { path: smilePath, radius: 0.024, tessellation: 8, cap: 3 }, scene), INK, this.head, 0);
+        for (const sx of [-0.33, 0.33]) {
+          const blush = part(sphere(0.1, 6), "#ff8fab", this.head, 0);
+          blush.position.set(sx, 0.8, front(sx, 0.8, 0.01));
+          blush.scaling.z = 0.3;
+        }
+        // Topi pelaut kecil
+        const hat = part(MeshBuilder.CreateCylinder("hat", { diameterTop: 0.3, diameterBottom: 0.36, height: 0.12, tessellation: 16 }, scene), "#ffffff", this.head, 0.02);
+        hat.position.set(0.2, cy + ey - 0.06, 0.1);
+        hat.rotation.z = -0.35;
+        const hatBand = part(MeshBuilder.CreateCylinder("hatBand", { diameter: 0.37, height: 0.04, tessellation: 16 }, scene), "#1d3557", this.head, 0);
+        hatBand.position.copyFrom(hat.position);
+        hatBand.position.y -= 0.03;
+        hatBand.rotation.z = -0.35;
+        break;
+      }
+
+      // ------------------------------------------------------------ kucing hitam
+      case "cat": {
+        const fur = color;
+        const pink = "#ff8fab";
+        // Kaki dengan kaus kaki putih
+        for (const sx of [-0.17, 0.17]) {
+          const leg = part(MeshBuilder.CreateCapsule("leg", { radius: 0.08, height: 0.3 }, scene), fur, this.body, 0.02);
+          leg.position.set(sx, 0.16, 0.02);
+          const paw = part(sphere(0.18, 8), "#ffffff", this.body, 0.02);
+          paw.scaling.set(1, 0.55, 1.3);
+          paw.position.set(sx, 0.05, 0.08);
+        }
+        const torso = part(sphere(0.86, 16), fur);
+        torso.scaling.set(0.9, 1, 0.85);
+        torso.position.y = 0.52;
+        const patch = part(sphere(0.5, 12), "#5a5a6b", this.body, 0);
+        patch.scaling.set(0.8, 1, 0.4);
+        patch.position.set(0, 0.47, 0.3);
+        // Lengan dengan ujung putih
+        for (const sx of [-1, 1]) {
+          const arm = new TransformNode("arm", scene);
+          arm.parent = this.body;
+          arm.position.set(sx * 0.34, 0.62, 0.05);
+          const a = part(MeshBuilder.CreateCapsule("arm", { radius: 0.065, height: 0.36 }, scene), fur, arm, 0.02);
+          a.position.set(sx * 0.07, -0.12, 0.04);
+          a.rotation.z = sx * 0.35;
+          const mitt = part(sphere(0.15, 8), "#ffffff", arm, 0.02);
+          mitt.position.set(sx * 0.13, -0.28, 0.06);
+          this.wiggles.push({ node: arm, phase: sx * 1.7, amp: 0.25, axis: "x" });
+        }
+        // Ekor melengkung tinggi
+        const tail = new TransformNode("tail", scene);
+        tail.parent = this.body;
+        tail.position.set(0, 0.3, -0.33);
+        const tailPath: Vector3[] = [];
+        for (let i = 0; i <= 16; i++) {
+          const t = i / 16;
+          tailPath.push(new Vector3(0.18 * Math.sin(t * Math.PI * 1.4), t * 0.95, -0.22 * Math.sin(t * Math.PI * 0.8)));
+        }
+        part(MeshBuilder.CreateTube("tail", { path: tailPath, radiusFunction: (i) => 0.065 - i * 0.0018, tessellation: 10, cap: 3 }, scene), fur, tail, 0.02);
+        this.wiggles.push({ node: tail, phase: 0.4, amp: 0.3, axis: "z" });
+        // Kepala
+        const head = part(sphere(0.76, 16), fur, this.head);
+        head.position.set(0, 1.16, 0.02);
+        for (const sx of [-1, 1]) {
+          const ear = part(MeshBuilder.CreateCylinder("ear", { diameterTop: 0, diameterBottom: 0.28, height: 0.3, tessellation: 12 }, scene), fur, this.head, 0.02);
+          ear.position.set(sx * 0.21, 1.5, 0);
+          ear.rotation.z = -sx * 0.32;
+          const inner = part(MeshBuilder.CreateCylinder("earIn", { diameterTop: 0, diameterBottom: 0.16, height: 0.19, tessellation: 12 }, scene), pink, this.head, 0);
+          inner.position.set(sx * 0.2, 1.47, 0.09);
+          inner.rotation.z = -sx * 0.32;
+          inner.scaling.z = 0.4;
+        }
+        // Mata kuning menyala
+        googly(-0.14, 1.2, 0.33, 0.22, this.head, "#ffe14d");
+        googly(0.14, 1.2, 0.33, 0.22, this.head, "#ffe14d");
+        const nose = part(sphere(0.08, 8), pink, this.head, 0);
+        nose.position.set(0, 1.08, 0.39);
+        nose.scaling.set(1.2, 0.8, 0.6);
+        // Mulut "w"
+        for (const sx of [-1, 1]) {
+          const m = part(MeshBuilder.CreateTorus("mouth", { diameter: 0.08, thickness: 0.018, tessellation: 12 }, scene), "#ffffff", this.head, 0);
+          m.position.set(sx * 0.04, 1.02, 0.375);
+          m.rotation.x = Math.PI / 2;
+          m.scaling.y = 0.5;
+        }
+        // Kumis
+        for (const sx of [-1, 1]) {
+          for (const k of [-1, 1]) {
+            const w = part(MeshBuilder.CreateCylinder("whisker", { diameter: 0.014, height: 0.32 }, scene), "#e8e8f0", this.head, 0);
+            w.rotation.z = Math.PI / 2 + k * sx * 0.18;
+            w.position.set(sx * 0.3, 1.06 + k * 0.035, 0.3);
+          }
+        }
+        // Kalung merah dengan lonceng
+        const collar = part(MeshBuilder.CreateTorus("collar", { diameter: 0.5, thickness: 0.07, tessellation: 20 }, scene), "#ff4d6d", this.body, 0.015);
+        collar.position.y = 0.86;
+        const bell = part(sphere(0.12, 10), "#ffd23f", this.body, 0.015);
+        bell.position.set(0, 0.8, 0.27);
         break;
       }
     }
