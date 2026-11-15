@@ -42,9 +42,9 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 
 ## Aturan singkat
 
-- Mulai dengan Rp300 jt. Lewat **Mulai** +Rp200 jt. Urutan jalan diundi: pemain pertama dipilih acak.
+- Mulai dengan Rp300 jt. Lewat **Mulai** +Rp350 jt. Urutan jalan diundi: pemain pertama dipilih acak.
 - Mendarat di tanah kosong → beli & langsung bangun hingga **Vila**. Di **putaran pertama** (sebelum pertama kali lewat Mulai) hanya boleh beli tanah. **Landmark** dibangun saat mendarat lagi di Vila sendiri.
-- Mendarat di properti lawan → bayar **sewa**: tanah kosong 12% harga tanah; bangunan 25% dari total biaya yang sudah dikeluarkan (tanah + bangunan). Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).
+- Mendarat di properti lawan → bayar **sewa** = 65% nilai wilayah (total biaya tanah + bangunan yang sudah dikeluarkan). Punya **satu grup warna lengkap** → sewa semua wilayah di grup itu **+30%**. Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).
 - **Tempat wisata** 🌴: sewa berlipat untuk setiap wisata milik pemilik yang sama.
 - **Dadu kembar** = lempar lagi; kembar 3x = dijebloskan ke **Nusakambangan** (3 giliran / sogok sipir Rp50 jt / dadu kembar).
 - **Pesta Pejabat** 🥂: sewa satu propertimu x2. **Naik Pesawat Negara** ✈️: giliran berikutnya terbang ke petak mana saja.

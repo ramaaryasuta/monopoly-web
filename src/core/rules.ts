@@ -3,7 +3,7 @@ import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
 
 export const CONFIG = {
   startMoney: 300,
-  salary: 200,
+  salary: 350,
   islandTurns: 3,
   islandBail: 50,
   tourFee: 50,
@@ -12,10 +12,10 @@ export const CONFIG = {
   sellRate: 0.5,
   festivalMultiplier: 2,
   resortBaseRent: 15,
-  /** Sewa tanah kosong (level 1): persentase harga tanah. */
-  landRentRate: 0.12,
-  /** Sewa bangunan (rumah s.d. landmark): persentase total biaya yang sudah dikeluarkan (tanah + bangunan). */
-  buildingRentRate: 0.25,
+  /** Sewa = persentase nilai wilayah (total biaya tanah + bangunan yang sudah dikeluarkan). */
+  rentRate: 0.65,
+  /** Punya satu grup warna lengkap (set): sewa semua wilayah di set naik 30%. */
+  setRentBonus: 0.3,
 };
 
 /** Biaya untuk naik KE level tertentu, sebagai pengali harga tanah. */
@@ -83,12 +83,9 @@ export function rentFor(state: GameState, tileIndex: number): number {
     rent = round10(CONFIG.resortBaseRent * 2 ** (owned - 1));
   } else if (def.kind === "property") {
     // Dibulatkan dulu, baru dikali bonus, supaya "x2" selalu tepat dua kali lipat
-    rent =
-      ts.level === 1
-        ? round10(def.price! * CONFIG.landRentRate)
-        : round10(upgradeCost(tileIndex, 0, ts.level) * CONFIG.buildingRentRate);
-    // Bonus satu grup penuh: sewa x2 untuk tanah kosong (level 1)
-    if (ts.level === 1 && ownsGroup(state, ts.owner, def.group!)) rent *= 2;
+    rent = round10(upgradeCost(tileIndex, 0, ts.level) * CONFIG.rentRate);
+    // Bonus set: satu grup warna lengkap → sewa +30% di semua level
+    if (ownsGroup(state, ts.owner, def.group!)) rent = round10(rent * (1 + CONFIG.setRentBonus));
   }
   if (ts.festival) rent *= CONFIG.festivalMultiplier;
   if (state.season?.id === "turis") rent *= 2;

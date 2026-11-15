@@ -39,32 +39,36 @@ describe("rules", () => {
   it("sewa naik sesuai level dan festival", () => {
     const s = createGame(setups(2));
     s.tiles[39] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 39)).toBe(40);
+    expect(rentFor(s, 39)).toBe(230); // 65% × 360 = 234 → 230
     s.tiles[39].level = 5;
-    // Landmark: 25% × (360 + 180 + 180 + 270 + 360 = 1.350) = 337,5 → 340
-    expect(rentFor(s, 39)).toBe(340);
+    // Landmark: 65% × (360 + 180 + 180 + 270 + 360 = 1.350) = 877,5 → 880
+    expect(rentFor(s, 39)).toBe(880);
     s.tiles[39].festival = true;
-    expect(rentFor(s, 39)).toBe(680);
+    expect(rentFor(s, 39)).toBe(1760);
   });
 
-  it("sewa bangunan = 25% dari total biaya yang sudah dikeluarkan", () => {
+  it("sewa = 65% nilai wilayah (total biaya yang sudah dikeluarkan)", () => {
     const s = createGame(setups(2));
     for (const tile of [1, 18, 39]) {
-      for (let level = 2; level <= 5; level++) {
+      for (let level = 1; level <= 5; level++) {
         s.tiles[tile] = { owner: 0, level: level as BuildLevel, festival: false };
-        expect(rentFor(s, tile), `petak ${tile} level ${level}`).toBe(Math.round((upgradeCost(tile, 0, level) * 0.25) / 10) * 10);
+        expect(rentFor(s, tile), `petak ${tile} level ${level}`).toBe(Math.round((upgradeCost(tile, 0, level) * 0.65) / 10) * 10);
       }
     }
   });
 
-  it("sewa tanah x2 jika satu grup lengkap", () => {
+  it("sewa +30% di semua level jika satu grup lengkap", () => {
     const s = createGame(setups(2));
     s.tiles[37] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(40);
+    expect(rentFor(s, 37)).toBe(210);
     s.tiles[38] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(40);
+    expect(rentFor(s, 37)).toBe(210);
     s.tiles[39] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(80);
+    expect(rentFor(s, 37)).toBe(270); // 210 × 1,3 = 273 → 270
+    s.tiles[39].level = 5;
+    expect(rentFor(s, 39)).toBe(1140); // 880 × 1,3 = 1.144 → 1.140
+    s.tiles[38].owner = 1; // set pecah → bonus hilang
+    expect(rentFor(s, 39)).toBe(880);
   });
 
   it("sewa resort berlipat sesuai jumlah resort", () => {

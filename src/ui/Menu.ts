@@ -544,7 +544,7 @@ export function showMenu(): Promise<MenuResult> {
             "ul",
             { class: "rule-list" },
             item("🎲", "Lempar dadu, jalan, lalu <b>beli</b> tanah & bangun rumah → vila → <b>landmark</b>."),
-            item("💸", "Mendarat di properti lawan? Bayar <b>sewa</b>. Properti lawan hanya bisa didapat lewat <b>negosiasi</b> atau <b>Pasar Terbuka</b>."),
+            item("💸", `Mendarat di properti lawan? Bayar <b>sewa</b>. Punya satu <b>grup warna lengkap</b>? Sewanya +${Math.round(CONFIG.setRentBonus * 100)}%! Properti lawan hanya bisa didapat lewat <b>negosiasi</b> atau <b>Pasar Terbuka</b>.`),
             item("🎯", "Dadu kembar = lempar lagi. Kembar 3x = dijebloskan ke <b>Nusakambangan</b> (keluar dengan dadu kembar atau sogok sipir)."),
             item("🏁", `Lewat Mulai: +${rp(CONFIG.salary)}. <b>Pesta Pejabat</b>: sewa x${CONFIG.festivalMultiplier}. <b>Naik Pesawat Negara</b>: terbang ke petak mana saja.`),
             item("📦", "<b>Paket Shopee, Tokopedia, Blibli & Lazada</b>: paket misterius berisi kartu konyol — bisa dapat duit, bisa kena kentut nuklir."),
