@@ -596,7 +596,7 @@ export function showMenu(): Promise<MenuResult> {
               ["💀", "Semua lawan bangkrut"],
               ["🎨", "Monopoli 3 grup warna"],
               ["📏", "Kuasai 1 sisi papan"],
-              ["🌴", "Kuasai semua wisata"],
+              ["🌴", "Kuasai semua wisata + 1 grup warna"],
               ["⏰", `Terkaya di ronde ${CONFIG.roundLimit}`],
             ].map(([i, t]) => h("div", {}, h("span", {}, i), t)),
           ),
