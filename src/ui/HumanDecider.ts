@@ -1,5 +1,4 @@
 import type {
-  AcquireChoice,
   BuildChoice,
   DealAction,
   DealChoice,
@@ -18,7 +17,7 @@ import type { BuildLevel, GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
 import { ITEMS } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
-import { escapeHtml, fmt, h, modal } from "./dom";
+import { fmt, h, modal } from "./dom";
 import type { Hud } from "./Hud";
 import { editOffer, marketMenu, offerView, pickTradeTarget } from "./TradeUi";
 
@@ -187,21 +186,6 @@ export class HumanDecider implements Decider {
       bandColor: def.group !== undefined ? GROUP_COLORS[def.group] : "#36d1c4",
       body: `<p>${levelText}Uangmu: <b>${fmt(c.money)}</b></p>`,
       buttons,
-    });
-  }
-
-  async chooseAcquire(c: AcquireChoice): Promise<boolean> {
-    const def = BOARD[c.tile];
-    const owner = this.state.players[c.owner];
-    return modal({
-      title: `Akuisisi ${def.name}?`,
-      bandColor: GROUP_COLORS[def.group!],
-      body: `<p>Rebut properti ini dari <b>${escapeHtml(owner.name)}</b> seharga <b>${fmt(c.price)}</b>.<br/>Uangmu: ${fmt(c.money)}</p>`,
-      row: true,
-      buttons: [
-        { label: "💰 Akuisisi!", value: true, class: "pink" },
-        { label: "Tidak", value: false, class: "white" },
-      ],
     });
   }
 

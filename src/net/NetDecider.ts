@@ -1,5 +1,4 @@
 import type {
-  AcquireChoice,
   BuildChoice,
   DealAction,
   DealChoice,
@@ -12,7 +11,7 @@ import type {
   TradeReplyChoice,
 } from "../core/interfaces";
 
-export type Kind = "roll" | "build" | "acq" | "island" | "tile" | "item" | "deal" | "trade";
+export type Kind = "roll" | "build" | "island" | "tile" | "item" | "deal" | "trade";
 
 /** Membungkus decider lokal (manusia/bot) dan menyiarkan setiap keputusannya ke jaringan. */
 export class BroadcastDecider implements Decider {
@@ -28,11 +27,6 @@ export class BroadcastDecider implements Decider {
   async chooseBuild(c: BuildChoice) {
     const v = await this.inner.chooseBuild(c);
     this.send("build", v);
-    return v;
-  }
-  async chooseAcquire(c: AcquireChoice) {
-    const v = await this.inner.chooseAcquire(c);
-    this.send("acq", v);
     return v;
   }
   async chooseIslandAction(c: IslandChoice) {
@@ -126,9 +120,6 @@ export class RemoteDecider implements Decider {
   }
   chooseBuild(c: BuildChoice) {
     return this.next("build", (d) => d.chooseBuild(c));
-  }
-  chooseAcquire(c: AcquireChoice) {
-    return this.next("acq", (d) => d.chooseAcquire(c));
   }
   chooseIslandAction(c: IslandChoice) {
     return this.next("island", (d) => d.chooseIslandAction(c));

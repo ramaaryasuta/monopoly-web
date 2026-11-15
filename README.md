@@ -33,7 +33,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 
 - Koneksi langsung antar browser (WebRTC lewat [PeerJS](https://peerjs.com)). Server publik PeerJS hanya dipakai untuk "jabat tangan" awal; data game tidak lewat server.
 - **Host** = pusat room: tamu tersambung ke host, host meneruskan pesan dan menjalankan bot. Host harus tetap membuka game sampai selesai.
-- **Lockstep deterministik**: semua perangkat menjalankan game dengan seed yang sama; yang dikirim hanya keputusan (lempar dadu, beli, akuisisi, pilih petak). Karena itu panel QA (`?qa=1`) dimatikan saat online.
+- **Lockstep deterministik**: semua perangkat menjalankan game dengan seed yang sama; yang dikirim hanya keputusan (lempar dadu, beli, pilih petak, negosiasi). Karena itu panel QA (`?qa=1`) dimatikan saat online.
 - Tamu terputus di tengah game → kursinya diambil alih bot oleh host. Host terputus → room bubar.
 - Tab yang disembunyikan menjeda animasinya sendiri; saat dibuka lagi game mengejar ketertinggalan, tidak ada langkah yang hilang.
 - Tanpa server TURN, sebagian jaringan (NAT ketat, beberapa operator seluler / Wi-Fi kantor) bisa gagal tersambung.
@@ -43,7 +43,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 
 - Mulai dengan 🪙1.500. Lewat **Mulai** +200.
 - Mendarat di tanah kosong → beli & langsung bangun hingga **Vila**. **Landmark** dibangun saat mendarat lagi di Vila sendiri.
-- Mendarat di properti lawan → bayar **sewa**, lalu boleh **akuisisi** (2x nilai investasi). Landmark tidak bisa diakuisisi.
+- Mendarat di properti lawan → bayar **sewa**. Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).
 - **Tempat wisata** 🌴: sewa berlipat untuk setiap wisata milik pemilik yang sama.
 - **Dadu kembar** = lempar lagi; kembar 3x = dijebloskan ke **Nusakambangan** (3 giliran / sogok sipir Rp100 jt / dadu kembar).
 - **Pesta Pejabat** 🥂: sewa satu propertimu x2. **Naik Pesawat Negara** ✈️: giliran berikutnya terbang ke petak mana saja.

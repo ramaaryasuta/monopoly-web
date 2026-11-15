@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BotDecider } from "../src/core/bot";
 import { Game } from "../src/core/game";
 import { NullPresenter, type Decider } from "../src/core/interfaces";
-import { acquirePrice, checkMonopolyWin, CONFIG, createGame, rentFor, salaryFor, seasonalCost, upgradeCost } from "../src/core/rules";
+import { checkMonopolyWin, CONFIG, createGame, rentFor, salaryFor, seasonalCost, upgradeCost } from "../src/core/rules";
 import type { PlayerSetup } from "../src/core/types";
 import { BOARD, PROPERTY_GROUPS, RESORTS } from "../src/data/board";
 import { CARDS, CHAOS_EVENTS } from "../src/data/cards";
@@ -61,12 +61,6 @@ describe("rules", () => {
     expect(rentFor(s, 2)).toBe(50);
     s.tiles[16] = { owner: 1, level: 1, festival: false };
     expect(rentFor(s, 2)).toBe(100);
-  });
-
-  it("harga akuisisi = 2x investasi", () => {
-    const s = createGame(setups(2));
-    s.tiles[1] = { owner: 0, level: 2, festival: false };
-    expect(acquirePrice(s, 1)).toBe((60 + 30) * 2);
   });
 
   it("deteksi monopoli resort", () => {
@@ -138,6 +132,18 @@ describe("game flow", () => {
     await g.resolveTile(0);
     expect(g.state.players[1].position).toBe(10);
     expect(g.state.players[2].position).toBe(39);
+  });
+
+  it("mendarat di properti lawan hanya bayar sewa, tidak bisa direbut", async () => {
+    const g = botGame(2, 1);
+    g.state.players[0].money = 100000;
+    g.state.players[0].position = 3;
+    g.state.tiles[3] = { owner: 1, level: 3, festival: false };
+    const rent = rentFor(g.state, 3);
+    await g.resolveTile(0);
+    expect(g.state.tiles[3].owner).toBe(1);
+    expect(g.state.tiles[3].level).toBe(3);
+    expect(g.state.players[0].money).toBe(100000 - rent);
   });
 
   it("kartu 'pergi ke' tidak memberi gaji kecuali tujuannya Mulai", async () => {

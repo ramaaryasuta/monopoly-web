@@ -3,7 +3,6 @@ import { BotDecider } from "../src/core/bot";
 import { Game } from "../src/core/game";
 import {
   NullPresenter,
-  type AcquireChoice,
   type BuildChoice,
   type DealAction,
   type DealChoice,
@@ -60,9 +59,6 @@ class RandomHuman implements Decider {
   async chooseBuild(c: BuildChoice) {
     const all = [c.currentLevel, ...c.options.map((o) => o.level)];
     return all[Math.floor(Math.random() * all.length)];
-  }
-  async chooseAcquire(_c: AcquireChoice) {
-    return Math.random() < 0.5;
   }
   async chooseIslandAction(c: IslandChoice) {
     return c.canPay && Math.random() < 0.5 ? ("pay" as const) : ("roll" as const);

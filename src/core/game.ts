@@ -21,9 +21,7 @@ import {
 import type { DealAction, Decider, ItemChoice, ItemUse, Presenter, TradeOffer } from "./interfaces";
 import { createRng, rollDie, type Rng } from "./rng";
 import {
-  acquirePrice,
   activePlayers,
-  canAcquire,
   checkMonopolyWin,
   CONFIG,
   createGame,
@@ -340,29 +338,6 @@ export class Game {
     } else {
       this.presenter.message(`${p.name} membayar sewa ${fmt(rent)} ke ${owner.name}.`, "bad");
       await this.charge(pid, rent, owner.id);
-    }
-    if (p.bankrupt || this.state.winner !== null) return;
-
-    // Akuisisi
-    if (canAcquire(this.state, tile, pid)) {
-      const price = acquirePrice(this.state, tile);
-      const yes = await this.deciders[pid].chooseAcquire({
-        player: pid,
-        tile,
-        price,
-        owner: owner.id,
-        money: p.money,
-      });
-      if (yes) {
-        this.addMoney(pid, -price);
-        this.addMoney(owner.id, price);
-        ts.owner = pid;
-        this.cleanMarket();
-        this.presenter.message(`${p.name} mengakuisisi ${BOARD[tile].name} dari ${owner.name} seharga ${fmt(price)}!`, "good");
-        await this.presenter.tileChanged(this.state, tile);
-        if (this.checkMonopoly(pid)) return;
-        await this.offerBuild(pid, tile);
-      }
     }
   }
 

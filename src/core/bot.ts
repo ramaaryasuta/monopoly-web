@@ -1,6 +1,5 @@
 import { BOARD, PROPERTY_GROUPS } from "../data/board";
 import type {
-  AcquireChoice,
   BuildChoice,
   DealAction,
   DealChoice,
@@ -54,22 +53,6 @@ export class BotDecider implements Decider {
     const first = c.options[0];
     if (c.currentLevel === 0 && c.money - first.cost >= 50) return first.level;
     return c.currentLevel;
-  }
-
-  async chooseAcquire(c: AcquireChoice): Promise<boolean> {
-    await this.think();
-    const def = BOARD[c.tile];
-    const after = c.money - c.price;
-    if (after < 100) return false;
-    if (def.group !== undefined) {
-      // Cek apakah akuisisi ini melengkapi grup
-      const prevOwner = this.state.tiles[c.tile].owner;
-      this.state.tiles[c.tile].owner = c.player;
-      const completes = ownsGroup(this.state, c.player, def.group);
-      this.state.tiles[c.tile].owner = prevOwner;
-      if (completes) return true;
-    }
-    return after >= this.reserve(c.player) * 2;
   }
 
   async chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll"> {

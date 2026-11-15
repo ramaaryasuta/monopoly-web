@@ -12,14 +12,6 @@ export interface BuildChoice {
   money: number;
 }
 
-export interface AcquireChoice {
-  player: number;
-  tile: number;
-  price: number;
-  owner: number;
-  money: number;
-}
-
 export interface IslandChoice {
   player: number;
   bail: number;
@@ -90,7 +82,6 @@ export interface Decider {
   waitForRoll(player: number): Promise<void>;
   /** Kembalikan level tujuan, atau `currentLevel` untuk lewati. */
   chooseBuild(c: BuildChoice): Promise<number>;
-  chooseAcquire(c: AcquireChoice): Promise<boolean>;
   chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll">;
   chooseTile(c: TileChoice): Promise<number>;
   /** Sebelum lempar dadu: pakai kartu simpanan, atau `null` untuk langsung lempar. */

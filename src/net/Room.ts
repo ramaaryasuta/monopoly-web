@@ -9,7 +9,7 @@ import Peer, { type DataConnection, type MediaConnection } from "peerjs";
  *
  * Model sinkronisasi: lockstep deterministik. Semua peer menjalankan `Game`
  * dengan seed yang sama; yang dikirim hanya KEPUTUSAN pemain (lempar dadu,
- * beli, akuisisi, pilih petak...). Bot dijalankan oleh host.
+ * beli, pilih petak, negosiasi...). Bot dijalankan oleh host.
  */
 
 export const PROTOCOL = 1;

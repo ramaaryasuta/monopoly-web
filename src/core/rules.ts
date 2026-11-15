@@ -1,6 +1,5 @@
 import { BOARD, PROPERTY_GROUPS, RESORTS, SIDE_PROPERTIES } from "../data/board";
 import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
-import { LANDMARK_LEVEL } from "./types";
 
 export const CONFIG = {
   startMoney: 1500,
@@ -10,7 +9,6 @@ export const CONFIG = {
   tourFee: 50,
   taxRate: 0.1,
   roundLimit: 30,
-  acquireMultiplier: 2,
   sellRate: 0.5,
   festivalMultiplier: 2,
   resortBaseRent: 50,
@@ -97,22 +95,6 @@ export function seasonalCost(state: GameState, cost: number): number {
 /** Gaji melewati Mulai (Musim THR = x2). */
 export function salaryFor(state: GameState): number {
   return state.season?.id === "thr" ? CONFIG.salary * 2 : CONFIG.salary;
-}
-
-export function acquirePrice(state: GameState, tileIndex: number): number {
-  return investedValue(state, tileIndex) * CONFIG.acquireMultiplier;
-}
-
-export function canAcquire(state: GameState, tileIndex: number, buyer: number): boolean {
-  const def = BOARD[tileIndex];
-  const ts = state.tiles[tileIndex];
-  return (
-    def.kind === "property" &&
-    ts.owner !== null &&
-    ts.owner !== buyer &&
-    ts.level < LANDMARK_LEVEL &&
-    state.players[buyer].money >= acquirePrice(state, tileIndex)
-  );
 }
 
 /**
