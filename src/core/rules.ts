@@ -1,6 +1,8 @@
 import { BOARD, PROPERTY_GROUPS, RESORTS, SIDE_PROPERTIES } from "../data/board";
 import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
 
+const ROUND_LIMIT = 62;
+
 export const CONFIG = {
   startMoney: 300,
   salary: 350,
@@ -8,7 +10,13 @@ export const CONFIG = {
   islandBail: 50,
   tourFee: 50,
   taxRate: 0.1,
-  roundLimit: 62,
+  roundLimit: ROUND_LIMIT,
+  /**
+   * Event musiman Musim Turis (semua sewa x2) baru boleh muncul setelah 75% game berjalan
+   * (ronde 47 dari 62), supaya sewa tidak meledak saat pemain masih punya sedikit uang dan aset.
+   * Pesta Pejabat (efek petak) tidak dibatasi.
+   */
+  turisFromRound: Math.ceil(ROUND_LIMIT * 0.75),
   sellRate: 0.5,
   festivalMultiplier: 2,
   /** Sewa wisata = dasar x 2^(jumlah wisata dimiliki - 1): 30 / 60 / 120 / 240. */
@@ -93,6 +101,11 @@ export function rentFor(state: GameState, tileIndex: number): number {
   if (ts.festival) rent *= CONFIG.festivalMultiplier;
   if (state.season?.id === "turis") rent *= 2;
   return rent;
+}
+
+/** Apakah Musim Turis (sewa x2) sudah boleh muncul di ronde ini. */
+export function turisOpen(state: GameState): boolean {
+  return state.round >= CONFIG.turisFromRound;
 }
 
 /** Biaya beli/bangun setelah efek event musiman (Harbolnas = diskon 50%). */
