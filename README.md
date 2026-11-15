@@ -49,7 +49,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 - Mendarat di properti lawan → bayar **sewa** = 65% nilai wilayah (total biaya tanah + bangunan yang sudah dikeluarkan). Punya **satu grup warna lengkap** → sewa semua wilayah di grup itu **+30%**. Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).
 - **Tempat wisata** 🌴: sewa berlipat untuk setiap wisata milik pemilik yang sama.
 - **Dadu kembar** = lempar lagi; kembar 3x = dijebloskan ke **Nusakambangan** (3 giliran / sogok sipir Rp50 jt / dadu kembar).
-- **Pesta Pejabat** 🥂: sewa satu propertimu x2. **Naik Pesawat Negara** ✈️: giliran berikutnya terbang ke petak mana saja.
+- **Pesta Pejabat** 🥂: sewa satu propertimu x2. Event musiman **Musim Turis** (semua sewa x2) baru bisa muncul setelah 75% game berjalan, yaitu mulai ronde 47 dari 62. **Naik Pesawat Negara** ✈️: giliran berikutnya terbang ke petak mana saja.
 - **Paket Shopee / Tokopedia / Blibli / Lazada** 📦: 34 kartu konyol (kentut nuklir, nebeng heli pejabat, tukar jiwa, mesin capit, dll).
 - **Berita Heboh** 📢: di awal ronde baru (peluang 45%) muncul event sepulau — heli pejabat salah jemput, gempa kentut, maling budiman, bansos, dll.
 - Uang kurang → **turunkan bangunan** (mis. Vila → Rumah 1; wilayah tetap milikmu, dapat 50% harga bangunan yang dibongkar), pilih sendiri wilayah yang dijual ke bank (50%), atau **nego jual** ke pemain lain (maks 3x). Masih kurang / menyerah → **bangkrut**.

@@ -36,6 +36,7 @@ import {
   seasonalCost,
   sellValue,
   downgradeOptions,
+  turisOpen,
   upgradeCost,
 } from "./rules";
 import {
@@ -859,7 +860,9 @@ export class Game {
       next = this.forcedSeason;
       this.forcedSeason = null;
     } else if (newRound && !this.state.season && this.rng() < SEASON_CHANCE) {
-      next = SEASON_IDS[Math.floor(this.rng() * SEASON_IDS.length)];
+      // Musim Turis (sewa x2) hanya boleh muncul di akhir game; satu undian RNG tetap dipakai
+      const pool = SEASON_IDS.filter((id) => id !== "turis" || turisOpen(this.state));
+      next = pool[Math.floor(this.rng() * pool.length)];
     }
     if (next) {
       this.state.season = { id: next, untilRound: this.state.round + SEASON_ROUNDS - 1 };

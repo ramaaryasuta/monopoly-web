@@ -600,6 +600,40 @@ describe("kartu simpanan & event musiman", () => {
     expect(log[0]).toBe("start:banjir@1");
     expect(log).toContain("end:banjir@3");
   });
+
+  it("Musim Turis baru boleh muncul di 75% game: ronde 47 dari 62", () => {
+    expect(CONFIG.roundLimit).toBe(62);
+    expect(CONFIG.turisFromRound).toBe(47);
+  });
+
+  it("Pesta Pejabat tetap bisa digelar sejak awal game (efek petak, tidak dibatasi ronde)", async () => {
+    const g = botGame(2, 1);
+    g.state.tiles[39] = { owner: 0, level: 1, festival: false };
+    expect(g.state.round).toBe(1);
+    const normal = rentFor(g.state, 39);
+    await (g as unknown as { hostFestival(p: number): Promise<void> }).hostFestival(0);
+    expect(g.state.festivalTile).toBe(39);
+    expect(g.state.tiles[39].festival).toBe(true);
+    expect(rentFor(g.state, 39)).toBe(normal * 2);
+  });
+
+  it("Musim Turis tidak pernah muncul sebelum ronde 47, tapi muncul sesudahnya", async () => {
+    const seasonsAt = async (round: number) => {
+      const seen = new Set<string>();
+      for (let seed = 1; seed <= 400; seed++) {
+        const g = botGame(3, seed);
+        g.state.round = round;
+        await (g as unknown as { maybeChaos(): Promise<void> }).maybeChaos();
+        if (g.state.season) seen.add(g.state.season.id);
+      }
+      return seen;
+    };
+    const early = await seasonsAt(CONFIG.turisFromRound - 1);
+    expect(early.has("turis")).toBe(false);
+    expect(early.size).toBeGreaterThan(0); // musim lain tetap muncul
+    const late = await seasonsAt(CONFIG.turisFromRound);
+    expect(late.has("turis")).toBe(true);
+  });
 });
 
 describe("negosiasi & pasar terbuka", () => {
