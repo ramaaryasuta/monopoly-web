@@ -164,6 +164,7 @@ body {
   font-size: 12px; padding: 1px 8px; transform: rotate(4deg);
 }
 .menu-foot { margin-top: 16px; display: flex; justify-content: center; gap: 8px; }
+.lap-note { font-size: 13px; opacity: 0.8; margin-top: -4px; }
 .menu-version { margin-top: 10px; text-align: center; font-size: 12px; font-weight: 700; opacity: 0.55; letter-spacing: 0.5px; }
 
 /* header layar dalam */

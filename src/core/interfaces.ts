@@ -10,6 +10,8 @@ export interface BuildChoice {
   /** Level yang ada tapi uangnya tidak cukup — ditampilkan sebagai tombol nonaktif. */
   unaffordable?: { level: number; cost: number }[];
   money: number;
+  /** Putaran pertama: hanya tanah yang boleh dibeli (untuk keterangan di UI). */
+  firstLap?: boolean;
 }
 
 export interface IslandChoice {

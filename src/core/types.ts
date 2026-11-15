@@ -51,6 +51,8 @@ export interface PlayerState {
   shields: number;
   /** Kartu simpanan di kantong. */
   items: ItemId[];
+  /** Berapa kali sudah melewati Mulai. 0 = putaran pertama (hanya boleh beli tanah). */
+  laps: number;
 }
 
 /** Wilayah yang dijual di Pasar Terbuka (bisa dibeli pemain mana pun di gilirannya). */
@@ -66,6 +68,8 @@ export interface GameState {
   tiles: TileState[];
   players: PlayerState[];
   current: number;
+  /** Pemain yang membuka permainan (diacak); ronde naik saat giliran kembali ke dia. */
+  firstPlayer: number;
   round: number;
   festivalTile: number | null;
   /** Event musiman yang sedang berlaku (berakhir setelah ronde `untilRound`). */

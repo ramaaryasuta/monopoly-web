@@ -37,7 +37,7 @@ async function boot() {
   const online = setup.online;
 
   // Game dibuat dulu, lalu presenter & deciders dipasang (keduanya butuh referensi state)
-  const game = new Game(setup.players, [], new NullPresenter(), { seed: setup.seed });
+  const game = new Game(setup.players, [], new NullPresenter(), { seed: setup.seed, randomStart: true });
 
   // Online: kursi yang dikendalikan manusia di perangkat ini
   const localHumans = online

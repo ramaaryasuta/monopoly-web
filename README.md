@@ -42,16 +42,16 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 
 ## Aturan singkat
 
-- Mulai dengan Rp300 jt. Lewat **Mulai** +Rp100 jt.
-- Mendarat di tanah kosong → beli & langsung bangun hingga **Vila**. **Landmark** dibangun saat mendarat lagi di Vila sendiri.
-- Mendarat di properti lawan → bayar **sewa**. Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).
+- Mulai dengan Rp300 jt. Lewat **Mulai** +Rp200 jt. Urutan jalan diundi: pemain pertama dipilih acak.
+- Mendarat di tanah kosong → beli & langsung bangun hingga **Vila**. Di **putaran pertama** (sebelum pertama kali lewat Mulai) hanya boleh beli tanah. **Landmark** dibangun saat mendarat lagi di Vila sendiri.
+- Mendarat di properti lawan → bayar **sewa**: tanah kosong 12% harga tanah; bangunan 25% dari total biaya yang sudah dikeluarkan (tanah + bangunan). Properti lawan hanya bisa pindah tangan lewat **negosiasi** atau **Pasar Terbuka** (tidak ada akuisisi paksa).
 - **Tempat wisata** 🌴: sewa berlipat untuk setiap wisata milik pemilik yang sama.
 - **Dadu kembar** = lempar lagi; kembar 3x = dijebloskan ke **Nusakambangan** (3 giliran / sogok sipir Rp50 jt / dadu kembar).
 - **Pesta Pejabat** 🥂: sewa satu propertimu x2. **Naik Pesawat Negara** ✈️: giliran berikutnya terbang ke petak mana saja.
 - **Paket Shopee / Tokopedia / Blibli / Lazada** 📦: 34 kartu konyol (kentut nuklir, nebeng heli pejabat, tukar jiwa, mesin capit, dll).
 - **Berita Heboh** 📢: di awal ronde baru (peluang 45%) muncul event sepulau — heli pejabat salah jemput, gempa kentut, maling budiman, bansos, dll.
 - Uang kurang → pilih sendiri wilayah yang dijual ke bank (50%), atau **nego jual** ke pemain lain (maks 3x). Masih kurang / menyerah → **bangkrut**.
-- **Menang**: lawan bangkrut semua · monopoli 3 grup warna · kuasai 1 sisi papan · kuasai 4 wisata · terkaya di ronde 30.
+- **Menang**: lawan bangkrut semua · monopoli 3 grup warna · kuasai 1 sisi papan · kuasai 4 wisata · terkaya di ronde 62.
 
 ## Struktur
 

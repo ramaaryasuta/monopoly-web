@@ -3,21 +3,23 @@ import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
 
 export const CONFIG = {
   startMoney: 300,
-  salary: 100,
+  salary: 200,
   islandTurns: 3,
   islandBail: 50,
   tourFee: 50,
   taxRate: 0.1,
-  roundLimit: 30,
+  roundLimit: 62,
   sellRate: 0.5,
   festivalMultiplier: 2,
-  resortBaseRent: 30,
+  resortBaseRent: 15,
+  /** Sewa tanah kosong (level 1): persentase harga tanah. */
+  landRentRate: 0.12,
+  /** Sewa bangunan (rumah s.d. landmark): persentase total biaya yang sudah dikeluarkan (tanah + bangunan). */
+  buildingRentRate: 0.25,
 };
 
 /** Biaya untuk naik KE level tertentu, sebagai pengali harga tanah. */
 const LEVEL_COST_FACTOR = [0, 1, 0.5, 0.5, 0.75, 1.0];
-/** Sewa per level, sebagai pengali harga tanah. */
-const RENT_FACTOR = [0, 0.25, 0.8, 1.6, 2.6, 4.0];
 
 export const LEVEL_NAMES = ["Kosong", "Tanah", "Rumah 1", "Rumah 2", "Vila", "Landmark"];
 
@@ -37,8 +39,10 @@ export function createGame(setups: PlayerSetup[]): GameState {
       pendingTour: false,
       shields: 0,
       items: [],
+      laps: 0,
     })),
     current: 0,
+    firstPlayer: 0,
     round: 1,
     festivalTile: null,
     season: null,
@@ -76,15 +80,19 @@ export function rentFor(state: GameState, tileIndex: number): number {
   let rent = 0;
   if (def.kind === "resort") {
     const owned = RESORTS.filter((r) => state.tiles[r].owner === ts.owner).length;
-    rent = CONFIG.resortBaseRent * 2 ** (owned - 1);
+    rent = round10(CONFIG.resortBaseRent * 2 ** (owned - 1));
   } else if (def.kind === "property") {
-    rent = def.price! * RENT_FACTOR[ts.level];
+    // Dibulatkan dulu, baru dikali bonus, supaya "x2" selalu tepat dua kali lipat
+    rent =
+      ts.level === 1
+        ? round10(def.price! * CONFIG.landRentRate)
+        : round10(upgradeCost(tileIndex, 0, ts.level) * CONFIG.buildingRentRate);
     // Bonus satu grup penuh: sewa x2 untuk tanah kosong (level 1)
     if (ts.level === 1 && ownsGroup(state, ts.owner, def.group!)) rent *= 2;
   }
   if (ts.festival) rent *= CONFIG.festivalMultiplier;
   if (state.season?.id === "turis") rent *= 2;
-  return round10(rent);
+  return rent;
 }
 
 /** Biaya beli/bangun setelah efek event musiman (Harbolnas = diskon 50%). */
@@ -97,15 +105,22 @@ export function salaryFor(state: GameState): number {
   return state.season?.id === "thr" ? CONFIG.salary * 2 : CONFIG.salary;
 }
 
+/** Putaran pertama pemain (belum pernah melewati Mulai): hanya boleh membeli tanah. */
+export function inFirstLap(state: GameState, player: number): boolean {
+  return state.players[player].laps === 0;
+}
+
 /**
- * Level maksimum yang boleh dituju dalam satu kunjungan.
+ * Level maksimum yang boleh dituju dalam satu kunjungan oleh `player`.
  * Landmark hanya bisa dibangun jika sudah Vila (level 4) sebelum kunjungan ini.
+ * Di putaran pertama pemain hanya bisa membeli tanah (level 1).
  */
-export function maxTargetLevel(state: GameState, tileIndex: number): BuildLevel {
+export function maxTargetLevel(state: GameState, tileIndex: number, player?: number): BuildLevel {
   const def = BOARD[tileIndex];
   const lvl = state.tiles[tileIndex].level;
   if (def.kind === "resort") return 1;
   if (def.kind !== "property") return 0;
+  if (player !== undefined && inFirstLap(state, player)) return 1;
   if (lvl === 4) return 5;
   if (lvl === 5) return 5;
   return 4;

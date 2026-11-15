@@ -12,7 +12,7 @@ import Peer, { type DataConnection, type MediaConnection } from "peerjs";
  * beli, pilih petak, negosiasi...). Bot dijalankan oleh host.
  */
 
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 const PREFIX = "pulaukaya-v1-";
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // tanpa 0/O/1/I biar tidak salah baca
 export const CODE_LEN = 5;

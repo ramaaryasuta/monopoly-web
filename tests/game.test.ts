@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { BotDecider } from "../src/core/bot";
 import { Game } from "../src/core/game";
-import { NullPresenter, type DebtAction, type DebtChoice, type Decider } from "../src/core/interfaces";
+import { NullPresenter, type BuildChoice, type DebtAction, type DebtChoice, type Decider } from "../src/core/interfaces";
 import { interruptibleDeals } from "../src/core/interject";
-import { checkMonopolyWin, CONFIG, createGame, rentFor, salaryFor, seasonalCost, upgradeCost } from "../src/core/rules";
-import type { PlayerSetup } from "../src/core/types";
+import { checkMonopolyWin, CONFIG, createGame, maxTargetLevel, rentFor, salaryFor, seasonalCost, upgradeCost } from "../src/core/rules";
+import type { BuildLevel, PlayerSetup } from "../src/core/types";
 import { BOARD, PROPERTY_GROUPS, RESORTS } from "../src/data/board";
 import { CARDS, CHAOS_EVENTS } from "../src/data/cards";
 
@@ -31,37 +31,48 @@ describe("board", () => {
 
 describe("rules", () => {
   it("menghitung biaya bangun bertahap", () => {
-    // Desa Jamur harga 60: tanah 60, rumah 30, rumah 30, vila 50 (45 dibulatkan)
-    expect(upgradeCost(1, 0, 1)).toBe(60);
-    expect(upgradeCost(1, 0, 4)).toBe(60 + 30 + 30 + 50);
+    // Burjo SS Tembalang harga 50: tanah 50, rumah 30 (25 dibulatkan), rumah 30, vila 40 (37,5 dibulatkan)
+    expect(upgradeCost(1, 0, 1)).toBe(50);
+    expect(upgradeCost(1, 0, 4)).toBe(50 + 30 + 30 + 40);
   });
 
   it("sewa naik sesuai level dan festival", () => {
     const s = createGame(setups(2));
     s.tiles[39] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 39)).toBe(100);
+    expect(rentFor(s, 39)).toBe(40);
     s.tiles[39].level = 5;
-    expect(rentFor(s, 39)).toBe(1600);
+    // Landmark: 25% × (360 + 180 + 180 + 270 + 360 = 1.350) = 337,5 → 340
+    expect(rentFor(s, 39)).toBe(340);
     s.tiles[39].festival = true;
-    expect(rentFor(s, 39)).toBe(3200);
+    expect(rentFor(s, 39)).toBe(680);
+  });
+
+  it("sewa bangunan = 25% dari total biaya yang sudah dikeluarkan", () => {
+    const s = createGame(setups(2));
+    for (const tile of [1, 18, 39]) {
+      for (let level = 2; level <= 5; level++) {
+        s.tiles[tile] = { owner: 0, level: level as BuildLevel, festival: false };
+        expect(rentFor(s, tile), `petak ${tile} level ${level}`).toBe(Math.round((upgradeCost(tile, 0, level) * 0.25) / 10) * 10);
+      }
+    }
   });
 
   it("sewa tanah x2 jika satu grup lengkap", () => {
     const s = createGame(setups(2));
     s.tiles[37] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(90);
+    expect(rentFor(s, 37)).toBe(40);
     s.tiles[38] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(90);
+    expect(rentFor(s, 37)).toBe(40);
     s.tiles[39] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 37)).toBe(180);
+    expect(rentFor(s, 37)).toBe(80);
   });
 
   it("sewa resort berlipat sesuai jumlah resort", () => {
     const s = createGame(setups(2));
     s.tiles[2] = { owner: 1, level: 1, festival: false };
-    expect(rentFor(s, 2)).toBe(30);
+    expect(rentFor(s, 2)).toBe(20);
     s.tiles[16] = { owner: 1, level: 1, festival: false };
-    expect(rentFor(s, 2)).toBe(60);
+    expect(rentFor(s, 2)).toBe(30);
   });
 
   it("deteksi monopoli resort", () => {
@@ -105,6 +116,49 @@ describe("game flow", () => {
     await g.charge(1, 100, 0);
     expect(g.state.players[1].bankrupt).toBe(false);
     expect(g.state.tiles[39].owner).toBeNull();
+  });
+
+  it("pemain pertama diacak dari seed, ronde naik saat giliran kembali ke dia", () => {
+    const firsts = new Set<number>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const g = new Game(setups(4), [], new NullPresenter(), { seed, randomStart: true });
+      const again = new Game(setups(4), [], new NullPresenter(), { seed, randomStart: true });
+      expect(again.state.current).toBe(g.state.current); // sama di semua peer online
+      expect(g.state.firstPlayer).toBe(g.state.current);
+      firsts.add(g.state.current);
+    }
+    expect(firsts.size).toBe(4);
+
+    const g = new Game(setups(3), [], new NullPresenter(), { seed: 1, randomStart: true });
+    g.state.current = g.state.firstPlayer = 2;
+    const end = () => (g as unknown as { endTurn(): void }).endTurn();
+    end(); // 2 → 0
+    expect(g.state.round).toBe(1);
+    end(); // 0 → 1
+    end(); // 1 → 2: kembali ke pembuka
+    expect(g.state.round).toBe(2);
+  });
+
+  it("putaran pertama hanya bisa beli tanah, setelah lewat Mulai boleh bangun", async () => {
+    const g = botGame(2, 1);
+    expect(maxTargetLevel(g.state, 39, 0)).toBe(1);
+    let seen: BuildChoice | null = null;
+    g.deciders[0] = Object.assign(Object.create(g.deciders[0]), {
+      chooseBuild: async (c: BuildChoice) => {
+        seen = c;
+        return c.currentLevel;
+      },
+    });
+    g.state.players[0].money = 5000;
+    g.state.players[0].position = 39;
+    await g.resolveTile(0);
+    expect(seen!.options.map((o) => o.level)).toEqual([1]);
+    expect(seen!.firstLap).toBe(true);
+
+    g.state.players[0].position = 37;
+    await g.moveSteps(0, 5); // 37 → 2, melewati Mulai
+    expect(g.state.players[0].laps).toBe(1);
+    expect(maxTargetLevel(g.state, 39, 0)).toBe(4);
   });
 
   it("pemain memilih sendiri wilayah yang dijual saat uang kurang", async () => {
@@ -362,10 +416,10 @@ describe("kartu simpanan & event musiman", () => {
 
   it("musim turis menggandakan sewa, harbolnas mendiskon, THR gaji x2", () => {
     const s = createGame(setups(2));
-    s.tiles[39] = { owner: 0, level: 2, festival: false };
-    const normal = rentFor(s, 39);
+    s.tiles[29] = { owner: 0, level: 2, festival: false }; // harga 250 → sewa bulat, tanpa efek pembulatan
+    const normal = rentFor(s, 29);
     s.season = { id: "turis", untilRound: 2 };
-    expect(rentFor(s, 39)).toBe(normal * 2);
+    expect(rentFor(s, 29)).toBe(normal * 2);
     s.season = { id: "diskon", untilRound: 2 };
     expect(seasonalCost(s, 200)).toBe(100);
     s.season = { id: "thr", untilRound: 2 };

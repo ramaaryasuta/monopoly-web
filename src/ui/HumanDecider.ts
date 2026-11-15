@@ -191,10 +191,11 @@ export class HumanDecider implements Decider {
     const noneAffordable = c.options.length === 0;
     buttons.push({ label: noneAffordable ? "Oke, lewati" : "Lewati", sub: "", value: c.currentLevel, class: "white", disabled: false });
     const levelText = c.currentLevel > 0 ? `Saat ini: <b>${LEVEL_NAMES[c.currentLevel]}</b>. ` : "";
+    const lapNote = c.firstLap ? `<p class="lap-note">🚩 Putaran pertama: baru bisa beli tanah. Rumah & vila setelah lewat Mulai.</p>` : "";
     return modal({
       title,
       bandColor: def.group !== undefined ? GROUP_COLORS[def.group] : "#36d1c4",
-      body: `<p>${levelText}Uangmu: <b>${fmt(c.money)}</b></p>`,
+      body: `<p>${levelText}Uangmu: <b>${fmt(c.money)}</b></p>${lapNote}`,
       buttons,
     });
   }

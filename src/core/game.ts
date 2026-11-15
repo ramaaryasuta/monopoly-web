@@ -26,6 +26,7 @@ import {
   checkMonopolyWin,
   CONFIG,
   createGame,
+  inFirstLap,
   LEVEL_NAMES,
   maxTargetLevel,
   ownedTiles,
@@ -50,6 +51,8 @@ export interface GameOptions {
   seed?: number;
   /** Pengaman untuk test/simulasi agar tidak loop selamanya. */
   maxTurns?: number;
+  /** Acak pemain yang jalan duluan (memakai RNG game, jadi sama di semua peer online). */
+  randomStart?: boolean;
 }
 
 const fmt = rp;
@@ -88,6 +91,11 @@ export class Game {
     this.seed = options.seed ?? Math.floor(Math.random() * 1e9);
     this.rng = createRng(this.seed);
     this.state = createGame(setups);
+    if (options.randomStart) {
+      const first = Math.floor(this.rng() * setups.length);
+      this.state.current = first;
+      this.state.firstPlayer = first;
+    }
   }
 
   stop() {
@@ -100,6 +108,9 @@ export class Game {
 
   async run(): Promise<GameState> {
     const max = this.options.maxTurns ?? Infinity;
+    if (this.options.randomStart && this.turns === 0) {
+      this.presenter.message(`🎲 Diundi: ${this.currentPlayer.name} jalan duluan!`, "good");
+    }
     while (this.state.winner === null && !this.stopped && this.turns < max) {
       await this.playTurn();
       this.turns++;
@@ -252,7 +263,7 @@ export class Game {
     let next = this.state.current;
     do {
       next = (next + 1) % this.state.players.length;
-      if (next === 0) this.state.round++;
+      if (next === this.state.firstPlayer) this.state.round++;
     } while (this.state.players[next].bankrupt);
     // Ronde naik setiap pemain pertama yang masih hidup memulai lagi
     this.state.current = next;
@@ -277,6 +288,7 @@ export class Game {
     if (path.length === 0) return;
     await this.presenter.movePawn(pid, path, mode);
     p.position = path[path.length - 1];
+    if (passedStart) p.laps++;
     if (passedStart && salary) {
       const amount = salaryFor(this.state);
       this.addMoney(pid, amount);
@@ -365,7 +377,7 @@ export class Game {
       this.presenter.message(`Lagi banjir! ${p.name} tidak bisa beli/bangun di ${BOARD[tile].name}.`);
       return;
     }
-    const max = maxTargetLevel(this.state, tile);
+    const max = maxTargetLevel(this.state, tile, pid);
     const options: { level: number; cost: number }[] = [];
     const unaffordable: { level: number; cost: number }[] = [];
     for (let l = ts.level + 1; l <= max; l++) {
@@ -385,6 +397,7 @@ export class Game {
       options,
       unaffordable,
       money: p.money,
+      firstLap: inFirstLap(this.state, pid) && BOARD[tile].kind === "property",
     });
     const chosen = options.find((o) => o.level === target);
     if (!chosen) return;
