@@ -30,18 +30,21 @@ const STORE_KEY = "pulauKaya.menu";
 const CHAR_BLURB = [
   "Kumisnya bikin lawan minder.",
   "Satu mata, fokus ke cuan.",
-  "Otot dulu, mikir belakangan.",
-  "Lezat tapi licik.",
+  "Pedasnya bikin lawan kepanasan.",
+  "Kalem di luar, segar di dalam.",
 ];
 
+/** Nama bawaan karakter lama → nama barunya (untuk data tersimpan). */
+const RENAMED: Record<string, string> = { Jago: "Cabai", Burger: "Timun" };
+
 /** Nama bawaan per karakter (bukan per slot). */
-const DEFAULT_NAMES = ["Kentang", "Om Mata", "Jago", "Burger"];
+const DEFAULT_NAMES = ["Kentang", "Om Mata", "Cabai", "Timun"];
 
 const DEFAULT_SLOTS: Slot[] = [
   { type: "human", name: "Kamu", char: 0 },
   { type: "bot", name: "Om Mata", char: 1 },
-  { type: "bot", name: "Jago", char: 2 },
-  { type: "bot", name: "Burger", char: 3 },
+  { type: "bot", name: "Cabai", char: 2 },
+  { type: "bot", name: "Timun", char: 3 },
 ];
 
 function loadSaved(): { slots: Slot[]; speed: number } {
@@ -52,7 +55,7 @@ function loadSaved(): { slots: Slot[]; speed: number } {
       if (Array.isArray(d.slots) && d.slots.length === 4) {
         const slots = d.slots.map((s, i) => ({
           type: (["human", "bot", "off"] as const).includes(s.type) ? s.type : DEFAULT_SLOTS[i].type,
-          name: typeof s.name === "string" ? s.name.slice(0, 12) : DEFAULT_SLOTS[i].name,
+          name: typeof s.name === "string" ? (RENAMED[s.name] ?? s.name).slice(0, 12) : DEFAULT_SLOTS[i].name,
           char: Number.isInteger(s.char) && s.char >= 0 && s.char < 4 ? s.char : i,
         }));
         // Karakter harus unik; kalau data lama bentrok, pakai default

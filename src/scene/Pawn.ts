@@ -2,13 +2,13 @@ import { MeshBuilder, TransformNode, Vector3, type Mesh, type Scene, type Shadow
 import { outline, toon } from "./toon";
 import { Ease, lerp, tween } from "./tween";
 
-export type CritterKind = "potato" | "cyclops" | "chicken" | "burger";
+export type CritterKind = "potato" | "cyclops" | "chili" | "cucumber";
 
 export const CRITTERS: { kind: CritterKind; label: string; color: string }[] = [
   { kind: "potato", label: "Bang Kentang Kumis", color: "#ff9f1c" },
   { kind: "cyclops", label: "Om Mata Satu", color: "#a55eea" },
-  { kind: "chicken", label: "Jago Kekar", color: "#ff4d6d" },
-  { kind: "burger", label: "Burger Bro", color: "#2ec4b6" },
+  { kind: "chili", label: "Cabai Ngamuk", color: "#ef3b36" },
+  { kind: "cucumber", label: "Timun Kalem", color: "#4cbf3f" },
 ];
 
 const INK = "#2b1d3a";
@@ -168,102 +168,182 @@ export class Pawn {
         break;
       }
 
-      // ------------------------------------------------------------ ayam
-      case "chicken": {
-        const torso = part(sphere(0.95, 16), "#fffaf0");
-        torso.scaling.set(1, 0.95, 0.95);
-        torso.position.y = 0.58;
-        // Kaos tanpa lengan warna pemain
-        const shirt = part(MeshBuilder.CreateCylinder("shirt", { diameterTop: 0.86, diameterBottom: 0.95, height: 0.38, tessellation: 20 }, scene), color);
-        shirt.position.y = 0.5;
-        // Kaki ayam kuning
-        for (const sx of [-0.16, 0.16]) {
-          const leg = part(MeshBuilder.CreateCylinder("leg", { diameter: 0.07, height: 0.22 }, scene), "#ffb703", this.body, 0);
-          leg.position.set(sx, 0.11, 0);
-          const toe = part(MeshBuilder.CreateBox("toe", { width: 0.2, height: 0.04, depth: 0.22 }, scene), "#ffb703", this.body, 0.015);
-          toe.position.set(sx, 0.02, 0.06);
-        }
-        // Lengan berotot berlebihan
-        for (const sx of [-1, 1]) {
-          const arm = new TransformNode("arm", scene);
-          arm.parent = this.body;
-          arm.position.set(sx * 0.5, 0.75, 0);
-          const bicep = part(sphere(0.42, 12), "#fffaf0", arm);
-          bicep.position.set(sx * 0.12, 0.08, 0);
-          bicep.scaling.set(1, 0.85, 0.85);
-          const fore = part(MeshBuilder.CreateCapsule("fore", { radius: 0.1, height: 0.45 }, scene), "#fffaf0", arm);
-          fore.position.set(sx * 0.22, 0.35, 0.05);
-          const fist = part(sphere(0.2, 8), "#ffb703", arm, 0.02);
-          fist.position.set(sx * 0.22, 0.58, 0.05);
-          this.wiggles.push({ node: arm, phase: sx * 1.5, amp: 0.15, axis: "x" });
-        }
-        // Kepala
-        const head = part(sphere(0.62, 14), "#fffaf0", this.head);
-        head.position.set(0, 1.15, 0.05);
-        googly(-0.12, 1.22, 0.3, 0.17);
-        googly(0.13, 1.25, 0.3, 0.2);
-        const beak = part(MeshBuilder.CreateCylinder("beak", { diameterTop: 0, diameterBottom: 0.2, height: 0.25, tessellation: 4 }, scene), "#ffb703", this.head, 0.02);
-        beak.rotation.x = Math.PI / 2;
-        beak.position.set(0, 1.08, 0.4);
-        const wattle = part(sphere(0.1, 8), "#ff2e4d", this.head, 0);
-        wattle.position.set(0, 0.97, 0.33);
-        wattle.scaling.y = 1.5;
-        for (let i = 0; i < 3; i++) {
-          const comb = part(sphere(0.18, 8), "#ff2e4d", this.head, 0.02);
-          comb.position.set(0, 1.45 + (i === 1 ? 0.05 : 0), -0.05 + (i - 1) * 0.13);
-        }
-        // Ikat kepala ala atlet
-        const band = part(MeshBuilder.CreateTorus("band", { diameter: 0.6, thickness: 0.06, tessellation: 20 }, scene), color, this.head, 0);
-        band.position.set(0, 1.33, 0.05);
-        band.rotation.x = 0.15;
-        break;
-      }
-
-      // ------------------------------------------------------------ burger
-      case "burger": {
-        const layer = (y: number, d: number, h: number, hex: string, parent: TransformNode = this.body) => {
-          const m = part(MeshBuilder.CreateCylinder("layer", { diameter: d, height: h, tessellation: 24 }, scene), hex, parent);
-          m.position.y = y;
-          return m;
-        };
-        for (const sx of [-0.2, 0.2]) {
-          const leg = part(MeshBuilder.CreateCylinder("leg", { diameter: 0.07, height: 0.2 }, scene), INK, this.body, 0);
-          leg.position.set(sx, 0.1, 0);
-          const shoe = part(sphere(0.22, 8), color, this.body, 0.02);
+      // ------------------------------------------------------------ cabai
+      case "chili": {
+        const green = "#3aa845";
+        // Kaki + sepatu
+        for (const sx of [-0.15, 0.15]) {
+          const leg = part(MeshBuilder.CreateCylinder("leg", { diameter: 0.07, height: 0.24 }, scene), INK, this.body, 0);
+          leg.position.set(sx, 0.12, 0);
+          const shoe = part(sphere(0.21, 8), "#ffffff", this.body, 0.02);
           shoe.scaling.set(0.9, 0.5, 1.4);
           shoe.position.set(sx, 0.04, 0.05);
         }
-        layer(0.3, 1, 0.22, "#e9a04b");
-        layer(0.47, 1.06, 0.16, "#6b3a1f");
-        const cheese = part(MeshBuilder.CreateBox("cheese", { width: 0.95, height: 0.05, depth: 0.95 }, scene), "#ffd23f", this.body, 0.015);
-        cheese.position.y = 0.57;
-        cheese.rotation.y = Math.PI / 4;
-        const lettuce = part(MeshBuilder.CreateTorus("lettuce", { diameter: 0.98, thickness: 0.1, tessellation: 12 }, scene), "#5fd35f", this.body, 0.015);
-        lettuce.position.y = 0.62;
-        lettuce.scaling.y = 0.6;
-        // Roti atas = kepala
-        const bun = part(MeshBuilder.CreateSphere("bun", { diameter: 1.04, segments: 16, slice: 0.5 }, scene), "#f4a63a", this.head);
-        bun.position.y = 0.64;
-        bun.scaling.y = 0.95;
-        for (let i = 0; i < 8; i++) {
-          const a = (i / 8) * Math.PI * 2 + 0.3;
-          const seed = part(sphere(0.07, 6), "#fff3dc", this.head, 0);
-          seed.scaling.set(1, 0.5, 1.6);
-          const r = 0.3 + (i % 2) * 0.1;
-          seed.position.set(Math.cos(a) * r, 0.64 + Math.sqrt(Math.max(0, 0.27 - r * r)) * 0.95 + 0.02, Math.sin(a) * r);
+        // Badan cabai: gemuk di atas, meruncing ke bawah, ujungnya melengkung ke samping
+        // (satu mesh tabung supaya outline-nya mulus, tidak belang)
+        const N = 18;
+        const path: Vector3[] = [];
+        const radii: number[] = [];
+        for (let i = 0; i <= N; i++) {
+          const t = i / N;
+          const k = (1 - t) ** 3;
+          path.push(new Vector3(0.42 * k, 0.12 + t * 1.26, -0.22 * k));
+          let r = 0.02 + 0.35 * Math.sin(Math.min(t / 0.8, 1) * (Math.PI / 2)) ** 1.3;
+          if (t > 0.85) r *= 1 - (t - 0.85) * 1.2;
+          radii.push(r);
         }
-        googly(-0.16, 0.92, 0.38, 0.22);
-        googly(0.16, 0.92, 0.38, 0.22);
-        // Lidah melet keluar dari antara roti
-        const tongue = part(MeshBuilder.CreateCapsule("tongue", { radius: 0.07, height: 0.3 }, scene), "#ff7aa2", this.body, 0.015);
-        tongue.rotation.x = Math.PI / 2 - 0.5;
-        tongue.position.set(0.15, 0.62, 0.55);
-        this.wiggles.push({ node: tongue, phase: 1, amp: 0.25, axis: "x" });
-        // Topi terbalik warna pemain
-        const cap = part(MeshBuilder.CreateSphere("cap", { diameter: 0.6, segments: 12, slice: 0.5 }, scene), color, this.head);
-        cap.position.set(0, 1.06, -0.05);
-        const brim = part(MeshBuilder.CreateBox("brim", { width: 0.36, height: 0.04, depth: 0.32 }, scene), color, this.head, 0.02);
-        brim.position.set(0, 1.08, -0.38);
+        part(MeshBuilder.CreateTube("chili", { path, radiusFunction: (i) => radii[i], tessellation: 20, cap: 3 }, scene), color);
+        // Kilap
+        const gloss = part(sphere(0.16, 8), light, this.body, 0);
+        gloss.position.set(-0.2, 1.1, 0.29);
+        gloss.scaling.set(0.6, 1.4, 0.4);
+        // Kelopak hijau + tangkai melengkung di atas kepala
+        const calyx = part(sphere(0.6, 12), green, this.head);
+        calyx.position.set(0, 1.42, 0);
+        calyx.scaling.set(1, 0.32, 1);
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          const leaf = part(sphere(0.18, 6), green, this.head, 0);
+          leaf.position.set(Math.cos(a) * 0.27, 1.36, Math.sin(a) * 0.27);
+          leaf.scaling.set(1.2, 0.4, 1.2);
+        }
+        const stem = new TransformNode("stem", scene);
+        stem.parent = this.head;
+        stem.position.set(0, 1.45, 0);
+        const s1 = part(MeshBuilder.CreateCylinder("stem", { diameter: 0.09, height: 0.28 }, scene), "#2d8a37", stem, 0.015);
+        s1.position.y = 0.13;
+        const s2 = part(MeshBuilder.CreateCylinder("stem", { diameter: 0.08, height: 0.2 }, scene), "#2d8a37", stem, 0.015);
+        s2.rotation.z = -1.0;
+        s2.position.set(0.08, 0.3, 0);
+        this.wiggles.push({ node: stem, phase: 0.5, amp: 0.2, axis: "z" });
+        // Lengan kecil mengepal
+        for (const sx of [-1, 1]) {
+          const arm = new TransformNode("arm", scene);
+          arm.parent = this.body;
+          arm.position.set(sx * 0.33, 0.85, 0);
+          const a = part(MeshBuilder.CreateCapsule("arm", { radius: 0.055, height: 0.42 }, scene), color, arm, 0.02);
+          a.position.set(sx * 0.12, 0.12, 0);
+          a.rotation.z = -sx * 0.9;
+          const fist = part(sphere(0.15, 8), "#ffffff", arm, 0.02);
+          fist.position.set(sx * 0.26, 0.24, 0);
+          this.wiggles.push({ node: arm, phase: sx * 2, amp: 0.3, axis: "x" });
+        }
+        // Wajah galak kepedasan
+        googly(-0.14, 1.08, 0.3, 0.2);
+        googly(0.14, 1.08, 0.3, 0.2);
+        for (const sx of [-1, 1]) {
+          const brow = part(MeshBuilder.CreateBox("brow", { width: 0.2, height: 0.05, depth: 0.04 }, scene), INK, this.head, 0);
+          brow.position.set(sx * 0.14, 1.23, 0.33);
+          brow.rotation.z = sx * 0.4;
+        }
+        const mouth = part(MeshBuilder.CreateBox("mouth", { width: 0.3, height: 0.1, depth: 0.04 }, scene), INK, this.head, 0);
+        mouth.position.set(0, 0.9, 0.34);
+        const teeth = part(MeshBuilder.CreateBox("teeth", { width: 0.26, height: 0.04, depth: 0.02 }, scene), "#ffffff", this.head, 0);
+        teeth.position.set(0, 0.93, 0.36);
+        // Api kecil di atas kepala (pedas!)
+        const flame = new TransformNode("flame", scene);
+        flame.parent = this.head;
+        flame.position.set(-0.22, 1.45, 0);
+        const flames: [number, number, number, number, string][] = [
+          [0, 0.13, 0, 0.22, "#ff7b00"],
+          [0.1, 0.09, 0.02, 0.14, "#ff9f1c"],
+          [0.01, 0.1, 0.07, 0.12, "#ffd23f"],
+        ];
+        for (const [x, y, z, d, hex] of flames) {
+          const f = part(sphere(d, 10), hex, flame, 0.015);
+          f.position.set(x, y, z);
+          f.scaling.set(0.8, 1.7, 0.8);
+        }
+        this.wiggles.push({ node: flame, phase: 3, amp: 0.25, axis: "z" });
+        break;
+      }
+
+      // ------------------------------------------------------------ timun
+      case "cucumber": {
+        // Kaki + sepatu
+        for (const sx of [-0.16, 0.16]) {
+          const leg = part(MeshBuilder.CreateCylinder("leg", { diameter: 0.07, height: 0.22 }, scene), INK, this.body, 0);
+          leg.position.set(sx, 0.11, 0);
+          const shoe = part(sphere(0.22, 8), "#ffffff", this.body, 0.02);
+          shoe.scaling.set(0.9, 0.5, 1.4);
+          shoe.position.set(sx, 0.04, 0.05);
+        }
+        // Badan timun panjang
+        const torso = part(MeshBuilder.CreateCapsule("torso", { radius: 0.36, height: 1.4, tessellation: 18 }, scene), color);
+        torso.position.y = 0.88;
+        torso.scaling.z = 0.9;
+        // Garis-garis memanjang khas timun (di depan dibuat pendek supaya wajah bersih)
+        const streak = lighten(color, 0.3);
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2 + 0.31;
+          const front = Math.cos(a) > 0.4;
+          const stripe = part(sphere(0.12, 8), i % 2 ? streak : dark, this.body, 0);
+          // Harus menonjol melewati outline badan (0.03) supaya kelihatan
+          stripe.scaling.set(0.9, front ? 2.6 : 7, 0.8);
+          stripe.position.set(Math.sin(a) * 0.37, front ? 0.6 : 0.88, Math.cos(a) * 0.335);
+          stripe.rotation.y = a;
+        }
+        // Bintil-bintil terang
+        const bumps: [number, number, number][] = [
+          [0.3, 0.5, 0.15],
+          [-0.31, 0.65, 0.1],
+          [0.26, 1.2, -0.18],
+          [-0.22, 1.32, -0.2],
+          [0.12, 0.42, 0.3],
+          [-0.15, 0.4, 0.29],
+        ];
+        for (const [x, y, z] of bumps) {
+          const bump = part(sphere(0.06, 6), light, this.body, 0);
+          bump.position.set(x, y, z);
+        }
+        // Bunga kuning di ujung atas (ciri khas timun)
+        const flower = new TransformNode("flower", scene);
+        flower.parent = this.head;
+        flower.position.set(0.05, 1.6, 0);
+        const fstem = part(MeshBuilder.CreateCylinder("fstem", { diameter: 0.05, height: 0.14 }, scene), dark, flower, 0);
+        fstem.position.y = 0.05;
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          const petal = part(sphere(0.13, 6), "#ffd23f", flower, 0.012);
+          petal.position.set(Math.cos(a) * 0.08, 0.14, Math.sin(a) * 0.08);
+          petal.scaling.set(1, 0.4, 1);
+        }
+        const center = part(sphere(0.07, 6), "#ff9f1c", flower, 0);
+        center.position.y = 0.16;
+        this.wiggles.push({ node: flower, phase: 1.2, amp: 0.3, axis: "z" });
+        // Sehelai daun di pucuk
+        const leaf = part(sphere(0.3, 10), dark, this.head, 0.015);
+        leaf.scaling.set(1, 0.18, 0.6);
+        leaf.position.set(-0.17, 1.6, -0.02);
+        leaf.rotation.z = -0.5;
+        // Lengan melambai
+        for (const sx of [-1, 1]) {
+          const arm = new TransformNode("arm", scene);
+          arm.parent = this.body;
+          arm.position.set(sx * 0.36, 0.85, 0);
+          const a = part(MeshBuilder.CreateCapsule("arm", { radius: 0.055, height: 0.45 }, scene), color, arm, 0.02);
+          a.position.set(sx * 0.1, 0.17, 0);
+          a.rotation.z = -sx * 0.5;
+          const hand = part(sphere(0.14, 8), "#ffffff", arm, 0.02);
+          hand.position.set(sx * 0.2, 0.38, 0);
+          this.wiggles.push({ node: arm, phase: sx * 0.8, amp: 0.35, axis: "z" });
+        }
+        // Wajah santai
+        googly(-0.13, 1.15, 0.3, 0.2);
+        googly(0.13, 1.15, 0.3, 0.2);
+        // Senyum lebar melengkung
+        const smilePath: Vector3[] = [];
+        for (let i = 0; i <= 10; i++) {
+          const x = -0.12 + (0.24 * i) / 10;
+          smilePath.push(new Vector3(x, 0.98 + 2 * x * x, 0.34 - 1.6 * x * x));
+        }
+        part(MeshBuilder.CreateTube("smile", { path: smilePath, radius: 0.022, tessellation: 8, cap: 3 }, scene), INK, this.head, 0);
+        // Pipi merona
+        for (const sx of [-0.22, 0.22]) {
+          const blush = part(sphere(0.09, 6), "#ff8fab", this.head, 0);
+          blush.position.set(sx, 1.02, 0.29);
+          blush.scaling.z = 0.3;
+        }
         break;
       }
     }

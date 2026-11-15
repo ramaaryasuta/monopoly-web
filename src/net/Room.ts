@@ -63,7 +63,7 @@ type Msg =
   | { t: "ping" }
   | { t: "pong" };
 
-const BOT_NAMES = ["Kentang", "Om Mata", "Jago", "Burger"];
+const BOT_NAMES = ["Kentang", "Om Mata", "Cabai", "Timun"];
 
 const PING_EVERY_MS = 3000;
 const DEAD_AFTER_MS = 10000;
