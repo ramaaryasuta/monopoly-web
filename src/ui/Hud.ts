@@ -53,10 +53,17 @@ export class Hud {
     private localPlayers: number[] | null = null,
   ) {
     const root = uiRoot();
+    // Online: pemain di perangkat ini selalu di kiri atas, sisanya searah jarum jam
+    // mengikuti urutan main — jadi posisi tidak berubah-ubah antar perangkat.
+    const n = state.players.length;
+    const me = localPlayers?.[0] ?? null;
     state.players.forEach((p, i) => {
+      const slot = me === null ? (i + 3) % 4 : (i - me + n) % n;
       const card = h(
         "div",
-        { class: `player-card panel p${i}`, "data-testid": `player-${i}` },
+        { class: `player-card panel slot${slot}`, "data-testid": `player-${i}` },
+        h("div", { class: "turn-tag now" }, "🎲 GILIRAN"),
+        h("div", { class: "turn-tag next" }, "⏭️ BERIKUTNYA"),
         h("div", { class: "avatar", style: `background:${p.color}` }, AVATARS[characterIdx[i]]),
         h(
           "div",
@@ -129,9 +136,18 @@ export class Hud {
     this.round.classList.toggle("season", !!season);
     const listed = activeListings(s).length;
     this.marketBtn.replaceChildren("🏪", listed ? h("span", { class: "badge" }, String(listed)) : "");
+    const playing = s.winner === null;
+    let next = -1;
+    if (playing) {
+      for (let k = 1; k < s.players.length; k++) {
+        const j = (s.current + k) % s.players.length;
+        if (!s.players[j].bankrupt) { next = j; break; }
+      }
+    }
     s.players.forEach((p, i) => {
       const card = this.cards[i];
-      card.classList.toggle("active", s.current === i && s.winner === null);
+      card.classList.toggle("active", playing && s.current === i);
+      card.classList.toggle("next", playing && next === i && next !== s.current);
       card.classList.toggle("bankrupt", p.bankrupt);
       const meta: string[] = [`🏠 ${ownedTiles(s, i).length}`, `💎 ${fmt(netWorth(s, i))}`];
       if (p.shields) meta.push(`🛡️${p.shields}`);

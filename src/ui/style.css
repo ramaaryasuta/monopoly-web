@@ -348,14 +348,48 @@ body {
   transition: transform 0.25s, box-shadow 0.25s;
   pointer-events: none !important;
 }
-.player-card.p0 { left: 12px; bottom: 12px; }
-.player-card.p1 { left: 12px; top: 12px; }
-.player-card.p2 { right: 12px; top: 12px; }
-.player-card.p3 { right: 12px; bottom: 12px; }
+/* slot0 kiri atas, lalu searah jarum jam */
+.player-card.slot0 { left: 12px; top: 12px; transform-origin: top left; }
+.player-card.slot1 { right: 12px; top: 12px; transform-origin: top right; }
+.player-card.slot2 { right: 12px; bottom: 12px; transform-origin: bottom right; }
+.player-card.slot3 { left: 12px; bottom: 12px; transform-origin: bottom left; }
+
+/* Giliran sekarang: kartu kuning terang + cincin oranye berdenyut */
 .player-card.active {
+  background: linear-gradient(160deg, #fff3a8 0%, var(--yellow) 100%);
   transform: scale(1.08);
-  box-shadow: 0 6px 0 var(--ink), 0 0 0 6px rgba(255, 210, 63, 0.9);
+  z-index: 2;
+  animation: turnGlow 1.4s ease-in-out infinite;
 }
+@keyframes turnGlow {
+  0%, 100% { box-shadow: 0 6px 0 var(--ink), 0 0 0 4px var(--orange), 0 0 14px 6px rgba(255, 154, 61, 0.55); }
+  50% { box-shadow: 0 6px 0 var(--ink), 0 0 0 7px var(--orange), 0 0 26px 12px rgba(255, 154, 61, 0.85); }
+}
+.player-card.active .avatar { animation: pulse 1.4s ease-in-out infinite; }
+/* Giliran berikutnya: cincin biru putus-putus */
+.player-card.next { outline: 4px dashed var(--blue); outline-offset: 3px; }
+
+.player-card .turn-tag {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 10px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 var(--ink);
+}
+.player-card .turn-tag.now { background: var(--orange); color: #fff; }
+.player-card .turn-tag.next { background: var(--blue); color: #fff; }
+.player-card.active .turn-tag.now,
+.player-card.next .turn-tag.next { display: block; }
+/* Kartu atas: label di bawah kartu; kartu bawah: label di atas kartu */
+.player-card.slot0 .turn-tag, .player-card.slot1 .turn-tag { top: calc(100% + 4px); }
+.player-card.slot2 .turn-tag, .player-card.slot3 .turn-tag { bottom: calc(100% + 4px); }
 .player-card.bankrupt { filter: grayscale(1); opacity: 0.55; }
 .player-card .avatar {
   font-size: 30px;
@@ -603,6 +637,10 @@ body {
   .player-card .avatar { width: 36px; height: 36px; font-size: 22px; }
   .player-card .money { font-size: 16px; }
   .player-card .meta { display: none; }
+  .player-card .turn-tag { font-size: 10px; padding: 1px 7px; border-width: 2px; }
+  /* Label rata ke sisi luar layar supaya tidak menabrak badge ronde di tengah */
+  .player-card.slot0 .turn-tag, .player-card.slot3 .turn-tag { left: 6px; transform: none; }
+  .player-card.slot1 .turn-tag, .player-card.slot2 .turn-tag { left: auto; right: 6px; transform: none; }
   .log { display: none; }
   /* Di bawah kartu pemain atas, supaya tidak tertutup menu giliran di bawah */
   .round-badge { top: 80px; font-size: 13px; }
