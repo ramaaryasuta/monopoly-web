@@ -4,9 +4,9 @@ import { clearSession, CODE_LEN, loadSession, MAX_SEATS, normalizeCode, Room, ty
 import { Voice } from "../net/Voice";
 import type { PlayerSetup } from "../core/types";
 import { CRITTERS } from "../scene/Pawn";
-import { music } from "../scene/music";
-import { sfx, Sound } from "../scene/sfx";
+import { sfx } from "../scene/sfx";
 import { Speed } from "../scene/tween";
+import { settingsButton } from "./SettingsMenu";
 import { h, uiRoot } from "./dom";
 import { AVATARS } from "./Hud";
 import { VoicePanel } from "./VoicePanel";
@@ -127,21 +127,6 @@ export function showMenu(): Promise<MenuResult> {
         return b;
       };
 
-      const soundBtn = h("button", { class: "btn small white", title: "Suara" }, Sound.muted ? "🔇 Suara mati" : "🔊 Suara nyala");
-      soundBtn.addEventListener("click", () => {
-        Sound.muted = !Sound.muted;
-        soundBtn.textContent = Sound.muted ? "🔇 Suara mati" : "🔊 Suara nyala";
-        music.sync();
-        sfx.click();
-      });
-      const musicText = () => (music.enabled ? "🎵 Musik nyala" : "🎵 Musik mati");
-      const musicBtn = h("button", { class: "btn small white", title: "Musik latar" }, musicText());
-      musicBtn.addEventListener("click", () => {
-        music.toggle();
-        musicBtn.textContent = musicText();
-        sfx.click();
-      });
-
       const parade = h("div", { class: "parade" }, ...AVATARS.map((a, i) => h("span", { style: `--i:${i};background:${CRITTERS[i].color}` }, a)));
 
       show(
@@ -159,7 +144,7 @@ export function showMenu(): Promise<MenuResult> {
             big("🌐", "Main Online", "Buat room & ajak teman pakai kode", "blue", "mode-online", () => online()),
             big("📖", "Cara Main", "Aturan singkat & cara menang", "white", "mode-rules", rules),
           ),
-          h("div", { class: "menu-foot" }, soundBtn, musicBtn),
+          h("div", { class: "menu-foot" }, settingsButton("⚙️ Pengaturan")),
           h("div", { class: "menu-version", "data-testid": "version" }, `v${__APP_VERSION__}`),
         ),
       );

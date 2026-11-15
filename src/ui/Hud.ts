@@ -3,11 +3,11 @@ import { CONFIG, investedValue, LEVEL_NAMES, netWorth, ownedTiles, rentFor, upgr
 import type { GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
 import { ITEMS, SEASONS } from "../data/cards";
-import { music } from "../scene/music";
-import { sfx, Sound } from "../scene/sfx";
+import { sfx } from "../scene/sfx";
 import { Speed } from "../scene/tween";
 import { activeListings, listingFor } from "../core/trade";
 import { escapeHtml, fmt, h, modal, uiRoot } from "./dom";
+import { settingsButton } from "./SettingsMenu";
 import { viewMarket } from "./TradeUi";
 
 export const AVATARS = ["🥔", "👾", "🌶️", "🥒", "🐳", "🐱"];
@@ -87,25 +87,13 @@ export class Hud {
       Speed.factor = steps[(steps.indexOf(Speed.factor) + 1) % steps.length] ?? 1;
       speedBtn.textContent = `⏩ ${Speed.factor}x`;
     });
-    const muteBtn = h("button", { class: "btn small white", title: "Suara" }, Sound.muted ? "🔇" : "🔊");
-    muteBtn.addEventListener("click", () => {
-      Sound.muted = !Sound.muted;
-      muteBtn.textContent = Sound.muted ? "🔇" : "🔊";
-      music.sync();
-    });
-        const musicBtn = h("button", { class: "btn small white music-btn", title: "Musik latar (nyala/mati)" }, "🎵");
-    musicBtn.classList.toggle("off", !music.enabled);
-    musicBtn.addEventListener("click", () => {
-      music.toggle();
-      musicBtn.classList.toggle("off", !music.enabled);
-    });
     const camBtn = h("button", { class: "btn small white", title: "Reset kamera" }, "🎥");
     camBtn.addEventListener("click", () => this.onResetCamera?.());
     this.marketBtn.addEventListener("click", () => {
       sfx.click();
       void viewMarket(this.state, this.localPlayers?.[0] ?? null);
     });
-    this.toolbar.append(speedBtn, muteBtn, musicBtn, camBtn, this.marketBtn);
+    this.toolbar.append(speedBtn, camBtn, this.marketBtn, settingsButton());
 
     root.append(this.round, this.toolbar, log, this.toasts, this.actionBar);
     this.refresh();

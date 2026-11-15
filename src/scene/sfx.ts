@@ -2,7 +2,43 @@ import type { SeasonId } from "../data/cards";
 
 /** Efek suara sintetis (WebAudio) — tanpa file aset, ceria ala game kartun. */
 let ctx: AudioContext | null = null;
-export const Sound = { muted: false };
+
+/** Pengaturan audio (disimpan di localStorage). Volume 0..1. */
+export const Sound = { muted: false, sfxVol: 1, musicVol: 0.8, voiceVol: 1 };
+type SoundSettings = typeof Sound;
+const AUDIO_KEY = "pk-audio";
+try {
+  const d = JSON.parse(localStorage.getItem(AUDIO_KEY) ?? "null") as Partial<SoundSettings> | null;
+  if (d) {
+    if (typeof d.muted === "boolean") Sound.muted = d.muted;
+    for (const k of ["sfxVol", "musicVol", "voiceVol"] as const) {
+      const v = d[k];
+      if (typeof v === "number" && v >= 0 && v <= 1) Sound[k] = v;
+    }
+  }
+} catch {
+  /* penyimpanan tidak tersedia */
+}
+
+const soundListeners = new Set<() => void>();
+/** Dipanggil setiap pengaturan audio berubah. Mengembalikan fungsi untuk berhenti mendengarkan. */
+export function onSoundChange(fn: () => void): () => void {
+  soundListeners.add(fn);
+  return () => soundListeners.delete(fn);
+}
+
+/** Ubah pengaturan audio: terapkan ke gain, simpan, beri tahu pendengar. */
+export function setSound(patch: Partial<SoundSettings>) {
+  Object.assign(Sound, patch);
+  try {
+    localStorage.setItem(AUDIO_KEY, JSON.stringify(Sound));
+  } catch {
+    /* abaikan */
+  }
+  if (sfxGain) sfxGain.gain.value = Sound.sfxVol;
+  if (musicVolGain) musicVolGain.gain.value = Sound.musicVol;
+  for (const fn of soundListeners) fn();
+}
 
 /** AudioContext bersama (efek suara & musik latar), tanpa memeriksa mute. */
 export function audioCtx(): AudioContext | null {
@@ -21,14 +57,29 @@ function ac(): AudioContext | null {
 }
 
 let duckGain: GainNode | null = null;
+let musicVolGain: GainNode | null = null;
+let sfxGain: GainNode | null = null;
 
-/** Jalur musik latar: lewat gain "duck" supaya musik mengecil saat jingle penting. */
+/** Jalur efek suara: lewat gain volume efek. */
+function sfxOut(a: AudioContext): AudioNode {
+  if (!sfxGain || sfxGain.context !== a) {
+    sfxGain = a.createGain();
+    sfxGain.gain.value = Sound.sfxVol;
+    sfxGain.connect(a.destination);
+  }
+  return sfxGain;
+}
+
+/** Jalur musik latar: gain "duck" (mengecil saat jingle penting) → volume musik → speaker. */
 export function musicBus(): GainNode | null {
   const a = audioCtx();
   if (!a) return null;
   if (!duckGain || duckGain.context !== a) {
+    musicVolGain = a.createGain();
+    musicVolGain.gain.value = Sound.musicVol;
+    musicVolGain.connect(a.destination);
     duckGain = a.createGain();
-    duckGain.connect(a.destination);
+    duckGain.connect(musicVolGain);
   }
   return duckGain;
 }
@@ -56,7 +107,7 @@ function tone(freq: number, dur: number, type: OscillatorType = "square", vol = 
   if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
   gain.gain.setValueAtTime(vol, t0);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(gain).connect(a.destination);
+  osc.connect(gain).connect(sfxOut(a));
   osc.start(t0);
   osc.stop(t0 + dur + 0.02);
 }
@@ -82,7 +133,7 @@ function wobble(freq: number, dur: number, type: OscillatorType, vol: number, lf
   gain.gain.setValueAtTime(vol, t0);
   gain.gain.setValueAtTime(vol, t0 + dur * 0.7);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(filter).connect(gain).connect(a.destination);
+  osc.connect(filter).connect(gain).connect(sfxOut(a));
   osc.start(t0);
   lfo.start(t0);
   osc.stop(t0 + dur + 0.02);
@@ -112,7 +163,7 @@ function noise(dur: number, vol: number, type: BiquadFilterType, freq: number, f
   const gain = a.createGain();
   gain.gain.setValueAtTime(vol, t0);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  src.connect(filter).connect(gain).connect(a.destination);
+  src.connect(filter).connect(gain).connect(sfxOut(a));
   src.start(t0, Math.random() * 0.5);
   src.stop(t0 + dur + 0.02);
 }

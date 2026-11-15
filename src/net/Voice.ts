@@ -1,5 +1,6 @@
 import type { MediaConnection } from "peerjs";
 import type { Room, Seat, VoiceState } from "./Room";
+import { onSoundChange, Sound } from "../scene/sfx";
 
 /**
  * Voice chat ala Discord untuk room online.
@@ -78,6 +79,7 @@ export class Voice {
   private timer: ReturnType<typeof setInterval> | null = null;
   private healTimer: ReturnType<typeof setInterval> | null = null;
   private unwatchSeats: () => void;
+  private unwatchSound = onSoundChange(() => this.applyAudio());
   private buf = new Uint8Array(512);
 
   constructor(private room: Room) {
@@ -232,6 +234,7 @@ export class Voice {
     this.leave();
     this.room.onVoice = null;
     this.unwatchSeats();
+    this.unwatchSound();
     if (!this.room.isClosed) this.room.onCall = null;
     this.onChange = null;
   }
@@ -266,7 +269,7 @@ export class Voice {
     for (const [id, r] of this.remotes) {
       if (!r.audio) continue;
       r.audio.muted = this.deaf || this.localMuted.has(id);
-      r.audio.volume = this.volumes.get(id) ?? 1;
+      r.audio.volume = (this.volumes.get(id) ?? 1) * Sound.voiceVol;
     }
   }
 

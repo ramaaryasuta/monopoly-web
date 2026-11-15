@@ -13,11 +13,13 @@ import { HumanDecider } from "./ui/HumanDecider";
 import { Hud } from "./ui/Hud";
 import { showMenu } from "./ui/Menu";
 import { mountQaPanel } from "./ui/QaPanel";
+import { installSettingsHotkey } from "./ui/SettingsMenu";
 import { ScenePresenter } from "./ui/ScenePresenter";
 import { editOffer, pickTradeTarget } from "./ui/TradeUi";
 
 async function boot() {
   music.init();
+  installSettingsHotkey();
   const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
   const view = new GameScene(canvas);
   Object.assign(window as object, { __view: view });

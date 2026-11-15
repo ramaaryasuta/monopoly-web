@@ -1,4 +1,4 @@
-import { audioCtx, musicBus, Sound } from "./sfx";
+import { audioCtx, musicBus, onSoundChange, Sound } from "./sfx";
 
 /**
  * Musik latar sintetis (WebAudio, tanpa file aset) bergaya lounge santai:
@@ -241,6 +241,7 @@ class MusicPlayer {
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
     document.addEventListener("visibilitychange", () => this.sync());
+    onSoundChange(() => this.sync());
   }
 
   toggle() {
