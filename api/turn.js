@@ -20,7 +20,9 @@ function staticServers() {
   const urls = (process.env.TURN_URLS ?? "")
     .split(",")
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    // "free.expressturn.com:3478" → "turn:free.expressturn.com:3478" (browser menolak URL tanpa skema)
+    .map((s) => (/^(stun|stuns|turn|turns):/i.test(s) ? s : `turn:${s}`));
   const username = process.env.TURN_USERNAME;
   const credential = process.env.TURN_CREDENTIAL;
   if (!urls.length || !username || !credential) return null;
