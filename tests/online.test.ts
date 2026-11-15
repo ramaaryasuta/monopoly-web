@@ -108,8 +108,10 @@ const HOST: Owner = "A";
 /**
  * Simulasi 3 perangkat. Kursi: 0 = manusia di A (host), 1 = manusia di B, 2 = bot (dijalankan host), 3 = manusia di C.
  * Pesan dikirim asinkron dengan jeda acak agar urutan eksekusi antar peer berbeda-beda.
+ * `rejoinBAfter`: setelah terputus, B masuk lagi (perangkat "baru") setelah host mencatat n aksi lagi —
+ * host mengirim riwayat aksinya, B memutar ulang lalu melanjutkan sebagai manusia.
  */
-function simulate(seed: number, opts: { dropBAfterActs?: number; anytime?: boolean } = {}) {
+function simulate(seed: number, opts: { dropBAfterActs?: number; anytime?: boolean; rejoinBAfter?: number } = {}) {
   const owners: Owner[] = ["A", "B", HOST, "C"];
   const kinds = ["human", "human", "bot", "human"] as const;
   const setups: PlayerSetup[] = owners.map((_, i) => ({ name: `P${i}`, color: "#fff", isBot: kinds[i] === "bot" }));
@@ -117,29 +119,59 @@ function simulate(seed: number, opts: { dropBAfterActs?: number; anytime?: boole
   const games = {} as Record<Owner, Game>;
   const alive = new Set<Owner>(PEERS);
   let bActs = 0;
+  /** Riwayat aksi menurut urutan host (seperti `Room.log`). */
+  const hostLog: { p: number; k: string; v: unknown }[] = [];
+  let tookOver = false;
+  let afterDrop = 0;
+  let rejoined: Promise<void> | null = null;
+  /** B sudah masuk lagi: seperti Room asli, B menerima aksi peer lain lewat host (topologi bintang). */
+  let bBack = false;
+  const logAtHost = (p: number, k: string, v: unknown) => {
+    hostLog.push({ p, k, v });
+    if (tookOver && opts.rejoinBAfter !== undefined && !rejoined && ++afterDrop >= opts.rejoinBAfter) {
+      rejoined = new Promise<void>((r) => queueMicrotask(() => r(rejoinB())));
+    }
+  };
 
   // Kanal andal & berurutan (seperti data channel WebRTC), tapi dengan jeda acak per tujuan
   const lane: Record<Owner, Promise<void>> = { A: Promise.resolve(), B: Promise.resolve(), C: Promise.resolve() };
   const deliver = (from: Owner, p: number, k: string, v: unknown) => {
+    if (from === HOST) logAtHost(p, k, v);
     for (const to of PEERS) {
-      if (to === from || !alive.has(to)) continue;
-      lane[to] = lane[to]
-        .then(() => (Math.random() < 0.2 ? new Promise<void>((r) => setTimeout(r, 0)) : undefined))
-        .then(() => (k === "offer" ? games[to].pool.add(v as Interjection) : remotes[to][p]?.push(k, v)));
+      if (to !== from && alive.has(to) && !(to === "B" && bBack && from !== HOST)) send(to, p, k, v, from);
     }
   };
+  function send(to: Owner, p: number, k: string, v: unknown, from: Owner = HOST) {
+    // Tujuan diikat saat dikirim (perangkat B lama ≠ perangkat B baru)
+    const g = games[to];
+    const r = remotes[to];
+    lane[to] = lane[to]
+      .then(() => (Math.random() < 0.2 ? new Promise<void>((res) => setTimeout(res, 0)) : undefined))
+      .then(() => {
+        if (to === HOST) {
+          logAtHost(p, k, v);
+          if (bBack && from !== "B") send("B", p, k, v);
+        }
+        if (k === "offer") g.pool.add(v as Interjection);
+        else r[p]?.push(k, v);
+      });
+  }
 
   let offerSeq = 0;
-  for (const peer of PEERS) {
+  const makePeer = (peer: Owner, resume?: { p: number; from: number }) => {
     const g = new Game(setups, [], new NullPresenter(), { seed, maxTurns: 300 });
     const bot = new BotDecider(g.state);
+    const mine: (RemoteDecider | null)[] = [];
+    /** Perangkat ini sudah terputus (B lama tidak boleh mengirim lagi walau B baru masuk). */
+    let dead = false;
+    const online = () => !dead && alive.has(peer);
     const decideHere = async (cur: number) => {
       const list = g.pool.drain();
-      if (alive.has(peer)) deliver(peer, cur, "sync", list);
+      if (online()) deliver(peer, cur, "sync", list);
       return list;
     };
     g.syncInterjections = async (cur) => {
-      const r = remotes[peer][cur];
+      const r = mine[cur];
       if (!r) return decideHere(cur);
       const list = await r.sync(() => decideHere(cur));
       g.pool.markApplied(list);
@@ -147,44 +179,80 @@ function simulate(seed: number, opts: { dropBAfterActs?: number; anytime?: boole
     };
     g.deciders = owners.map((o, pid) => {
       if (o === peer) {
-        remotes[peer].push(null);
         const human = new RandomHuman(g.state);
         const inner = kinds[pid] === "bot" ? bot : interruptibleDeals(human, g.pool);
-        return new BroadcastDecider(inner, (k, v) => {
+        const local = new BroadcastDecider(inner, (k, v) => {
           // Manusia kadang mengirim tawaran kapan saja (di luar gilirannya)
-          if (kinds[pid] === "human" && opts.anytime && alive.has(peer) && Math.random() < 0.15) {
+          if (kinds[pid] === "human" && opts.anytime && online() && Math.random() < 0.15) {
             const act = human.randomOffer(pid);
             if (act) {
-              const it: Interjection = { id: `${peer}:${++offerSeq}`, player: pid, act };
+              const it: Interjection = { id: `${peer}${resume ? "2" : ""}:${++offerSeq}`, player: pid, act };
               g.pool.add(it);
               deliver(peer, pid, "offer", it);
             }
           }
-          if (peer === "B" && opts.dropBAfterActs !== undefined) {
-            if (!alive.has("B")) return;
+          if (peer === "B" && !resume && opts.dropBAfterActs !== undefined) {
+            if (dead) return;
             if (++bActs > opts.dropBAfterActs) {
               // B terputus: pesan ini tidak terkirim; host mengambil alih kursi 1 dengan bot
+              dead = true;
               alive.delete("B");
               g.stop();
               const r = remotes.A[1]!;
               const hostGame = games.A;
               // Seperti WebRTC: pesan B yang sudah terkirim tiba dulu sebelum host tahu B terputus
-              lane.A = lane.A.then(() =>
-                r.takeover(new BroadcastDecider(new BotDecider(hostGame.state), (k2, v2) => deliver("A", 1, k2, v2))),
-              );
+              lane.A = lane.A.then(() => {
+                r.takeover(new BroadcastDecider(new BotDecider(hostGame.state), (k2, v2) => deliver("A", 1, k2, v2)));
+                tookOver = true;
+              });
               return;
             }
           }
           deliver(peer, pid, k, v);
         });
+        if (!resume) {
+          mine.push(null);
+          return local;
+        }
+        // Perangkat yang masuk lagi: kursinya sendiri diputar ulang dulu dari riwayat
+        const r = new RemoteDecider();
+        if (pid === resume.p) r.handover(resume.from, local);
+        mine.push(r);
+        return r;
       }
       const r = new RemoteDecider();
-      remotes[peer].push(r);
+      mine.push(r);
       return r;
     });
+    remotes[peer] = mine;
     games[peer] = g;
-  }
-  return { games, run: (only: Owner[] = PEERS) => Promise.all(PEERS.map((p) => { const r = games[p].run(); return only.includes(p) ? r : null; })) };
+    return g;
+  };
+
+  /** Host menerima "hello" dari B yang kembali (atomik, seperti `Room.rejoin`). */
+  const rejoinB = () => {
+    const from = remotes.A[1]!.release();
+    const g = makePeer("B", { p: 1, from });
+    for (const a of hostLog) {
+      if (a.k === "offer") g.pool.add(a.v as Interjection);
+      else remotes.B[a.p]?.push(a.k, a.v);
+    }
+    alive.add("B");
+    bBack = true;
+    return g.run().then(() => {});
+  };
+
+  for (const peer of PEERS) makePeer(peer);
+  return {
+    games,
+    run: async (only: Owner[] = PEERS) => {
+      await Promise.all(PEERS.map((p) => { const r = games[p].run(); return only.includes(p) ? r : null; }));
+      await rejoined;
+    },
+    get rejoined() {
+      return !!rejoined;
+    },
+  };
 }
 
 const snapshot = (g: Game) => JSON.stringify(g.state);
@@ -220,6 +288,21 @@ describe("online lockstep", { timeout: 60000 }, () => {
     await run(["A", "C"]);
     expect(games.A.state.winner).not.toBeNull();
     expect(snapshot(games.C)).toBe(snapshot(games.A));
+  });
+
+  it("pemain yang terputus bisa masuk lagi: riwayat diputar ulang & semua peer tetap sinkron", async () => {
+    // Simulasinya acak: kadang B sudah bangkrut / game selesai sebelum sempat terputus → coba seed lain
+    let rejoins = 0;
+    for (let seed = 1; seed <= 40 && rejoins < 4; seed++) {
+      const sim = simulate(seed, { dropBAfterActs: 3 + (seed % 4) * 6, rejoinBAfter: 1 + (seed % 3) * 8, anytime: seed % 2 === 0 });
+      await sim.run(["A", "C"]);
+      expect(sim.games.A.state.winner).not.toBeNull();
+      expect(snapshot(sim.games.C)).toBe(snapshot(sim.games.A));
+      if (!sim.rejoined) continue;
+      rejoins++;
+      expect(snapshot(sim.games.B)).toBe(snapshot(sim.games.A));
+    }
+    expect(rejoins).toBe(4);
   });
 
   it("menormalkan kode room", () => {

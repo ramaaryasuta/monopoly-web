@@ -270,6 +270,12 @@ body {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
 }
 .online-card p { margin: 0; font-size: 13px; opacity: 0.8; }
+.resume-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #e9fbe5; border: 3px solid var(--ink); border-radius: 14px;
+  padding: 8px 12px; margin-bottom: 12px; font-size: 14px;
+}
+.resume-row span { flex: 1 1 200px; }
 .online-card .btn { width: 100%; }
 .oc-icon { font-size: 36px; }
 .room-code {

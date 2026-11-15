@@ -12,7 +12,7 @@ import Peer, { type DataConnection, type MediaConnection } from "peerjs";
  * beli, pilih petak, negosiasi...). Bot dijalankan oleh host.
  */
 
-export const PROTOCOL = 2;
+export const PROTOCOL = 3;
 const PREFIX = "pulaukaya-v1-";
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // tanpa 0/O/1/I biar tidak salah baca
 export const CODE_LEN = 5;
@@ -39,14 +39,26 @@ export interface StartInfo {
   seats: Seat[];
 }
 
+/** Tamu yang masuk lagi ke game yang sedang berjalan. */
+export interface ResumeInfo {
+  /** Kursi milik perangkat ini. */
+  p: number;
+  /** Indeks keputusan kursi `p` yang pertama kali dibuat lagi oleh perangkat ini. */
+  from: number;
+}
+
+type Act = { p: number; k: string; v: unknown };
+
 type Msg =
-  | { t: "hello"; v: number; name: string }
+  | { t: "hello"; v: number; name: string; token?: string }
   | { t: "lobby"; seats: Seat[] }
   | { t: "setMe"; name?: string; char?: number }
   | { t: "reject"; reason: string }
   | { t: "start"; seed: number; seats: Seat[] }
   | { t: "act"; p: number; k: string; v: unknown }
   | { t: "left"; p: number }
+  | { t: "resume"; seed: number; seats: Seat[]; log: Act[]; p: number; from: number }
+  | { t: "back"; p: number; id: string }
   | { t: "voice"; id: string; on: boolean; mute: boolean; deaf: boolean }
   | { t: "ping" }
   | { t: "pong" };
@@ -114,6 +126,68 @@ export function normalizeCode(raw: string): string {
   return raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, CODE_LEN);
 }
 
+// ------------------------------------------------------------------ sesi (untuk reconnect)
+
+/**
+ * Identitas perangkat untuk sambung ulang. Bukan IP: browser tidak bisa membaca IP-nya
+ * sendiri, satu Wi-Fi bisa berbagi IP, dan IP HP berubah saat pindah jaringan.
+ * Token acak di localStorage tetap sama walau halaman dimuat ulang.
+ */
+const SESSION_KEY = "pulaukaya-session";
+const SESSION_TTL_MS = 6 * 60 * 60 * 1000;
+
+export interface SavedSession {
+  code: string;
+  token: string;
+  name: string;
+  at: number;
+}
+
+export function loadSession(): SavedSession | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null") as SavedSession | null;
+    if (!s || typeof s.code !== "string" || typeof s.token !== "string") return null;
+    if (Date.now() - s.at > SESSION_TTL_MS) return null;
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+function newToken(): string {
+  return typeof crypto.randomUUID === "function" ? crypto.randomUUID() : genCode() + genCode() + Date.now();
+}
+
+function saveSession(code: string, name: string): string {
+  const old = loadSession();
+  const token = old?.code === code ? old.token : newToken();
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ code, token, name, at: Date.now() } satisfies SavedSession));
+  } catch {
+    /* mode privat: reconnect tidak tersedia */
+  }
+  return token;
+}
+
+/** Perbarui waktu sesi (dipanggil berkala selama game) supaya tidak kedaluwarsa. */
+export function touchSession() {
+  const s = loadSession();
+  if (!s) return;
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...s, at: Date.now() }));
+  } catch {
+    /* abaikan */
+  }
+}
+
+export function clearSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* abaikan */
+  }
+}
+
 const cleanName = (n: unknown) => (typeof n === "string" ? n.trim().slice(0, 12) : "") || "Pemain";
 
 function openPeer(id?: string): Promise<Peer> {
@@ -143,7 +217,17 @@ export class Room {
   started = false;
   private conns = new Map<string, DataConnection>();
   private hostConn: DataConnection | null = null;
-  private actBuffer: { p: number; k: string; v: unknown }[] = [];
+  private actBuffer: Act[] = [];
+  /** Host: semua aksi sejak game dimulai, urut — dikirim ke tamu yang tersambung kembali. */
+  private log: Act[] = [];
+  private seed = 0;
+  /** Host: token sambung ulang per peer id (lobi) dan per kursi (setelah mulai). */
+  private tokenOf = new Map<string, string>();
+  private seatTokens: (string | undefined)[] = [];
+  /** Tamu: terisi bila perangkat ini masuk lagi ke game yang sedang berjalan. */
+  resume: ResumeInfo | null = null;
+  /** Seed game (dari pesan resume). */
+  resumeSeed = 0;
   private _onAct: ((p: number, k: string, v: unknown) => void) | null = null;
   private closed = false;
   private seatListeners = new Set<(seats: Seat[]) => void>();
@@ -156,6 +240,11 @@ export class Room {
   onStart: ((info: StartInfo) => void) | null = null;
   /** Pemain p (manusia) terputus di tengah game — host mengambil alih sebagai bot. */
   onPlayerLeft: ((p: number) => void) | null = null;
+  /**
+   * Pemain p tersambung kembali. Host mengembalikan indeks keputusan pertama yang
+   * kembali dibuat pemain itu (lihat `RemoteDecider.release`); di tamu nilai return diabaikan.
+   */
+  onPlayerBack: ((p: number) => number) | null = null;
   onClosed: ((reason: string) => void) | null = null;
 
   private constructor(
@@ -202,6 +291,7 @@ export class Room {
   static async join(code: string, name: string): Promise<Room> {
     const peer = await openPeer();
     const room = new Room(peer, code, false);
+    const token = saveSession(code, cleanName(name));
     await new Promise<void>((resolve, reject) => {
       const fail = (msg: string) => {
         clearTimeout(timer);
@@ -218,7 +308,7 @@ export class Room {
       room.hostConn = conn;
       let heartbeat: ((m: Msg) => boolean) | null = null;
       conn.once("open", () => {
-        conn.send({ t: "hello", v: PROTOCOL, name: cleanName(name) } satisfies Msg);
+        conn.send({ t: "hello", v: PROTOCOL, name: cleanName(name), token } satisfies Msg);
         heartbeat = watchConn(conn, () => {
           conn.close();
           room.close("Koneksi ke host terputus 📡");
@@ -229,10 +319,11 @@ export class Room {
         const m = raw as Msg;
         if (heartbeat?.(m)) return;
         if (m.t === "reject") {
+          if (!room.seats.length) clearSession();
           fail(m.reason);
           return;
         }
-        if (m.t === "lobby" && !room.seats.length) {
+        if ((m.t === "lobby" || m.t === "resume") && !room.seats.length) {
           clearTimeout(timer);
           peer.off("error", onError);
           room.seats = m.seats;
@@ -242,7 +333,7 @@ export class Room {
       });
       conn.on("close", () => {
         fail("Koneksi ke host terputus.");
-        room.close("Host menutup room 😢");
+        room.close("Koneksi ke host terputus 😢");
       });
     });
     return room;
@@ -266,8 +357,16 @@ export class Room {
           setTimeout(() => conn.close(), 300);
         };
         if (m.v !== PROTOCOL) return reject("Versi game berbeda. Muat ulang halaman (Ctrl+F5).");
-        if (this.started) return reject("Permainan di room ini sudah dimulai.");
+        const token = typeof m.token === "string" && m.token ? m.token.slice(0, 64) : undefined;
+        if (this.started) {
+          const idx = token ? this.seatTokens.indexOf(token) : -1;
+          if (idx < 0) return reject("Permainan di room ini sudah dimulai.");
+          return this.rejoin(conn, idx);
+        }
+        // Tamu yang memuat ulang halaman di lobi: buang kursi lamanya dulu
+        if (token) for (const [id, t] of [...this.tokenOf]) if (t === token && id !== conn.peer) this.dropGuest(id);
         if (this.seats.length >= MAX_SEATS) return reject("Room sudah penuh (maks 4).");
+        if (token) this.tokenOf.set(conn.peer, token);
         this.conns.set(conn.peer, conn);
         this.seats.push({ id: conn.peer, name: cleanName(m.name), char: this.freeChar(), kind: "guest" });
         this.broadcastLobby();
@@ -295,8 +394,32 @@ export class Room {
     conn.on("error", () => this.guestGone(conn.peer));
   }
 
+  /** Host: tamu kembali ke game yang sedang berjalan → kursinya dikembalikan & riwayat dikirim. */
+  private rejoin(conn: DataConnection, idx: number) {
+    const old = this.seats[idx];
+    // Koneksi lama belum terdeteksi putus (mis. halaman dimuat ulang): anggap putus sekarang
+    if (old.kind === "guest" && old.id !== conn.peer) this.dropGuest(old.id);
+    const from = this.onPlayerBack?.(idx) ?? 0;
+    this.seats[idx] = { ...this.seats[idx], kind: "guest", id: conn.peer };
+    this.conns.set(conn.peer, conn);
+    // Kirim riwayat lalu (secara sinkron) mulai teruskan aksi baru → urutannya terjaga
+    conn.send({ t: "resume", seed: this.seed, seats: this.seats, log: this.log, p: idx, from } satisfies Msg);
+    for (const [id, c] of this.conns) if (id !== conn.peer && c.open) c.send({ t: "back", p: idx, id: conn.peer } satisfies Msg);
+    if (this.myVoice.on) conn.send({ t: "voice", id: this.me, ...this.myVoice } satisfies Msg);
+    for (const [id, v] of this.voice) conn.send({ t: "voice", id, ...v } satisfies Msg);
+    this.emitSeats();
+  }
+
+  /** Host: putuskan koneksi tamu lama secara paksa. */
+  private dropGuest(id: string) {
+    const c = this.conns.get(id);
+    this.guestGone(id);
+    c?.close();
+  }
+
   private guestGone(id: string) {
     if (!this.conns.delete(id)) return;
+    if (!this.started) this.tokenOf.delete(id);
     this.dropVoice(id);
     const idx = this.seats.findIndex((s) => s.id === id);
     if (idx < 0) return;
@@ -384,6 +507,8 @@ export class Room {
     if (!this.isHost || this.started || this.seats.length < 2) return;
     const seed = Math.floor(Math.random() * 1e9);
     this.started = true;
+    this.seed = seed;
+    this.seatTokens = this.seats.map((s) => this.tokenOf.get(s.id));
     this.broadcast({ t: "start", seed, seats: this.seats });
     this.onStart?.({ seed, seats: structuredClone(this.seats) });
   }
@@ -395,6 +520,19 @@ export class Room {
       case "lobby":
         this.seats = m.seats;
         this.onLobby?.(m.seats);
+        this.emitSeats();
+        break;
+      case "resume":
+        this.started = true;
+        this.seats = m.seats;
+        this.resumeSeed = m.seed;
+        this.resume = { p: m.p, from: m.from };
+        for (const a of m.log) this.emitAct(a.p, a.k, a.v);
+        this.emitSeats();
+        break;
+      case "back":
+        if (this.seats[m.p]) this.seats[m.p] = { ...this.seats[m.p], kind: "guest", id: m.id };
+        this.onPlayerBack?.(m.p);
         this.emitSeats();
         break;
       case "start":
@@ -471,6 +609,7 @@ export class Room {
   }
 
   private emitAct(p: number, k: string, v: unknown) {
+    if (this.isHost) this.log.push({ p, k, v });
     if (this._onAct) this._onAct(p, k, v);
     else this.actBuffer.push({ p, k, v });
   }
@@ -478,7 +617,10 @@ export class Room {
   /** Kirim keputusan untuk pemain p (milik peer ini) ke semua peer lain. */
   sendAct(p: number, k: string, v: unknown) {
     const m: Msg = { t: "act", p, k, v };
-    if (this.isHost) this.broadcast(m);
+    if (this.isHost) {
+      this.log.push({ p, k, v });
+      this.broadcast(m);
+    }
     else this.hostConn?.send(m);
   }
 

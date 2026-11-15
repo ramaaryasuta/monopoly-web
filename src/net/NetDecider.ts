@@ -78,6 +78,11 @@ export class RemoteDecider implements Decider {
   private queue: { kind: string; v: unknown }[] = [];
   private pending: Pending | null = null;
   private fallback: Decider | null = null;
+  /** Jumlah keputusan yang sudah diminta game dari kursi ini (untuk serah-terima saat reconnect). */
+  private asked = 0;
+  /** Tamu yang tersambung kembali: keputusan ke-`localFrom` dst. diambil dari perangkat ini. */
+  private localFrom = Infinity;
+  private local: Decider | null = null;
 
   constructor(
     /** Dipanggil saat mulai/berhenti menunggu pemain ini (untuk label "sedang mikir"). */
@@ -106,11 +111,29 @@ export class RemoteDecider implements Decider {
     }
   }
 
+  /**
+   * Host: pemain kembali setelah terputus → bot berhenti mengambil keputusan baru.
+   * Return: indeks keputusan pertama yang menjadi milik pemain itu lagi
+   * (keputusan yang sedang dikerjakan bot tetap diselesaikan bot).
+   */
+  release(): number {
+    this.fallback = null;
+    return this.asked + this.queue.length - (this.pending ? 1 : 0);
+  }
+
+  /** Tamu yang tersambung kembali: setelah riwayat diputar ulang, keputusan ke-`from` dst. dibuat di sini. */
+  handover(from: number, local: Decider) {
+    this.localFrom = from;
+    this.local = local;
+  }
+
   private check(expected: Kind, got: string) {
     if (expected !== got) console.warn(`[online] desync? menunggu "${expected}" tapi dapat "${got}"`);
   }
 
   private next<T>(kind: Kind, viaFallback: (d: Decider) => Promise<T>): Promise<T> {
+    const idx = this.asked++;
+    if (this.local && idx >= this.localFrom) return viaFallback(this.local);
     const q = this.queue.shift();
     if (q) {
       this.check(kind, q.kind);

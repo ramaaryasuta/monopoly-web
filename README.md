@@ -36,6 +36,7 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 - **Lockstep deterministik**: semua perangkat menjalankan game dengan seed yang sama; yang dikirim hanya keputusan (lempar dadu, beli, pilih petak, negosiasi). Karena itu panel QA (`?qa=1`) dimatikan saat online.
 - **🤝 Nego kapan saja**: tombol di toolbar mengirim tawaran walau bukan giliranmu. Tawaran diantrekan lalu diproses di titik sinkron berikutnya (awal giliran, setelah tiap lemparan, akhir giliran, atau langsung menyela menu giliran pemain manusia). Urutannya ditentukan perangkat pemilik pemain yang sedang giliran, jadi semua peer tetap identik. Maks 3 tawaran per pemain per giliran.
 - Tamu terputus di tengah game → kursinya diambil alih bot oleh host. Host terputus → room bubar.
+- **Sambung ulang**: tamu yang terputus / me-refresh halaman bisa kembali ke kursinya lewat tombol **🔄 Sambung ulang** (di dialog putus koneksi atau di layar Main Online). Identitasnya pakai token acak di `localStorage` perangkat itu (bukan IP — browser tidak bisa membaca IP sendiri dan IP HP sering berganti). Host mengirim riwayat semua keputusan; perangkat tamu memutar ulang game tanpa animasi, lalu bot berhenti dan kursi kembali dimainkan tamu.
 - Tab yang disembunyikan menjeda animasinya sendiri; saat dibuka lagi game mengejar ketertinggalan, tidak ada langkah yang hilang.
 - Tanpa server TURN, sebagian jaringan (NAT ketat, beberapa operator seluler / Wi-Fi kantor) bisa gagal tersambung.
 - QA: `window.__room` di DevTools; `[Memonopoli] seed=... room=...` di console.

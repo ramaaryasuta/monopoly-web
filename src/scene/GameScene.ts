@@ -118,7 +118,7 @@ export class GameScene {
     this.pawns = state.players.map((p, i) => {
       const c = CRITTERS[characterIdx[i] % CRITTERS.length];
       const pawn = new Pawn(this.scene, this.shadows, c.kind, p.color, i);
-      pawn.setPosition(pawnSlot(0, i));
+      pawn.setPosition(pawnSlot(p.position, i));
       pawn.root.rotation.y = -Math.PI / 2;
       return pawn;
     });

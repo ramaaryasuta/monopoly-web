@@ -1,6 +1,6 @@
 import { CONFIG } from "../core/rules";
 import { rp } from "../core/money";
-import { CODE_LEN, MAX_SEATS, normalizeCode, Room, type Seat } from "../net/Room";
+import { clearSession, CODE_LEN, loadSession, MAX_SEATS, normalizeCode, Room, type Seat } from "../net/Room";
 import { Voice } from "../net/Voice";
 import type { PlayerSetup } from "../core/types";
 import { CRITTERS } from "../scene/Pawn";
@@ -329,7 +329,7 @@ export function showMenu(): Promise<MenuResult> {
     };
 
     /** Layar awal online: isi nama, lalu buat room atau gabung pakai kode. */
-    const online = (prefillCode = "", errorText = "") => {
+    const online = (prefillCode = "", errorText = "", autoJoin = false) => {
       dropVoice();
       room?.leave();
       room = null;
@@ -376,6 +376,31 @@ export function showMenu(): Promise<MenuResult> {
         if (e.key === "Enter") join();
       });
 
+      // Sesi game online sebelumnya (mis. koneksi putus / halaman dimuat ulang): tombol sambung ulang
+      const saved = loadSession();
+      let resumeRow: HTMLElement | null = null;
+      if (saved) {
+        const again = h("button", { class: "btn green small", "data-testid": "rejoin-room" }, "🔄 Sambung ulang");
+        const forget = h("button", { class: "btn white small", title: "Lupakan sesi ini" }, "✖");
+        again.addEventListener("click", () => {
+          code.value = saved.code;
+          if (!name.value.trim()) name.value = saved.name;
+          join();
+        });
+        forget.addEventListener("click", () => {
+          sfx.click();
+          clearSession();
+          resumeRow?.remove();
+        });
+        resumeRow = h(
+          "div",
+          { class: "resume-row", "data-testid": "resume-row" },
+          h("span", { html: `Tadi kamu main di room <b>${saved.code}</b>. Terputus? Masuk lagi ke kursimu:` }),
+          again,
+          forget,
+        );
+      }
+
       const card = (icon: string, title: string, text: string, ...extra: HTMLElement[]) =>
         h("div", { class: "online-card" }, h("div", { class: "oc-icon" }, icon), h("b", {}, title), h("p", {}, text), ...extra);
       show(
@@ -383,6 +408,7 @@ export function showMenu(): Promise<MenuResult> {
           "div",
           { class: "panel menu-panel online" },
           header("🌐 Main Online", home),
+          resumeRow,
           h("label", { class: "online-name-row" }, "Namamu", name),
           h(
             "div",
@@ -395,6 +421,7 @@ export function showMenu(): Promise<MenuResult> {
         ),
       );
       if (prefillCode) code.focus();
+      if (autoJoin && code.value.length === CODE_LEN) join();
     };
 
     /** Lobi room: kode, daftar kursi, tambah bot, mulai. */
@@ -497,7 +524,7 @@ export function showMenu(): Promise<MenuResult> {
         sfx.bad();
         online("", `📡 ${reason}`);
       };
-      r.onStart = ({ seed, seats }) => {
+      const begin = ({ seed, seats }: { seed: number; seats: Seat[] }) => {
         r.onLobby = null;
         r.onClosed = null;
         voiceUi = null; // pindah ke layar game
@@ -509,6 +536,12 @@ export function showMenu(): Promise<MenuResult> {
           online: { room: r, seats, voice, voicePanel },
         });
       };
+      r.onStart = begin;
+      // Tersambung kembali ke game yang sedang berjalan: langsung masuk ke papan
+      if (r.resume) {
+        begin({ seed: r.resumeSeed, seats: r.seats });
+        return;
+      }
       render(r.seats);
 
       show(
@@ -566,8 +599,11 @@ export function showMenu(): Promise<MenuResult> {
       );
     };
 
-    const roomParam = normalizeCode(new URLSearchParams(location.search).get("room") ?? "");
-    if (roomParam) online(roomParam);
+    const params = new URLSearchParams(location.search);
+    const roomParam = normalizeCode(params.get("room") ?? "");
+    const lastSession = loadSession();
+    if (params.has("rejoin") && lastSession) online(lastSession.code, "", true);
+    else if (roomParam) online(roomParam);
     else home();
   });
 }
