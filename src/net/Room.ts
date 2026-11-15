@@ -1,4 +1,5 @@
 import Peer, { type DataConnection, type MediaConnection } from "peerjs";
+import { getIceServers } from "./ice";
 
 /**
  * Room online peer-to-peer (WebRTC via PeerJS).
@@ -191,9 +192,10 @@ export function clearSession() {
 
 const cleanName = (n: unknown) => (typeof n === "string" ? n.trim().slice(0, 12) : "") || "Pemain";
 
-function openPeer(id?: string): Promise<Peer> {
+async function openPeer(id?: string): Promise<Peer> {
+  const opts = { debug: 1, config: { iceServers: await getIceServers() } };
   return new Promise((resolve, reject) => {
-    const peer = id ? new Peer(id, { debug: 1 }) : new Peer({ debug: 1 });
+    const peer = id ? new Peer(id, opts) : new Peer(opts);
     const timer = setTimeout(() => {
       peer.destroy();
       reject(new Error("Server penghubung tidak merespons. Cek koneksi internet."));
