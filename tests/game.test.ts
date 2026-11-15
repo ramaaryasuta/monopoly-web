@@ -18,12 +18,13 @@ function botGame(n: number, seed: number, maxTurns = 2000) {
 }
 
 describe("board", () => {
-  it("punya 32 petak dengan sudut di 0/8/16/24", () => {
-    expect(BOARD).toHaveLength(32);
+  it("punya 40 petak (9 lokasi per sisi) dengan sudut di 0/10/20/30", () => {
+    expect(BOARD).toHaveLength(40);
     expect(BOARD.map((t, i) => t.index === i).every(Boolean)).toBe(true);
-    expect([0, 8, 16, 24].map((i) => BOARD[i].kind)).toEqual(["start", "island", "festival", "tour"]);
+    expect([0, 10, 20, 30].map((i) => BOARD[i].kind)).toEqual(["start", "island", "festival", "tour"]);
     expect(RESORTS).toHaveLength(4);
     expect(PROPERTY_GROUPS).toHaveLength(8);
+    for (let side = 0; side < 4; side++) expect(BOARD.slice(side * 10 + 1, side * 10 + 10)).toHaveLength(9);
   });
 });
 
@@ -36,27 +37,29 @@ describe("rules", () => {
 
   it("sewa naik sesuai level dan festival", () => {
     const s = createGame(setups(2));
-    s.tiles[31] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 31)).toBe(120);
-    s.tiles[31].level = 5;
-    expect(rentFor(s, 31)).toBe(2000);
-    s.tiles[31].festival = true;
-    expect(rentFor(s, 31)).toBe(4000);
+    s.tiles[39] = { owner: 0, level: 1, festival: false };
+    expect(rentFor(s, 39)).toBe(120);
+    s.tiles[39].level = 5;
+    expect(rentFor(s, 39)).toBe(2000);
+    s.tiles[39].festival = true;
+    expect(rentFor(s, 39)).toBe(4000);
   });
 
   it("sewa tanah x2 jika satu grup lengkap", () => {
     const s = createGame(setups(2));
-    s.tiles[30] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 30)).toBe(110);
-    s.tiles[31] = { owner: 0, level: 1, festival: false };
-    expect(rentFor(s, 30)).toBe(210);
+    s.tiles[37] = { owner: 0, level: 1, festival: false };
+    expect(rentFor(s, 37)).toBe(110);
+    s.tiles[38] = { owner: 0, level: 1, festival: false };
+    expect(rentFor(s, 37)).toBe(110);
+    s.tiles[39] = { owner: 0, level: 1, festival: false };
+    expect(rentFor(s, 37)).toBe(210);
   });
 
   it("sewa resort berlipat sesuai jumlah resort", () => {
     const s = createGame(setups(2));
     s.tiles[2] = { owner: 1, level: 1, festival: false };
     expect(rentFor(s, 2)).toBe(50);
-    s.tiles[13] = { owner: 1, level: 1, festival: false };
+    s.tiles[16] = { owner: 1, level: 1, festival: false };
     expect(rentFor(s, 2)).toBe(100);
   });
 
@@ -77,7 +80,7 @@ describe("rules", () => {
 describe("game flow", () => {
   it("melewati Mulai memberi gaji", async () => {
     const g = botGame(2, 1);
-    g.state.players[0].position = 30;
+    g.state.players[0].position = 38;
     await g.moveSteps(0, 4);
     expect(g.state.players[0].position).toBe(2);
     expect(g.state.players[0].money).toBe(CONFIG.startMoney + CONFIG.salary);
@@ -87,7 +90,7 @@ describe("game flow", () => {
     const g = botGame(2, 1);
     g.forcedDice = [[1, 1], [2, 2], [3, 3]];
     await g.playTurn();
-    expect(g.state.players[0].position).toBe(8);
+    expect(g.state.players[0].position).toBe(10);
     expect(g.state.players[0].islandTurns).toBe(CONFIG.islandTurns);
   });
 
@@ -102,39 +105,39 @@ describe("game flow", () => {
 
   it("menjual properti sebelum bangkrut", async () => {
     const g = botGame(2, 1);
-    g.state.tiles[31] = { owner: 1, level: 4, festival: false };
+    g.state.tiles[39] = { owner: 1, level: 4, festival: false };
     g.state.players[1].money = 0;
     await g.charge(1, 100, 0);
     expect(g.state.players[1].bankrupt).toBe(false);
-    expect(g.state.tiles[31].owner).toBeNull();
+    expect(g.state.tiles[39].owner).toBeNull();
   });
 
   it("semua kartu konyol bisa dimainkan tanpa merusak state", async () => {
     for (const card of CARDS) {
       const g = botGame(4, 7);
-      g.state.players[2].position = 8;
+      g.state.players[2].position = 10;
       g.state.players[2].islandTurns = 2;
-      g.state.players[0].position = 5; // Paket Shopee
+      g.state.players[0].position = 6; // Paket Shopee
       g.forcedCard = card.id;
       await g.resolveTile(0);
       for (const p of g.state.players) {
         expect(p.money, card.id).toBeGreaterThanOrEqual(0);
         expect(p.position, card.id).toBeGreaterThanOrEqual(0);
         expect(p.position, card.id).toBeLessThan(BOARD.length);
-        if (p.islandTurns > 0) expect(p.position, card.id).toBe(8);
+        if (p.islandTurns > 0) expect(p.position, card.id).toBe(10);
       }
     }
   });
 
   it("kentut nuklir mendorong lawan mundur 2 petak", async () => {
     const g = botGame(3, 1);
-    g.state.players[0].position = 5;
+    g.state.players[0].position = 6;
     g.state.players[1].position = 12;
     g.state.players[2].position = 1;
     g.forcedCard = "fart";
     await g.resolveTile(0);
     expect(g.state.players[1].position).toBe(10);
-    expect(g.state.players[2].position).toBe(31);
+    expect(g.state.players[2].position).toBe(39);
   });
 
   it("semua event heboh bisa dijalankan", async () => {
@@ -246,53 +249,53 @@ describe("negosiasi & pasar terbuka", () => {
   it("tukar wilayah + uang bila diterima", async () => {
     const g = botGame(2, 1);
     g.state.tiles[1] = { owner: 0, level: 2, festival: false };
-    g.state.tiles[31] = { owner: 1, level: 1, festival: false };
+    g.state.tiles[39] = { owner: 1, level: 1, festival: false };
     scripted(g, { 1: [{ type: "accept" }] });
-    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [1], giveMoney: 100, takeTiles: [31], takeMoney: 0 } });
+    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [1], giveMoney: 100, takeTiles: [39], takeMoney: 0 } });
     expect(g.state.tiles[1].owner).toBe(1);
-    expect(g.state.tiles[31].owner).toBe(0);
+    expect(g.state.tiles[39].owner).toBe(0);
     expect(g.state.players[0].money).toBe(CONFIG.startMoney - 100);
     expect(g.state.players[1].money).toBe(CONFIG.startMoney + 100);
   });
 
   it("ditolak → tidak ada yang berubah", async () => {
     const g = botGame(2, 1);
-    g.state.tiles[31] = { owner: 1, level: 1, festival: false };
+    g.state.tiles[39] = { owner: 1, level: 1, festival: false };
     scripted(g, { 1: [{ type: "reject" }] });
-    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [31], takeMoney: 0 } });
-    expect(g.state.tiles[31].owner).toBe(1);
+    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [39], takeMoney: 0 } });
+    expect(g.state.tiles[39].owner).toBe(1);
     expect(g.state.players[0].money).toBe(CONFIG.startMoney);
   });
 
   it("tawar balik lalu diterima pengirim awal", async () => {
     const g = botGame(2, 1);
-    g.state.tiles[31] = { owner: 1, level: 1, festival: false };
+    g.state.tiles[39] = { owner: 1, level: 1, festival: false };
     scripted(g, {
-      1: [{ type: "counter", offer: { from: 1, to: 0, giveTiles: [31], giveMoney: 0, takeTiles: [], takeMoney: 300 } }],
+      1: [{ type: "counter", offer: { from: 1, to: 0, giveTiles: [39], giveMoney: 0, takeTiles: [], takeMoney: 300 } }],
       0: [{ type: "accept" }],
     });
-    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [31], takeMoney: 0 } });
-    expect(g.state.tiles[31].owner).toBe(0);
+    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [39], takeMoney: 0 } });
+    expect(g.state.tiles[39].owner).toBe(0);
     expect(g.state.players[0].money).toBe(CONFIG.startMoney - 300);
   });
 
   it("tawaran tidak sah diabaikan (wilayah bukan milik lawan)", async () => {
     const g = botGame(2, 1);
     scripted(g, { 1: [{ type: "accept" }] });
-    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [31], takeMoney: 0 } });
-    expect(g.state.tiles[31].owner).toBeNull();
+    await g.applyDeal(0, { type: "trade", offer: { from: 0, to: 1, giveTiles: [], giveMoney: 100, takeTiles: [39], takeMoney: 0 } });
+    expect(g.state.tiles[39].owner).toBeNull();
     expect(g.state.players[0].money).toBe(CONFIG.startMoney);
   });
 
   it("pajang, beli, dan listing hilang saat pindah tangan", async () => {
     const g = botGame(3, 1);
-    g.state.tiles[31] = { owner: 1, level: 1, festival: false };
-    await g.applyDeal(1, { type: "list", tile: 31, price: 250 });
-    expect(g.state.market).toEqual([{ tile: 31, seller: 1, price: 250 }]);
-    await g.applyDeal(1, { type: "buy", tile: 31 }); // tidak bisa beli milik sendiri
-    expect(g.state.tiles[31].owner).toBe(1);
-    await g.applyDeal(2, { type: "buy", tile: 31 });
-    expect(g.state.tiles[31].owner).toBe(2);
+    g.state.tiles[39] = { owner: 1, level: 1, festival: false };
+    await g.applyDeal(1, { type: "list", tile: 39, price: 250 });
+    expect(g.state.market).toEqual([{ tile: 39, seller: 1, price: 250 }]);
+    await g.applyDeal(1, { type: "buy", tile: 39 }); // tidak bisa beli milik sendiri
+    expect(g.state.tiles[39].owner).toBe(1);
+    await g.applyDeal(2, { type: "buy", tile: 39 });
+    expect(g.state.tiles[39].owner).toBe(2);
     expect(g.state.players[2].money).toBe(CONFIG.startMoney - 250);
     expect(g.state.players[1].money).toBe(CONFIG.startMoney + 250);
     expect(g.state.market).toEqual([]);

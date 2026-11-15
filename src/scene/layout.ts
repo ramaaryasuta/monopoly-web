@@ -1,15 +1,20 @@
 import { Vector3 } from "@babylonjs/core";
+import { SIDE_LEN } from "../data/board";
 
 /** Ukuran satu petak (unit dunia). */
-export const TILE = 2.4;
-export const HALF = 4; // papan 9x9, koordinat grid -4..4
+export const TILE = 2.1;
+export const HALF = SIDE_LEN / 2; // papan 11x11, koordinat grid -5..5
+/** Lebar papan dalam satuan petak (termasuk sudut). */
+export const GRID = SIDE_LEN + 1;
+/** Skala dunia relatif terhadap papan lama (9 petak × 2.4) untuk dekorasi yang posisinya absolut. */
+export const WORLD_SCALE = (TILE * GRID) / (2.4 * 9);
 export const TILE_HEIGHT = 0.5;
 export const TILE_TOP = TILE_HEIGHT;
 
 /** Koordinat grid (x, z) dari indeks petak. Petak 0 di kanan-bawah, berjalan searah jarum jam dilihat dari atas. */
 export function gridOf(index: number): { x: number; z: number } {
-  const side = Math.floor(index / 8);
-  const k = index % 8;
+  const side = Math.floor(index / SIDE_LEN);
+  const k = index % SIDE_LEN;
   switch (side) {
     case 0:
       return { x: HALF - k, z: -HALF };
@@ -29,8 +34,8 @@ export function tilePosition(index: number, y = TILE_TOP): Vector3 {
 
 /** Arah "ke dalam" papan (menuju pusat) untuk petak non-sudut. */
 export function inwardDir(index: number): Vector3 {
-  const side = Math.floor(index / 8);
-  const k = index % 8;
+  const side = Math.floor(index / SIDE_LEN);
+  const k = index % SIDE_LEN;
   if (k === 0) {
     const p = tilePosition(index, 0);
     return new Vector3(-Math.sign(p.x), 0, -Math.sign(p.z)).normalize();
@@ -40,7 +45,7 @@ export function inwardDir(index: number): Vector3 {
 
 /** Rotasi Y supaya label petak terbaca dari luar papan (sisi luar = bawah teks). */
 export function tileYaw(index: number): number {
-  const side = Math.floor(index / 8);
+  const side = Math.floor(index / SIDE_LEN);
   return [0, Math.PI / 2, Math.PI, -Math.PI / 2][side];
 }
 

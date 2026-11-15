@@ -1,6 +1,6 @@
 import { DynamicTexture, type Scene } from "@babylonjs/core";
 import type { TileDef } from "../core/types";
-import { GROUP_COLORS } from "../data/board";
+import { GROUP_COLORS, isCorner as cornerTile } from "../data/board";
 import { rp } from "../core/money";
 
 const ICONS: Record<string, string> = {
@@ -58,7 +58,7 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
   const k = S / 256;
   ctx.clearRect(0, 0, S, S);
 
-  const isCorner = def.index % 8 === 0;
+  const isCorner = cornerTile(def.index);
   const base = isCorner ? "#fff3c4" : "#fffaf0";
   roundRect(ctx, 6 * k, 6 * k, S - 12 * k, S - 12 * k, 28 * k);
   ctx.fillStyle = base;

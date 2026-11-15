@@ -28,7 +28,7 @@ import { sfx } from "./sfx";
 import { clearToonCache } from "./toon";
 import { Ease, lerp, tween } from "./tween";
 
-const HOME = { alpha: -Math.PI / 2, beta: 0.85, radius: 34, target: new Vector3(0, 0, -1) };
+const HOME = { alpha: -Math.PI / 2, beta: 0.85, radius: 36, target: new Vector3(0, 0, -1) };
 
 export class GameScene {
   readonly engine: Engine;

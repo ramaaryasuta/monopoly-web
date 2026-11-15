@@ -12,8 +12,8 @@ import {
 import earcut from "earcut";
 import { rentFor } from "../core/rules";
 import type { GameState } from "../core/types";
-import { BOARD } from "../data/board";
-import { gridOf, inwardDir, TILE, TILE_HEIGHT, tilePosition, tileYaw } from "./layout";
+import { BOARD, isCorner } from "../data/board";
+import { GRID, gridOf, HALF, inwardDir, TILE, TILE_HEIGHT, tilePosition, tileYaw, WORLD_SCALE } from "./layout";
 import { createTileTexture, drawTile, FONT } from "./tileArt";
 import { outline, toon } from "./toon";
 import { Ease, tween } from "./tween";
@@ -86,7 +86,7 @@ export class BoardView {
 
   private buildEnvironment() {
     const s = this.scene;
-    const R = TILE * 9 * 0.82;
+    const R = TILE * GRID * 0.82;
 
     // Laut
     const sea = MeshBuilder.CreateDisc("sea", { radius: 120, tessellation: 64 }, s);
@@ -120,7 +120,7 @@ export class BoardView {
     outline(grass, 0.06);
 
     // Area dalam papan (rumput lebih terang)
-    const inner = MeshBuilder.CreateBox("inner", { width: TILE * 7.6, depth: TILE * 7.6, height: 0.2 }, s);
+    const inner = MeshBuilder.CreateBox("inner", { width: TILE * (GRID - 1.4), depth: TILE * (GRID - 1.4), height: 0.2 }, s);
     inner.position.y = 0.05;
     inner.material = toon(s, "#8ef07a");
     inner.receiveShadows = true;
@@ -141,7 +141,7 @@ export class BoardView {
     hillSpots.forEach(([x, z, r], i) => {
       const hill = MeshBuilder.CreateSphere(`hill${i}`, { diameter: r * 2, segments: 16 }, s);
       hill.scaling.y = 0.55;
-      hill.position.set(x, -0.3, z);
+      hill.position.set(x * WORLD_SCALE, -0.3, z * WORLD_SCALE);
       hill.material = toon(s, i % 2 ? "#4fc94a" : "#5ed65a");
       hill.receiveShadows = true;
       outline(hill, 0.05);
@@ -151,18 +151,18 @@ export class BoardView {
     const rnd = mulberry(7);
     for (let i = 0; i < 40; i++) {
       const ang = rnd() * Math.PI * 2;
-      const dist = TILE * 5.4 + rnd() * 4.5;
+      const dist = TILE * (HALF + 1.4) + rnd() * 4.5;
       const x = Math.cos(ang) * dist;
       const z = Math.sin(ang) * dist;
       if (Math.hypot(x, z) > R - 1) continue;
       // Jangan taruh pohon di sisi depan (arah kamera) agar papan tidak tertutup
-      if (z < -TILE * 4.6) continue;
+      if (z < -TILE * (HALF + 0.6)) continue;
       if (rnd() < 0.7) this.makeTree(new Vector3(x, 0, z), 0.8 + rnd() * 0.6, i);
       else this.makeMushroom(new Vector3(x, 0, z), 0.7 + rnd() * 0.4, i);
     }
 
     // Pohon kecil di sudut area dalam
-    const c = TILE * 2.6;
+    const c = TILE * (HALF - 1.4);
     [
       [-c, -c],
       [c, -c],
@@ -353,7 +353,7 @@ export class BoardView {
     ];
     duckSpots.forEach(([x, z, sc], i) => {
       const duck = new TransformNode(`duck${i}`, s);
-      duck.position.set(x, -1.1, z);
+      duck.position.set(x * WORLD_SCALE, -1.1, z * WORLD_SCALE);
       duck.scaling.setAll(sc);
       duck.rotation.y = Math.PI + i;
       const b = mk(MeshBuilder.CreateSphere("duckBody", { diameter: 2, segments: 14 }, s), "#ffd23f", duck);
@@ -391,7 +391,7 @@ export class BoardView {
 
     // Sendal jepit raksasa nancep di bukit belakang
     const sandal = new TransformNode("giantSandal", s);
-    sandal.position.set(15, 1.2, 15.5);
+    sandal.position.set(15 * WORLD_SCALE, 1.2, 15.5 * WORLD_SCALE);
     sandal.rotation.set(-1.1, 0.5, 0.2);
     const sole = mk(MeshBuilder.CreateCylinder("sole", { diameter: 2.4, height: 0.35, tessellation: 24 }, s), "#ffffff", sandal);
     sole.scaling.set(1, 1, 2);
@@ -406,7 +406,7 @@ export class BoardView {
 
     // Donat raksasa tergeletak
     const donut = new TransformNode("giantDonut", s);
-    donut.position.set(-15.5, 0.6, 14);
+    donut.position.set(-15.5 * WORLD_SCALE, 0.6, 14 * WORLD_SCALE);
     donut.rotation.set(0.25, 0, 0.2);
     mk(MeshBuilder.CreateTorus("dough", { diameter: 3.2, thickness: 1.3, tessellation: 24 }, s), "#e9a04b", donut);
     const frost = mk(MeshBuilder.CreateTorus("frost", { diameter: 3.2, thickness: 1.2, tessellation: 24 }, s), "#ff7ab6", donut, 0);
@@ -450,12 +450,12 @@ export class BoardView {
       const p = tilePosition(def.index, 0);
       root.position.copyFrom(p);
       root.rotation.y = tileYaw(def.index);
-      const isCorner = def.index % 8 === 0;
+      const corner = isCorner(def.index);
 
       const size = TILE * 0.94;
       const block = MeshBuilder.CreateBox(`block${def.index}`, { width: size, depth: size, height: TILE_HEIGHT }, s);
       block.position.y = TILE_HEIGHT / 2;
-      block.material = toon(s, isCorner ? "#ffcf4d" : "#fff6e6");
+      block.material = toon(s, corner ? "#ffcf4d" : "#fff6e6");
       block.parent = root;
       block.receiveShadows = true;
       outline(block, 0.03);

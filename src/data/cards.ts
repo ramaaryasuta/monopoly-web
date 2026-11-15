@@ -1,3 +1,4 @@
+import { FESTIVAL_INDEX, tileIndexByName } from "./board";
 export type CardEffect =
   | { type: "gain"; amount: number }
   | { type: "pay"; amount: number }
@@ -44,7 +45,7 @@ export const CARDS: Card[] = [
   { id: "toIsland", title: "Digrebek Polisi", text: "Ketahuan main judi online. Langsung digiring ke Nusakambangan!", icon: "🚓", effect: { type: "island" }, fx: "cry" },
   { id: "birthday", title: "Ultah Dadakan", text: "Ngaku ulang tahun (padahal bukan). Setiap pemain memberimu Rp50 jt.", icon: "🎂", effect: { type: "collectFromAll", amount: 50 }, fx: "dance" },
   { id: "back3", title: "Kunci Motor Ketinggalan", text: "Balik lagi! Mundur 3 petak.", icon: "🔑", effect: { type: "back", steps: 3 }, fx: "dizzy" },
-  { id: "toFestival", title: "Dapat Undangan VIP", text: "Namamu nyelip di daftar tamu. Berangkat ke Pesta Pejabat!", icon: "🥂", effect: { type: "goto", tile: 16 }, fx: "party" },
+  { id: "toFestival", title: "Dapat Undangan VIP", text: "Namamu nyelip di daftar tamu. Berangkat ke Pesta Pejabat!", icon: "🥂", effect: { type: "goto", tile: FESTIVAL_INDEX }, fx: "party" },
   { id: "fart", title: "Kentut Nuklir", text: "BRRRT! Semua pemain lain terpental mundur 2 petak.", icon: "💨", effect: { type: "pushOthers", steps: 2 }, fx: "fart" },
   { id: "heli", title: "Nebeng Heli Pejabat", text: "Disangka ajudan, kamu ikut terbang lalu diturunkan di petak acak.", icon: "🚁", effect: { type: "randomTile" }, fx: "heli" },
   { id: "swap", title: "Tukar Jiwa", text: "Kesamber petir bareng pemain lain. Kalian tukar posisi!", icon: "⚡", effect: { type: "swap" }, fx: "shake" },
@@ -67,8 +68,8 @@ export const CARDS: Card[] = [
   { id: "pinjol", title: "Kartu Pinjol", text: "Klik 'cairkan' tanpa baca syarat. Bunganya beranak pinak! Bayar Rp150 jt.", icon: "📱", effect: { type: "pay", amount: 150 }, fx: "cry" },
   { id: "viral", title: "Kartu Viral", text: "Kontenmu FYP! Setiap pemain kirim saweran Rp40 jt.", icon: "🤳", effect: { type: "collectFromAll", amount: 40 }, fx: "dance" },
   { id: "gusur", title: "Kartu Kena Gusur", text: "Lahanmu kena proyek strategis. Angkat koper, mundur 4 petak.", icon: "🚜", effect: { type: "back", steps: 4 }, fx: "shake" },
-  { id: "wapres", title: "Kartu Wapres Resign", text: "Kursi kosong mendadak! Kamu langsung meluncur ke Istana Presiden.", icon: "🪑", effect: { type: "goto", tile: 31 }, fx: "dizzy" },
-  { id: "ronda", title: "Dipanggil Jadi Saksi", text: "Surat panggilan datang. Kamu buru-buru ke Polri.", icon: "👮", effect: { type: "goto", tile: 9 }, fx: "dizzy" },
+  { id: "wapres", title: "Kartu Wapres Resign", text: "Kursi kosong mendadak! Kamu langsung meluncur ke Istana Presiden.", icon: "🪑", effect: { type: "goto", tile: tileIndexByName("Istana Presiden") }, fx: "dizzy" },
+  { id: "ronda", title: "Dipanggil Jadi Saksi", text: "Surat panggilan datang. Kamu buru-buru ke Polri.", icon: "👮", effect: { type: "goto", tile: tileIndexByName("Polri") }, fx: "dizzy" },
 ];
 
 /** Event konyol sedunia: kadang muncul di awal ronde. */
