@@ -140,6 +140,68 @@ describe("game flow", () => {
     expect(g.state.players[2].position).toBe(39);
   });
 
+  it("kartu 'pergi ke' tidak memberi gaji kecuali tujuannya Mulai", async () => {
+    const g = botGame(2, 1);
+    g.state.players[0].position = 22; // Paket Blibli, Polri ada di belakang
+    g.forcedCard = "ronda";
+    await g.resolveTile(0);
+    expect(g.state.players[0].position).toBe(11);
+    expect(g.state.players[0].money).toBeLessThanOrEqual(CONFIG.startMoney);
+
+    const h = botGame(2, 1);
+    h.state.players[0].position = 35;
+    h.forcedCard = "toStart";
+    await h.resolveTile(0);
+    expect(h.state.players[0].position).toBe(0);
+    expect(h.state.players[0].money).toBe(CONFIG.startMoney + CONFIG.salary);
+  });
+
+  it("Atap Bocor hanya menagih bangunan, bukan tanah kosong / wisata", async () => {
+    const g = botGame(2, 1);
+    g.state.players[0].position = 6;
+    g.state.tiles[1] = { owner: 0, level: 1, festival: false }; // tanah
+    g.state.tiles[2] = { owner: 0, level: 1, festival: false }; // wisata
+    g.state.tiles[3] = { owner: 0, level: 3, festival: false }; // rumah 2 = 2 bangunan
+    g.forcedCard = "repair";
+    await g.resolveTile(0);
+    expect(g.state.players[0].money).toBe(CONFIG.startMoney - 2 * 20);
+  });
+
+  it("helikopter (kartu & event) selalu mendarat di petak lokasi", async () => {
+    const isLocation = (i: number) => BOARD[i].kind === "property" || BOARD[i].kind === "resort";
+    for (let seed = 1; seed <= 40; seed++) {
+      const g = botGame(2, seed);
+      g.state.players[0].position = 6;
+      g.forcedCard = "heli";
+      await g.resolveTile(0);
+      expect(isLocation(g.state.players[0].position), `kartu seed ${seed}`).toBe(true);
+      expect(g.state.players[0].islandTurns).toBe(0);
+
+      const h = botGame(2, seed);
+      const before = h.state.players.map((p) => p.position);
+      await h.applyChaos(CHAOS_EVENTS.find((e) => e.id === "heli")!);
+      const moved = h.state.players.findIndex((p, i) => p.position !== before[i]);
+      expect(moved, `event seed ${seed}`).toBeGreaterThanOrEqual(0);
+      expect(isLocation(h.state.players[moved].position), `event seed ${seed}`).toBe(true);
+    }
+  });
+
+  it("Tukar Jiwa tidak memilih pemain di Nusakambangan", async () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const g = botGame(3, seed);
+      g.state.players[0].position = 6;
+      g.state.players[1].position = 10;
+      g.state.players[1].islandTurns = 2;
+      g.state.players[2].position = 25;
+      g.forcedCard = "swap";
+      await g.resolveTile(0);
+      expect(g.state.players[1].position).toBe(10);
+      expect(g.state.players[1].islandTurns).toBe(2);
+      expect(g.state.players[2].position).toBe(6);
+      expect(g.state.players[0].position).toBe(25);
+    }
+  });
+
   it("semua event heboh bisa dijalankan", async () => {
     for (const ev of CHAOS_EVENTS) {
       const g = botGame(4, 3);

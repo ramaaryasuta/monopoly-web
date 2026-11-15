@@ -249,7 +249,8 @@ export class Game {
 
   // ---------------------------------------------------------------- movement
 
-  async moveSteps(pid: number, steps: number, mode: "walk" | "fly" = "walk") {
+  /** `salary = false`: lewat Mulai tidak memberi gaji (dipakai kartu "pergi ke"). */
+  async moveSteps(pid: number, steps: number, mode: "walk" | "fly" = "walk", salary = true) {
     const p = this.state.players[pid];
     const path: number[] = [];
     let passedStart = false;
@@ -261,10 +262,10 @@ export class Game {
     if (path.length === 0) return;
     await this.presenter.movePawn(pid, path, mode);
     p.position = path[path.length - 1];
-    if (passedStart) {
-      const salary = salaryFor(this.state);
-      this.addMoney(pid, salary);
-      this.presenter.message(`${p.name} melewati Mulai: +${fmt(salary)}`, "good");
+    if (passedStart && salary) {
+      const amount = salaryFor(this.state);
+      this.addMoney(pid, amount);
+      this.presenter.message(`${p.name} melewati Mulai: +${fmt(amount)}`, "good");
     }
   }
 
@@ -448,7 +449,11 @@ export class Game {
         await this.charge(pid, e.amount, null);
         return;
       case "repair": {
-        const levels = ownedTiles(this.state, pid).reduce((s, i) => s + this.state.tiles[i].level, 0);
+        // Hanya bangunan yang dihitung: tanah kosong & tempat wisata tidak kena biaya.
+        const levels = ownedTiles(this.state, pid).reduce(
+          (s, i) => s + (BOARD[i].kind === "property" ? Math.max(0, this.state.tiles[i].level - 1) : 0),
+          0,
+        );
         const cost = levels * e.perLevel;
         if (cost > 0) await this.charge(pid, cost, null);
         return;
@@ -458,7 +463,8 @@ export class Game {
         return;
       case "goto": {
         const steps = (e.tile - p.position + BOARD_SIZE) % BOARD_SIZE;
-        await this.moveSteps(pid, steps, "fly");
+        // Dipanggil langsung ke tujuan: hanya dapat gaji kalau tujuannya memang petak Mulai.
+        await this.moveSteps(pid, steps, "fly", e.tile === 0);
         await this.resolveTile(pid);
         return;
       }
@@ -518,7 +524,8 @@ export class Game {
         }
         return;
       case "swap": {
-        const others = activePlayers(this.state).filter((i) => i !== pid);
+        // Pemain di Nusakambangan dijaga ketat: tidak bisa diajak tukar posisi.
+        const others = activePlayers(this.state).filter((i) => i !== pid && this.state.players[i].islandTurns === 0);
         if (others.length === 0) return;
         const o = this.state.players[others[Math.floor(this.rng() * others.length)]];
         const a = p.position;
@@ -529,13 +536,10 @@ export class Game {
         p.position = b;
         await this.presenter.movePawn(o.id, [a], "fly");
         o.position = a;
-        // Yang tadinya terjebak di pulau ikut bebas/terjebak mengikuti posisinya
-        if (p.position !== ISLAND_INDEX) p.islandTurns = 0;
-        if (o.position !== ISLAND_INDEX) o.islandTurns = 0;
         return;
       }
       case "randomTile": {
-        const dest = Math.floor(this.rng() * BOARD_SIZE);
+        const dest = this.heliDestination(p.position);
         this.presenter.message(`Helikopter menurunkan ${p.name} di ${BOARD[dest].name}.`);
         if (dest !== p.position) {
           await this.presenter.movePawn(pid, [dest], "fly");
@@ -856,7 +860,7 @@ export class Game {
           this.presenter.message(`Helikopter mau jemput ${v.name}, tapi penjagaan Nusakambangan terlalu ketat. Batal!`);
           return;
         }
-        const dest = Math.floor(this.rng() * BOARD_SIZE);
+        const dest = this.heliDestination(v.position);
         this.presenter.message(`${v.name} diangkut helikopter pejabat ke ${BOARD[dest].name}!`);
         if (dest !== v.position) {
           await this.presenter.movePawn(v.id, [dest], "fly");
@@ -870,6 +874,15 @@ export class Game {
   }
 
   // ---------------------------------------------------------------- money
+
+  /**
+   * Tujuan helikopter (kartu & event): petak lokasi acak (properti/wisata) selain posisi sekarang.
+   * Tidak pernah sudut atau petak Paket, jadi tidak bisa menjebloskan ke penjara atau memicu kartu berantai.
+   */
+  private heliDestination(from: number): number {
+    const options = BOARD.filter((t) => (t.kind === "property" || t.kind === "resort") && t.index !== from).map((t) => t.index);
+    return options[Math.floor(this.rng() * options.length)];
+  }
 
   private addMoney(pid: number, delta: number) {
     if (delta === 0) return;
