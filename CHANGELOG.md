@@ -2,6 +2,14 @@
 
 Semua perubahan penting pada Memonopoli : Wilayah WNI dicatat di sini.
 
+## [0.3.3-beta] - 2026-11-16
+
+### UI dalam permainan
+- Dialog **Beli/Bangun** kini memisahkan harga beli dan sewa dengan jelas:
+  - Sisi kiri: **🛒 Bayar Rp…** (yang kamu bayar sekarang) dan sisa uangmu setelah beli.
+  - Sisi kanan: kotak **💰 SEWA +Rp… dari lawan**, yaitu uang yang kamu terima tiap kali pemain lain menginjak petak itu.
+  - Keterangan singkat di atas tombol menjelaskan arti **Bayar** dan **Sewa**.
+
 ## [0.3.2-beta] - 2026-11-16
 
 ### UI dalam permainan
