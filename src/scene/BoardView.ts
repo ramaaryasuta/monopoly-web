@@ -9,8 +9,7 @@ import {
   type ShadowGenerator,
   type Scene,
 } from "@babylonjs/core";
-import earcut from "earcut";
-import { ownsGroup, rentFor } from "../core/rules";
+import { CONFIG, ownsGroup, rentFor } from "../core/rules";
 import type { GameState } from "../core/types";
 import { BOARD, isCorner, PROPERTY_GROUPS } from "../data/board";
 import { GRID, gridOf, HALF, inwardDir, TILE, TILE_HEIGHT, tilePosition, tileYaw, WORLD_SCALE } from "./layout";
@@ -34,9 +33,14 @@ interface TileView {
 
 export class BoardView {
   tiles: TileView[] = [];
-  private festivalStar: Mesh;
+  private partyMarker: Mesh;
   private highlighted = new Set<number>();
   private decor: TransformNode[] = [];
+  /** Penanda petak tujuan pion yang sedang berjalan (cincin + panah). */
+  private destMarker: TransformNode;
+  private destRing: Mesh;
+  private destArrow: Mesh;
+  private destTile: number | null = null;
 
   constructor(
     private scene: Scene,
@@ -45,10 +49,11 @@ export class BoardView {
     this.buildEnvironment();
     this.freezeStaticDecor();
     this.buildTiles();
-    this.festivalStar = this.makeStar();
-    this.festivalStar.setEnabled(false);
+    this.partyMarker = this.makePartyMarker();
+    this.partyMarker.setEnabled(false);
+    [this.destMarker, this.destRing, this.destArrow] = this.makeDestMarker();
 
-    // Animasi idle: awan melayang, bintang festival
+    // Animasi idle: awan melayang, gelas Pesta Pejabat
     let time = 0;
     scene.onBeforeRenderObservable.add(() => {
       const dt = scene.getEngine().getDeltaTime() / 1000;
@@ -76,9 +81,27 @@ export class BoardView {
           d.position.y = m.baseY + Math.sin(time * 1.3 + m.phase) * 0.3;
         }
       }
-      if (this.festivalStar.isEnabled()) {
-        this.festivalStar.rotation.y += dt * 1.5;
-        this.festivalStar.position.y = 3 + Math.sin(time * 2) * 0.25;
+      if (this.partyMarker.isEnabled()) {
+        const { glass, badge } = this.partyMarker.metadata as { glass: TransformNode; badge: Mesh };
+        glass.rotation.y += dt * 1.2;
+        glass.rotation.z = Math.sin(time * 2.4) * 0.12; // goyang "cheers"
+        glass.position.y = Math.sin(time * 2) * 0.15;
+        badge.position.y = 2.75 + Math.sin(time * 2 + 0.6) * 0.12;
+        const k = 1 + Math.max(0, Math.sin(time * 3)) * 0.06;
+        badge.scaling.set(k, k, 1);
+        for (const b of glass.getChildMeshes()) {
+          const m = b.metadata as { phase: number; x: number; z: number } | null;
+          if (!m) continue;
+          const u = (time * 0.6 + m.phase) % 1;
+          b.position.set(m.x, 0.75 + u * 0.5, m.z);
+          b.setEnabled(u < 0.95);
+        }
+      }
+      if (this.destTile !== null) {
+        this.destRing.rotation.y += dt * 2;
+        const k = 1 + Math.sin(time * 6) * 0.08;
+        this.destRing.scaling.set(k, 1, k);
+        this.destArrow.position.y = 1.5 + Math.abs(Math.sin(time * 4)) * 0.5;
       }
       // Petak yang di-highlight memantul
       for (const i of this.highlighted) {
@@ -443,21 +466,91 @@ export class BoardView {
     this.shadows.addShadowCaster(frost);
   }
 
-  private makeStar(): Mesh {
+  /**
+   * Penanda Pesta Pejabat: gelas sampanye berputar + papan "🥂 SEWA x2" yang selalu
+   * menghadap kamera, supaya pemain langsung paham efeknya.
+   */
+  private makePartyMarker(): Mesh {
     const s = this.scene;
-    const shape: Vector3[] = [];
-    for (let i = 0; i < 10; i++) {
-      const r = i % 2 === 0 ? 0.8 : 0.35;
-      const a = (i / 10) * Math.PI * 2 + Math.PI / 2;
-      shape.push(new Vector3(Math.cos(a) * r, Math.sin(a) * r, 0));
+    const holder = new Mesh("partyHolder", s);
+
+    const glass = new TransformNode("partyGlass", s);
+    glass.parent = holder;
+    const glassMat = new StandardMaterial("partyGlassMat", s);
+    glassMat.diffuseColor = Color3.FromHexString("#e8fbff");
+    glassMat.emissiveColor = Color3.FromHexString("#9fdcff");
+    glassMat.alpha = 0.7;
+    glassMat.specularPower = 64;
+    const part = (m: Mesh, mat: StandardMaterial | ReturnType<typeof toon>, y: number) => {
+      m.material = mat;
+      m.position.y = y;
+      m.parent = glass;
+      m.isPickable = false;
+      outline(m, 0.035);
+      return m;
+    };
+    // Kaki, tangkai, mangkuk (flute), isi sampanye, buih
+    part(MeshBuilder.CreateCylinder("partyBase", { diameter: 0.7, height: 0.06, tessellation: 24 }, s), glassMat, 0.03);
+    part(MeshBuilder.CreateCylinder("partyStem", { diameter: 0.09, height: 0.6, tessellation: 10 }, s), glassMat, 0.33);
+    part(MeshBuilder.CreateCylinder("partyBowl", { diameterTop: 0.62, diameterBottom: 0.22, height: 0.9, tessellation: 24 }, s), glassMat, 1.08);
+    const wine = MeshBuilder.CreateCylinder("partyWine", { diameterTop: 0.52, diameterBottom: 0.2, height: 0.62, tessellation: 24 }, s);
+    wine.material = toon(s, "#ffcf3a");
+    wine.position.y = 0.97;
+    wine.parent = glass;
+    wine.isPickable = false;
+    const foam = MeshBuilder.CreateCylinder("partyFoam", { diameter: 0.54, height: 0.08, tessellation: 24 }, s);
+    foam.material = toon(s, "#fff8dc");
+    foam.position.y = 1.3;
+    foam.parent = glass;
+    foam.isPickable = false;
+    for (let i = 0; i < 4; i++) {
+      const b = MeshBuilder.CreateSphere(`partyBubble${i}`, { diameter: 0.09, segments: 6 }, s);
+      b.material = toon(s, "#fffbe8");
+      b.parent = glass;
+      b.isPickable = false;
+      b.metadata = { phase: i / 4, x: Math.cos(i * 2.1) * 0.12, z: Math.sin(i * 2.1) * 0.12 };
     }
-    shape.push(shape[0]);
-    const star = MeshBuilder.ExtrudePolygon("festStar", { shape: shape.map((v) => new Vector3(v.x, 0, v.y)), depth: 0.25 }, s, earcut);
-    star.rotation.x = -Math.PI / 2;
-    const holder = new Mesh("festStarHolder", s);
-    star.parent = holder;
-    star.material = toon(s, "#ffd23f");
-    outline(star, 0.04);
+    glass.scaling.setAll(1.15);
+
+    // Papan "SEWA x2"
+    const W = 512;
+    const H = 192;
+    const tex = new DynamicTexture("partyBadgeTex", { width: W, height: H }, s, true);
+    tex.hasAlpha = true;
+    const ctx = tex.getContext() as unknown as CanvasRenderingContext2D;
+    ctx.clearRect(0, 0, W, H);
+    const r = 70;
+    ctx.beginPath();
+    ctx.roundRect(14, 14, W - 28, H - 28, r);
+    const g = ctx.createLinearGradient(0, 14, 0, H - 14);
+    g.addColorStop(0, "#ffe46b");
+    g.addColorStop(1, "#ff9f2e");
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = "#2b1d3a";
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#2b1d3a";
+    ctx.font = `bold 92px ${FONT}`;
+    ctx.fillText(Lang.scene3d.partyBadge(CONFIG.festivalMultiplier), W / 2, H / 2 + 6, W - 70);
+    tex.update();
+    const badgeMat = new StandardMaterial("partyBadgeMat", s);
+    badgeMat.diffuseTexture = tex;
+    badgeMat.useAlphaFromDiffuseTexture = true;
+    badgeMat.emissiveColor = Color3.White();
+    badgeMat.disableLighting = true;
+    badgeMat.backFaceCulling = false;
+    const badge = MeshBuilder.CreatePlane("partyBadge", { width: 2.1, height: 2.1 * (H / W) }, s);
+    badge.material = badgeMat;
+    badge.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    badge.position.y = 2.75;
+    badge.parent = holder;
+    badge.isPickable = false;
+    badge.renderingGroupId = 1; // tetap terbaca walau tertutup bangunan tinggi
+
+    holder.metadata = { glass, badge };
     return holder;
   }
 
@@ -520,13 +613,12 @@ export class BoardView {
       }
     }
 
-    // Festival star
+    // Penanda Pesta Pejabat (hanya satu petak sekaligus). Di atas bangunan tertinggi.
     if (ts.festival) {
-      const p = tilePosition(index, 3);
-      this.festivalStar.position.copyFrom(p);
-      this.festivalStar.setEnabled(true);
+      this.partyMarker.position.copyFrom(tilePosition(index, 3.1));
+      this.partyMarker.setEnabled(true);
     } else if (state.festivalTile === null) {
-      this.festivalStar.setEnabled(false);
+      this.partyMarker.setEnabled(false);
     }
 
     const key = `${ts.owner}:${ts.level}`;
@@ -664,6 +756,54 @@ export class BoardView {
       t.root.position.y = t.baseY;
     }
     this.highlighted.clear();
+  }
+
+  // ------------------------------------------------------------------ tujuan langkah
+
+  private makeDestMarker(): [TransformNode, Mesh, Mesh] {
+    const s = this.scene;
+    const root = new TransformNode("destMarker", s);
+    const mat = new StandardMaterial("destMat", s);
+    mat.disableLighting = true;
+    mat.emissiveColor = Color3.White();
+    mat.alpha = 0.9;
+    const ring = MeshBuilder.CreateTorus("destRing", { diameter: TILE * 0.95, thickness: 0.14, tessellation: 40 }, s);
+    ring.position.y = 0.08;
+    ring.material = mat;
+    ring.parent = root;
+    const arrow = MeshBuilder.CreateCylinder("destArrow", { diameterTop: 0.9, diameterBottom: 0, height: 1.1, tessellation: 4 }, s);
+    arrow.material = mat;
+    arrow.parent = root;
+    outline(arrow, 0.05);
+    for (const m of [ring, arrow]) {
+      m.isPickable = false;
+      m.renderingGroupId = 1; // tetap terlihat walau tertutup bangunan
+    }
+    root.setEnabled(false);
+    return [root, ring, arrow];
+  }
+
+  /** Tandai petak tujuan pion (warna pemain) supaya semua tahu ia akan berhenti di mana. */
+  showDestination(index: number, hex: string) {
+    this.hideDestination();
+    const color = Color3.FromHexString(hex);
+    (this.destRing.material as StandardMaterial).emissiveColor = color;
+    this.destMarker.position.copyFrom(tilePosition(index));
+    this.destMarker.setEnabled(true);
+    const b = this.tiles[index].block;
+    if (!this.highlighted.has(index)) {
+      b.renderOverlay = true;
+      b.overlayColor = color;
+      b.overlayAlpha = 0.45;
+    }
+    this.destTile = index;
+  }
+
+  hideDestination() {
+    if (this.destTile === null) return;
+    if (!this.highlighted.has(this.destTile)) this.tiles[this.destTile].block.renderOverlay = false;
+    this.destMarker.setEnabled(false);
+    this.destTile = null;
   }
 
   /** Efek "tekan" petak saat pion mendarat. */

@@ -6,6 +6,7 @@ import type {
   DebtChoice,
   Decider,
   IslandChoice,
+  ShieldChoice,
   ItemChoice,
   ItemUse,
   TileChoice,
@@ -318,6 +319,18 @@ export class HumanDecider implements Decider {
       buttons: [
         { label: Lang.human.bribe(fmt(c.bail)), value: "pay" as const, class: "blue", disabled: !c.canPay },
         { label: Lang.human.tryDouble, value: "roll" as const, class: "green" },
+      ],
+    });
+  }
+
+  async chooseShield(c: ShieldChoice): Promise<boolean> {
+    const owner = this.state.players[c.owner].name;
+    return modal({
+      title: Lang.human.shieldTitle,
+      body: Lang.human.shieldBody(fmt(c.rent), BOARD[c.tile].name, owner),
+      buttons: [
+        { label: Lang.human.shieldUse, value: true, class: "green" },
+        { label: Lang.human.shieldPay(fmt(c.rent)), value: false, class: "white" },
       ],
     });
   }

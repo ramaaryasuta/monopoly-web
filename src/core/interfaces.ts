@@ -27,6 +27,15 @@ export interface TileChoice {
   options: number[];
 }
 
+/** Kena sewa sambil memegang kartu bebas sewa: pakai sekarang atau simpan. */
+export interface ShieldChoice {
+  player: number;
+  tile: number;
+  rent: number;
+  owner: number;
+  money: number;
+}
+
 export interface ItemChoice {
   player: number;
   /** Kartu simpanan yang bisa dipakai sekarang beserta sasaran sahnya (pemain atau petak). */
@@ -109,6 +118,8 @@ export interface Decider {
   /** Kembalikan level tujuan, atau `currentLevel` untuk lewati. */
   chooseBuild(c: BuildChoice): Promise<number>;
   chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll">;
+  /** Pakai kartu bebas sewa (true) atau bayar sewa dan simpan kartunya (false). */
+  chooseShield(c: ShieldChoice): Promise<boolean>;
   chooseTile(c: TileChoice): Promise<number>;
   /** Sebelum lempar dadu: pakai kartu simpanan, atau `null` untuk langsung lempar. */
   chooseItem(c: ItemChoice): Promise<ItemUse | null>;

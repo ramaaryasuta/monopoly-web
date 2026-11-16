@@ -12,6 +12,8 @@ const STEP = 60 / BPM / 2; // satu langkah = seperdelapan ketukan
 const STEPS_PER_BAR = 8;
 const SWING = 0.17; // geser langkah ganjil (rasa swing)
 const LOOKAHEAD = 0.3; // detik dijadwalkan di depan
+/** Tab di latar: timer dibatasi browser ±1×/detik, jadi jadwalkan lebih jauh agar musik tidak putus. */
+const LOOKAHEAD_HIDDEN = 2.5;
 const TICK_MS = 50;
 const STORE_KEY = "pk-music";
 
@@ -240,7 +242,6 @@ class MusicPlayer {
     };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
-    document.addEventListener("visibilitychange", () => this.sync());
     onSoundChange(() => this.sync());
   }
 
@@ -254,9 +255,9 @@ class MusicPlayer {
     this.sync();
   }
 
-  /** Nyalakan / matikan sesuai pengaturan musik, mute global, dan visibilitas tab. */
+  /** Nyalakan / matikan sesuai pengaturan musik dan mute global (tetap jalan saat tab di latar). */
   sync() {
-    const want = this.enabled && this.unlocked && !Sound.muted && !document.hidden;
+    const want = this.enabled && this.unlocked && !Sound.muted;
     if (want) this.start();
     else this.stop();
   }
@@ -316,7 +317,8 @@ class MusicPlayer {
     if (!a || !this.master || !this.fxBus) return;
     // Tab sempat tertidur: jangan "mengejar" ratusan nada sekaligus.
     if (this.nextTime < a.currentTime - 0.2) this.nextTime = a.currentTime + 0.05;
-    while (this.nextTime < a.currentTime + LOOKAHEAD) {
+    const ahead = document.hidden ? LOOKAHEAD_HIDDEN : LOOKAHEAD;
+    while (this.nextTime < a.currentTime + ahead) {
       this.schedule(a, this.nextTime);
       this.nextTime += STEP;
       this.step++;

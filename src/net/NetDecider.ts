@@ -8,13 +8,14 @@ import type {
   IslandChoice,
   ItemChoice,
   ItemUse,
+  ShieldChoice,
   TileChoice,
   TradeReply,
   TradeReplyChoice,
 } from "../core/interfaces";
 import type { Interjection } from "../core/interject";
 
-export type Kind = "roll" | "build" | "island" | "tile" | "item" | "deal" | "trade" | "debt" | "sync";
+export type Kind = "roll" | "build" | "island" | "shield" | "tile" | "item" | "deal" | "trade" | "debt" | "sync";
 
 /** Membungkus decider lokal (manusia/bot) dan menyiarkan setiap keputusannya ke jaringan. */
 export class BroadcastDecider implements Decider {
@@ -35,6 +36,11 @@ export class BroadcastDecider implements Decider {
   async chooseIslandAction(c: IslandChoice) {
     const v = await this.inner.chooseIslandAction(c);
     this.send("island", v);
+    return v;
+  }
+  async chooseShield(c: ShieldChoice) {
+    const v = await this.inner.chooseShield(c);
+    this.send("shield", v);
     return v;
   }
   async chooseTile(c: TileChoice) {
@@ -154,6 +160,9 @@ export class RemoteDecider implements Decider {
   }
   chooseIslandAction(c: IslandChoice) {
     return this.next("island", (d) => d.chooseIslandAction(c));
+  }
+  chooseShield(c: ShieldChoice) {
+    return this.next<boolean>("shield", (d) => d.chooseShield(c));
   }
   chooseTile(c: TileChoice) {
     return this.next("tile", (d) => d.chooseTile(c));

@@ -141,6 +141,8 @@ const game = {
   dijebloskan: (player: Fmt) => `${player} dijebloskan ke Nusakambangan! Kasihan...`,
   naikPesawat: (player: Fmt) => `${player} naik Pesawat Negara! Giliran berikutnya pilih mau mendarat di mana.`,
   perisaiSewa: (player: Fmt, rent: Fmt) => `Kartu pelindung menyelamatkan ${player} dari sewa ${rent}!`,
+  perisaiDisimpan: (player: Fmt) => `${player} menyimpan kartu bebas sewa untuk nanti.`,
+  perisaiHangus: (player: Fmt) => `🛡️ ${player} sudah pegang kartu bebas sewa (maks 1) — kartu lama hangus, diganti yang baru.`,
   bayarSewa: (player: Fmt, rent: Fmt, owner: Fmt) => `${player} membayar sewa ${rent} ke ${owner}.`,
   banjirTolakBeli: (player: Fmt, tile: Fmt) => `Lagi banjir! ${player} tidak bisa beli/bangun di ${tile}.`,
   uangKurangBeli: (player: Fmt, tile: Fmt) => `${player} tidak punya cukup uang untuk membeli ${tile}.`,
@@ -352,6 +354,8 @@ const tradeUi = {
 
 // ============================================================ HUD, info petak, layar akhir (ui/Hud.ts)
 const hud = {
+  shieldTag: (n: Fmt, max: Fmt) => `🛡️${n}/${max}`,
+  turnTabTitle: (title: Fmt) => `🎲 Giliranmu! · ${title}`,
   kindLabel: { start: "Petak Mulai", property: "Properti", resort: "Tempat Wisata", chance: "Paket Misterius", tax: "Pajak", island: "Penjara", festival: "Pesta Pejabat", tour: "Naik Pesawat Negara" },
   tileHelp: { start: (salary: Fmt) => `Dapat ${salary} setiap melewati petak ini.`, chance: "Paket datang tanpa pesan! Buka isinya — bisa duit, bisa kentut nuklir!", tax: (pct: Fmt, min: Fmt) => `Ormas datang minta "uang keamanan". Bayar ${pct}% dari uangmu (minimal ${min}).`, island: (turns: Fmt, bail: Fmt) => `Dipenjara ${turns} giliran. Keluar dengan dapat dadu kembar atau sogok sipir ${bail}.`, festival: (mult: Fmt) => `Gelar pesta pejabat di satu propertimu — sewanya jadi x${mult}.`, tour: (fee: Fmt) => `Numpang pesawat negara: giliran berikutnya mendarat di petak mana saja (ongkos ${fee}).` },
   roundLabel: (round: Fmt, limit: Fmt) => `Ronde ${round} / ${limit}`,
@@ -432,6 +436,11 @@ const human = {
   jailBody: (turnsLeft: Fmt) => `<p>Sisa ${turnsLeft} giliran. Dapatkan dadu kembar untuk kabur, atau sogok sipir biar langsung bebas.</p>`,
   bribe: (bail: Fmt) => `💰 Sogok sipir ${bail}`,
   tryDouble: "🎲 Coba dapat dadu kembar",
+  shieldTitle: "🛡️ Pakai Kartu Bebas Sewa?",
+  shieldBody: (rent: Fmt, tile: Fmt, owner: Fmt) =>
+    `<p>Kamu kena sewa <b>${rent}</b> di <b>${tile}</b> milik ${owner}.</p><p>Pakai kartu bebas sewa sekarang, atau bayar dan simpan kartunya untuk sewa yang lebih mahal nanti?</p><p class="hint">🛡️ Maksimal pegang 1 kartu — kalau dapat kartu baru, kartu lama hangus.</p>`,
+  shieldUse: "🛡️ Pakai kartu (gratis)",
+  shieldPay: (rent: Fmt) => `💸 Bayar ${rent}, simpan kartu`,
   pickTour: "Klik petak tujuan pesawat negara",
   pickFestival: "Klik propertimu untuk Pesta Pejabat",
 };
@@ -446,12 +455,14 @@ const scene = {
   dealAsk: ["Deal, bos? 🤝","Ada penawaran menarik nih!","Bisa nego dong~","Harga teman!"],
   dealCounter: ["Kurang dikit lagi...","Gimana kalau segini?","Naikin dong! 😤","Nego tipis-tipis"],
   dealNo: ["Ogah! 🙅","Mimpi kali!","Nggak dulu deh","Harga diri lebih mahal!"],
-  dealYes: ["Deal! 🤝","Sepakat!","Cuan bareng!","Salaman dulu!"],
+  dealYes: ["Deal! 🤝","Sepakat!","Cuan bareng!","Salaman dulu!"],
+
 
   setShout: ["Satu komplek punyaku! 👑","Tuan tanah sejati!","Sewa naik, bos! 📈","Komplit kayak nasi padang!","Lunas semua, hehe"],
   eventButtons: ["Astaga!","Waduh!","Hah?!","Ngakak 🤣"],
   seasonButtons: ["Siap!","Wah!","Gaskeun!","Oke deh"],
   bankruptSpeech: ["Mampus aku...","Pinjol mana pinjol?!","Aku pulang kampung aja 😭","Jual ginjal kah?"],
+  destBanner: (name: Fmt, tile: Fmt, steps: Fmt) => `🎯 ${name} → ${tile} (${steps} langkah)`,
   turnLabel: (name: Fmt, isBot: boolean) => `Giliran ${name}${isBot ? " 🤖" : ""}`,
   victims: (names: Fmt) => `Yang kena: ${names}`,
   victimsHtml: (names: Fmt) => `<p class="victim">Yang kena: <b>${names}</b></p>`,
@@ -571,6 +582,8 @@ const scene3d = {
   live: "LIVE",
   ticker: (headline: Fmt) => `WNI TV  •  ${headline}  •  JANGAN PANIK  •  `,
   rentLabel: (rent: Fmt) => `Sewa ${rent}`,
+  partyBadge: (mult: Fmt) => `SEWA x${mult}`,
+  partyCorner: (mult: Fmt) => `x${mult}`,
 };
 
 // ============================================================ common
@@ -600,7 +613,8 @@ const cardSummary = {
   repairNone: "😌 Rp0",
   repairNoneDetail: "Belum punya bangunan, lolos!",
   shieldMain: "🛡️ Bebas sewa 1×",
-  shieldDetail: "Dipakai otomatis saat kena sewa berikutnya",
+  shieldDetail: "Maks pegang 1 · saat kena sewa, pilih mau dipakai atau tidak",
+  shieldReplace: "Maks pegang 1 · kartu lamamu hangus, diganti yang ini",
   gotoMain: (dest: Fmt) => `✈️ Pindah ke ${dest}`,
   gotoDetail: "Dapat gaji Mulai",
   islandMain: "⛓️ Masuk Nusakambangan",

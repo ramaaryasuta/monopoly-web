@@ -91,7 +91,23 @@ export class Voice {
     room.onVoice = () => this.sync();
     room.onCall = (c) => this.incoming(c);
     this.unwatchSeats = room.watchSeats(() => this.sync());
+    document.addEventListener("visibilitychange", this.wake);
+    window.addEventListener("focus", this.wake);
+    window.addEventListener("pointerdown", this.wake, true);
   }
+
+  /**
+   * Pindah tab / aplikasi bisa membuat browser men-suspend AudioContext (mikrofon ikut
+   * berhenti terkirim) atau menjeda elemen audio lawan bicara. Lanjutkan lagi.
+   */
+  private wake = () => {
+    if (!this.joined) return;
+    const ctx = this.ctx;
+    if (ctx && ctx.state !== "running" && ctx.state !== "closed") void ctx.resume().catch(() => {});
+    for (const r of this.remotes.values()) {
+      if (r.audio?.paused) void r.audio.play().catch(() => {});
+    }
+  };
 
   // ------------------------------------------------------------------ kontrol
 
@@ -134,7 +150,10 @@ export class Voice {
       this.applyAudio();
       this.publish();
       this.timer = setInterval(() => this.meter(), 120);
-      this.healTimer = setInterval(() => this.sync(), 4000);
+      this.healTimer = setInterval(() => {
+        this.wake();
+        this.sync();
+      }, 4000);
       this.sync();
     } finally {
       this.joining = false;
@@ -236,6 +255,9 @@ export class Voice {
     this.room.onVoice = null;
     this.unwatchSeats();
     this.unwatchSound();
+    document.removeEventListener("visibilitychange", this.wake);
+    window.removeEventListener("focus", this.wake);
+    window.removeEventListener("pointerdown", this.wake, true);
     if (!this.room.isClosed) this.room.onCall = null;
     this.onChange = null;
   }

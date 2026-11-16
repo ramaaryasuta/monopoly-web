@@ -88,6 +88,9 @@ class RandomHuman implements Decider {
     const money = Math.min(s.players[me].money, 10 * (1 + Math.floor(Math.random() * 20)));
     return { type: "trade", offer: { from: me, to, giveTiles: [], giveMoney: money, takeTiles: [theirs[0]], takeMoney: 0 } };
   }
+  async chooseShield() {
+    return Math.random() < 0.5;
+  }
   async chooseIslandAction(c: IslandChoice) {
     return c.canPay && Math.random() < 0.5 ? ("pay" as const) : ("roll" as const);
   }

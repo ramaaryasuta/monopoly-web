@@ -586,6 +586,24 @@ body {
   animation: popIn 0.3s ease-out;
 }
 
+.dest-banner {
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-left: 12px solid var(--pawn, var(--ink));
+  border-radius: 14px;
+  box-shadow: 0 4px 0 var(--ink);
+  padding: 6px 16px;
+  font-weight: 700;
+  font-size: 17px;
+  text-align: center;
+  white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  animation: popIn 0.25s ease-out;
+}
+
 /* ---------------------------------------------------------------- modal */
 
 .modal-backdrop {
@@ -997,6 +1015,7 @@ body {
 }
 @media (max-width: 760px) {
   .pick-banner { top: 170px; }
+  .dest-banner { font-size: 15px; }
 }
 
 /* Konfirmasi beli dari pasar */

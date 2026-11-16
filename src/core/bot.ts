@@ -7,6 +7,7 @@ import type {
   DealChoice,
   Decider,
   IslandChoice,
+  ShieldChoice,
   ItemChoice,
   ItemUse,
   TileChoice,
@@ -73,6 +74,12 @@ export class BotDecider implements Decider {
     if (biggest) return { type: "downgrade", tile: biggest.tile, level: 1 };
     // Jual wilayah termurah; tidak ada lagi yang bisa dijual → menyerah
     return c.tiles.length ? { type: "sell", tile: c.tiles[0].tile } : { type: "giveUp" };
+  }
+
+  async chooseShield(c: ShieldChoice): Promise<boolean> {
+    await this.think();
+    // Simpan untuk sewa mahal; sewa kecil dibayar saja kalau uangnya masih longgar.
+    return c.rent >= cash(150) || c.rent > c.money * 0.25;
   }
 
   async chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll"> {

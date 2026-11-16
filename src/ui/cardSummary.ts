@@ -1,7 +1,7 @@
 import { activePlayers, ownedTiles } from "../core/rules";
 import type { GameState } from "../core/types";
 import { BOARD } from "../data/board";
-import { ITEMS, MAX_ITEMS, type Card } from "../data/cards";
+import { ITEMS, MAX_ITEMS, MAX_SHIELDS, type Card } from "../data/cards";
 import { rp } from "../core/money";
 import { Lang } from "../lang/id";
 
@@ -38,7 +38,11 @@ export function cardSummary(state: GameState, pid: number, card: Card): CardSumm
         : { tone: "neutral", main: Lang.cardSummary.repairNone, detail: Lang.cardSummary.repairNoneDetail };
     }
     case "shield":
-      return { tone: "gain", main: Lang.cardSummary.shieldMain, detail: Lang.cardSummary.shieldDetail };
+      return {
+        tone: "gain",
+        main: Lang.cardSummary.shieldMain,
+        detail: state.players[pid].shields >= MAX_SHIELDS ? Lang.cardSummary.shieldReplace : Lang.cardSummary.shieldDetail,
+      };
     case "goto": {
       const dest = BOARD[e.tile].name;
       return { tone: "neutral", main: Lang.cardSummary.gotoMain(dest), detail: e.tile === 0 ? Lang.cardSummary.gotoDetail : undefined };

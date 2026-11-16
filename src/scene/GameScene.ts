@@ -120,8 +120,45 @@ export class GameScene {
       if (typeof idx === "number") this.onTileClick?.(idx);
     });
 
+    this.keepRunningInBackground();
     this.engine.runRenderLoop(() => scene.render());
     window.addEventListener("resize", () => this.engine.resize());
+  }
+
+  /**
+   * requestAnimationFrame berhenti total saat tab disembunyikan, sehingga game (dan
+   * semua suaranya) ikut membeku dan pemain lupa sedang main. Cadangan setTimeout
+   * menjaga game tetap berjalan di latar (browser membatasinya ±1 frame/detik —
+   * cukup, karena animasi berbasis waktu dan tetap selesai tepat waktu).
+   */
+  private keepRunningInBackground() {
+    let nextId = 1;
+    const pending = new Map<number, { raf: number; timer: number }>();
+    this.engine.customAnimationFrameRequester = {
+      requestAnimationFrame: (fn: (t: number) => void) => {
+        const id = nextId++;
+        const run = (t: number) => {
+          const p = pending.get(id);
+          if (!p) return;
+          pending.delete(id);
+          cancelAnimationFrame(p.raf);
+          clearTimeout(p.timer);
+          fn(t);
+        };
+        pending.set(id, {
+          raf: requestAnimationFrame(run),
+          timer: window.setTimeout(() => run(performance.now()), 250),
+        });
+        return id;
+      },
+      cancelAnimationFrame: (id: number) => {
+        const p = pending.get(id);
+        if (!p) return;
+        pending.delete(id);
+        cancelAnimationFrame(p.raf);
+        clearTimeout(p.timer);
+      },
+    };
   }
 
   /**
@@ -216,6 +253,7 @@ export class GameScene {
   async movePawn(player: number, path: number[], mode: "walk" | "fly") {
     const pawn = this.pawns[player];
     const stop = this.follow(pawn);
+    if (path.length) this.board.showDestination(path[path.length - 1], pawn.color);
     try {
       if (mode === "fly") {
         sfx.fly();
@@ -233,6 +271,7 @@ export class GameScene {
         }
       }
     } finally {
+      this.board.hideDestination();
       stop();
     }
   }

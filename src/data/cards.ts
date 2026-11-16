@@ -137,6 +137,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
 
 /** Maksimal kartu simpanan per pemain. Kalau penuh, kartu baru dijual Rp50 jt. */
 export const MAX_ITEMS = 3;
+/** Kartu bebas sewa yang boleh dipegang; kartu baru menggantikan yang lama (hangus). */
+export const MAX_SHIELDS = 1;
 export const SANDAL_STEPS = 3;
 export const UTANG_AMOUNT = 100;
 export const TURBO_STEPS = 3;

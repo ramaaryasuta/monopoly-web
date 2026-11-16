@@ -88,7 +88,16 @@ export class ScenePresenter implements Presenter {
   }
 
   async movePawn(player: number, path: number[], mode: "walk" | "fly") {
-    await this.view.movePawn(player, path, mode);
+    const dest = path[path.length - 1];
+    if (dest !== undefined) {
+      const p = this.state.players[player];
+      this.hud.showDestBanner(Lang.scene.destBanner(p.name, BOARD[dest].name, path.length), this.view.pawns[player].color);
+    }
+    try {
+      await this.view.movePawn(player, path, mode);
+    } finally {
+      this.hud.hideDestBanner();
+    }
   }
 
   moneyChanged(state: GameState, player: number, delta: number) {

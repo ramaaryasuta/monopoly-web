@@ -79,6 +79,7 @@ export function interruptibleDeals(inner: Decider, pool: InterjectionPool): Deci
     waitForRoll: (p) => inner.waitForRoll(p),
     chooseBuild: (c) => inner.chooseBuild(c),
     chooseIslandAction: (c) => inner.chooseIslandAction(c),
+    chooseShield: (c) => inner.chooseShield(c),
     chooseTile: (c) => inner.chooseTile(c),
     chooseItem: (c) => inner.chooseItem(c),
     respondTrade: (c) => inner.respondTrade(c),

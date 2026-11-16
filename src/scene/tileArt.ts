@@ -2,6 +2,7 @@ import { DynamicTexture, type Scene } from "@babylonjs/core";
 import type { TileDef } from "../core/types";
 import { GROUP_COLORS, isCorner as cornerTile } from "../data/board";
 import { rp } from "../core/money";
+import { CONFIG } from "../core/rules";
 import { Lang } from "../lang/id";
 
 const ICONS: Record<string, string> = {
@@ -152,8 +153,20 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
   }
 
   if (st.festival) {
-    ctx.font = `${S * 0.16}px ${FONT}`;
-    ctx.fillText("⭐", S * 0.83, S * 0.17);
+    // Badge pojok "🥂x2" supaya efek pesta terbaca juga dari petaknya
+    const text = Lang.scene3d.partyCorner(CONFIG.festivalMultiplier);
+    ctx.font = `bold ${S * 0.1}px ${FONT}`;
+    const bw = ctx.measureText(text).width + S * 0.08;
+    roundRect(ctx, S * 0.97 - bw, S * 0.06, bw, S * 0.15, S * 0.07);
+    ctx.fillStyle = "#ffd23f";
+    ctx.fill();
+    ctx.lineWidth = 4 * k;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    ctx.fillStyle = INK;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, S * 0.97 - bw / 2, S * 0.137);
   }
 }
 

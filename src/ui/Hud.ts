@@ -2,7 +2,7 @@ import type { MessageKind } from "../core/interfaces";
 import { CONFIG, investedValue, LEVEL_NAMES, netWorth, ownedTiles, rentFor, upgradeCost, WIN_TEXT } from "../core/rules";
 import type { GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
-import { ITEMS, SEASONS } from "../data/cards";
+import { ITEMS, MAX_SHIELDS, SEASONS } from "../data/cards";
 import { sfx } from "../scene/sfx";
 import { Speed } from "../scene/tween";
 import { activeListings, listingFor } from "../core/trade";
@@ -130,7 +130,7 @@ export class Hud {
       card.classList.toggle("next", playing && next === i && next !== s.current);
       card.classList.toggle("bankrupt", p.bankrupt);
       const meta: string[] = [`🏠 ${ownedTiles(s, i).length}`, `💎 ${fmt(netWorth(s, i))}`];
-      if (p.shields) meta.push(`🛡️${p.shields}`);
+      if (p.shields) meta.push(Lang.hud.shieldTag(p.shields, MAX_SHIELDS));
       if (p.items.length) meta.push(`🎒${p.items.map((it) => ITEMS[it].icon).join("")}`);
       if (p.islandTurns) meta.push(`🏝️${p.islandTurns}`);
       if (p.pendingTour) meta.push("✈️");
@@ -234,7 +234,25 @@ export class Hud {
     if (text) this.actionBar.prepend(h("div", { class: "turn-label" }, text));
   }
 
+  /** Tab sedang di latar saat giliranmu tiba: bunyikan pengingat & tandai judul tab. */
+  private reminding = false;
+  private remindTurn() {
+    if (!document.hidden || this.reminding) return;
+    this.reminding = true;
+    sfx.turnPing();
+    const base = document.title;
+    document.title = Lang.hud.turnTabTitle(base);
+    const back = () => {
+      if (document.hidden) return;
+      this.reminding = false;
+      document.title = base;
+      document.removeEventListener("visibilitychange", back);
+    };
+    document.addEventListener("visibilitychange", back);
+  }
+
   waitRollButton(label = Lang.hud.roll): Promise<void> {
+    this.remindTurn();
     return new Promise((resolve) => {
       const btn = h("button", { class: "btn roll-btn", "data-testid": "roll" }, label);
       const go = () => {
@@ -257,6 +275,7 @@ export class Hud {
 
   /** Tombol lempar dadu + tombol buka kantong kartu simpanan. */
   waitRollOrItem(count: number): Promise<"roll" | "item"> {
+    this.remindTurn();
     return new Promise((resolve) => {
       const roll = h("button", { class: "btn roll-btn", "data-testid": "roll" }, Lang.hud.roll);
       const item = h("button", { class: "btn pink item-btn", "data-testid": "use-item" }, Lang.hud.useCard(count));
@@ -282,6 +301,7 @@ export class Hud {
 
   /** Menu awal giliran: lempar dadu, kantong, negosiasi, pasar. */
   waitTurnMenu(o: { items: number; tradesLeft: number; rollLabel: string }): Promise<"roll" | "item" | "trade" | "market"> {
+    this.remindTurn();
     return new Promise((resolve) => {
       type A = "roll" | "item" | "trade" | "market";
       const roll = h("button", { class: "btn roll-btn", "data-testid": "roll" }, o.rollLabel);
@@ -323,6 +343,20 @@ export class Hud {
   hidePickBanner() {
     this.pickBanner?.remove();
     this.pickBanner = null;
+  }
+
+  private destBanner: HTMLElement | null = null;
+
+  /** Info tujuan langkah pion, terlihat semua pemain selama pion berjalan. */
+  showDestBanner(text: string, color: string) {
+    this.hideDestBanner();
+    this.destBanner = h("div", { class: "dest-banner", style: `--pawn:${color}` }, text);
+    this.toasts.prepend(this.destBanner);
+  }
+
+  hideDestBanner() {
+    this.destBanner?.remove();
+    this.destBanner = null;
   }
 
   // ------------------------------------------------------------------ tile info

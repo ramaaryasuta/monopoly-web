@@ -444,6 +444,44 @@ describe("game flow", () => {
     expect(g.state.players[0].money).toBe(100000 - rent);
   });
 
+  it("kartu bebas sewa: maks 1, kartu baru menggantikan yang lama", async () => {
+    const g = botGame(2, 1);
+    const draw = (g as unknown as { drawCard(pid: number): Promise<void> }).drawCard.bind(g);
+    g.forcedCard = "shield";
+    await draw(0);
+    expect(g.state.players[0].shields).toBe(1);
+    g.forcedCard = "orangDalam";
+    await draw(0);
+    expect(g.state.players[0].shields).toBe(1);
+  });
+
+  it("kartu bebas sewa bisa disimpan (bayar sewa) atau dipakai", async () => {
+    const g = botGame(2, 1);
+    const p = g.state.players[0];
+    p.money = 100000;
+    p.shields = 1;
+    p.position = 3;
+    g.state.tiles[3] = { owner: 1, level: 3, festival: false };
+    const rent = rentFor(g.state, 3);
+    const asked: number[] = [];
+    let answer = false;
+    const d = (g as unknown as { deciders: Decider[] }).deciders[0];
+    d.chooseShield = async (c) => {
+      asked.push(c.rent);
+      return answer;
+    };
+    await g.resolveTile(0);
+    expect(p.money).toBe(100000 - rent);
+    expect(p.shields).toBe(1);
+    answer = true;
+    await g.resolveTile(0);
+    expect(p.money).toBe(100000 - rent);
+    expect(p.shields).toBe(0);
+    // Tanpa kartu: tidak ditanya
+    await g.resolveTile(0);
+    expect(asked).toEqual([rent, rent]);
+  });
+
   it("kartu 'pergi ke' tidak memberi gaji kecuali tujuannya Mulai", async () => {
     const g = botGame(2, 1);
     g.state.players[0].position = 22; // Paket Blibli, Polri ada di belakang

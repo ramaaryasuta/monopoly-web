@@ -6,6 +6,7 @@ import {
   CHAOS_EVENTS,
   ITEMS,
   MAX_ITEMS,
+  MAX_SHIELDS,
   SANDAL_STEPS,
   SEASON_CHANCE,
   SEASON_IDS,
@@ -380,10 +381,14 @@ export class Game {
     // Milik lawan: bayar sewa
     const owner = this.state.players[ts.owner];
     const rent = rentFor(this.state, tile);
-    if (p.shields > 0) {
+    const useShield =
+      p.shields > 0 &&
+      (await this.deciders[pid].chooseShield({ player: pid, tile, rent, owner: owner.id, money: p.money }));
+    if (useShield) {
       p.shields--;
       this.presenter.message(Lang.game.perisaiSewa(p.name, fmt(rent)), "good");
     } else {
+      if (p.shields > 0) this.presenter.message(Lang.game.perisaiDisimpan(p.name));
       this.presenter.message(Lang.game.bayarSewa(p.name, fmt(rent), owner.name), "bad");
       await this.charge(pid, rent, owner.id);
     }
@@ -483,7 +488,8 @@ export class Game {
         return;
       }
       case "shield":
-        p.shields++;
+        if (p.shields >= MAX_SHIELDS) this.presenter.message(Lang.game.perisaiHangus(p.name));
+        p.shields = Math.min(MAX_SHIELDS, p.shields + 1);
         return;
       case "goto": {
         const steps = (e.tile - p.position + BOARD_SIZE) % BOARD_SIZE;

@@ -51,6 +51,21 @@ export function audioCtx(): AudioContext | null {
   }
 }
 
+/**
+ * Browser (terutama HP) bisa men-suspend AudioContext saat tab/aplikasi berpindah.
+ * Coba lanjutkan lagi begitu tab kembali terlihat atau ada interaksi.
+ */
+function keepAlive() {
+  const wake = () => {
+    if (ctx && ctx.state !== "running" && ctx.state !== "closed") void ctx.resume().catch(() => {});
+  };
+  document.addEventListener("visibilitychange", wake);
+  window.addEventListener("focus", wake);
+  window.addEventListener("pointerdown", wake, true);
+  window.addEventListener("keydown", wake, true);
+}
+if (typeof window !== "undefined") keepAlive();
+
 function ac(): AudioContext | null {
   if (Sound.muted) return null;
   return audioCtx();
@@ -357,6 +372,8 @@ export const sfx = {
     [659, 698, 659, 587].forEach((f, i) => tone(f, 0.16, "square", 0.035, undefined, 0.1 + i * 0.2));
   },
   scream: () => wobble(700, 0.6, "sawtooth", 0.05, 12, 80, 1100),
+  /** Pengingat giliran saat tab di latar. */
+  turnPing: () => [784, 988, 1319].forEach((f, i) => tone(f, 0.25, "sine", 0.09, undefined, i * 0.12)),
   hop: () => tone(420, 0.12, "square", 0.05, 820),
   land: () => tone(160, 0.08, "triangle", 0.08),
   coin: () => {
