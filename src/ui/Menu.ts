@@ -140,7 +140,7 @@ export function showMenu(): Promise<MenuResult> {
             big("📖", Lang.menu.rulesTitle, Lang.menu.rulesSub, "white", "mode-rules", rules),
           ),
           h("div", { class: "menu-foot" }, settingsButton(Lang.menu.settings)),
-          h("div", { class: "menu-version", "data-testid": "version" }, `v${__APP_VERSION__}`),
+          h("div", { class: "menu-version", "data-testid": "version" }, `v${__APP_VERSION__.replace(/-(\w+)$/, " ($1)")}`),
         ),
       );
     };
