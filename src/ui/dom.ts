@@ -36,6 +36,8 @@ export interface ModalButton<T> {
   color?: string;
   /** Judul kelompok; judul ditampilkan tiap kali berganti dari tombol sebelumnya. */
   group?: string;
+  /** label & sub berisi HTML tepercaya (teks dari Lang + angka terformat). */
+  html?: boolean;
 }
 
 export interface ModalOptions<T> {
@@ -101,8 +103,8 @@ export function modal<T>(o: ModalOptions<T>): Promise<T> {
           "data-tile": b.tile,
           style: b.color ? `--chip:${b.color}` : undefined,
         },
-        h("span", {}, b.label),
-        b.sub ? h("small", {}, b.sub) : null,
+        b.html ? h("span", { html: b.label }) : h("span", {}, b.label),
+        b.sub ? (b.html ? h("small", { html: b.sub }) : h("small", {}, b.sub)) : null,
       );
       btn.addEventListener("click", () => {
         sfx.click();

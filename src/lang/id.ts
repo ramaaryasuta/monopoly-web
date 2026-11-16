@@ -402,6 +402,9 @@ const hud = {
 };
 
 // ============================================================ dialog keputusan pemain manusia (ui/HumanDecider.ts)
+const rentExplainHtml =
+  "<p class=\"rent-explain\">🛒 <b>Bayar</b> = harga yang kamu bayar sekarang.<br>💰 <b>Sewa</b> = uang yang <u>lawan bayar ke kamu</u> tiap kali menginjak petak ini.</p>";
+
 const human = {
   offerFrom: (first: boolean, name: Fmt) => `🤝 ${first ? "Tawaran" : "Tawar balik"} dari ${name}`,
   continue: "⛓️ LANJUT",
@@ -417,15 +420,18 @@ const human = {
   pickResign: (icon: Fmt) => `Klik bangunan lawan yang karyawannya mau dibikin resign ${icon}`,
   buyQ: (tile: Fmt) => `Beli ${tile}?`,
   buildQ: (tile: Fmt) => `Bangun di ${tile}?`,
-  buyResort: (cost: Fmt) => `🌴 Beli Wisata — ${cost}`,
   rent: (rent: Fmt) => `sewa ${rent}`,
-  rentLeft: (rent: Fmt, left: Fmt) => `sewa ${rent}\nsisa uang ${left}`,
+  /** Tombol beli/bangun: kiri = yang kamu BAYAR sekarang, kanan = sewa yang kamu TERIMA dari lawan. */
+  buyOptLabel: (name: Fmt, cost: Fmt, left: Fmt) =>
+    `<b class="bo-name">${name}</b><span class="bo-pay">🛒 Bayar <b>${cost}</b></span><span class="bo-left">sisa uangmu ${left}</span>`,
+  buyOptLabelShort: (name: Fmt, cost: Fmt) => `<b class="bo-name">${name}</b><span class="bo-pay">🛒 Bayar <b>${cost}</b></span>`,
+  buyOptRent: (rent: Fmt) => `<span class="bo-rent"><span class="bo-rent-t">💰 Sewa</span><b>+${rent}</b><span class="bo-rent-s">dari lawan</span></span>`,
   moneyShort: (short: Fmt) => `💸 uang kurang ${short}`,
   skipOk: "Oke, lewati",
   skip: "Lewati",
   currentLevel: (level: Fmt) => `Saat ini: <b>${level}</b>. `,
   lapNote: "<p class=\"lap-note\">🚩 Putaran pertama: baru bisa beli tanah. Rumah & vila setelah lewat Mulai.</p>",
-  buyBody: (levelText: Fmt, money: Fmt, lapNote: Fmt) => `<p>${levelText}Uangmu: <b>${money}</b></p>${lapNote}`,
+  buyBody: (levelText: Fmt, money: Fmt, lapNote: Fmt) => `<p>${levelText}Uangmu: <b>${money}</b></p>${rentExplainHtml}${lapNote}`,
   debtTitle: "💸 Uangnya kurang!",
   debtTo: (to: Fmt) => `Bayar ke <b>${to}</b>`,
   debtNeed: "Harus bayar",

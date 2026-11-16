@@ -663,6 +663,21 @@ body {
 .modal .buttons.row { flex-direction: row; justify-content: center; }
 .modal .opt { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; }
 .modal .opt small { font-weight: 600; opacity: 0.75; font-size: 13px; text-align: right; white-space: pre-line; line-height: 1.25; flex-shrink: 0; }
+/* Tombol beli/bangun: kiri = harga yang dibayar, kanan = kotak sewa dari lawan */
+.modal .buy-opt > span { display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
+.modal .buy-opt .bo-name { font-size: 17px; }
+.modal .buy-opt .bo-pay { font-size: 15px; font-weight: 700; }
+.modal .buy-opt .bo-left { font-size: 12px; font-weight: 600; opacity: 0.75; }
+.modal .buy-opt small { opacity: 1; }
+.modal .buy-opt .bo-rent {
+  display: flex; flex-direction: column; align-items: center; min-width: 84px;
+  padding: 4px 8px; border: 2px dashed var(--ink); border-radius: 10px;
+  background: #fff6c9; color: var(--ink); line-height: 1.15;
+}
+.modal .buy-opt .bo-rent-t { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; }
+.modal .buy-opt .bo-rent b { font-size: 15px; color: #1f8a3b; }
+.modal .buy-opt .bo-rent-s { font-size: 11px; font-weight: 600; opacity: 0.8; }
+.modal .rent-explain { font-size: 13px; text-align: left; background: rgba(43, 29, 58, 0.06); border-radius: 10px; padding: 6px 10px; line-height: 1.4; }
 .card-art { font-size: 72px; margin: 6px 0; animation: cardFlip 0.6s ease-out; }
 .modal table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
 .modal td { padding: 3px 6px; border-bottom: 1px dashed rgba(43, 29, 58, 0.25); }

@@ -186,17 +186,22 @@ export class HumanDecider implements Decider {
       ...c.options.map((o) => ({ ...o, ok: true })),
       ...(c.unaffordable ?? []).map((o) => ({ ...o, ok: false })),
     ].sort((a, b) => a.level - b.level);
-    const buttons = all.map((o) => ({
-      label: isResort ? Lang.human.buyResort(nbsp(fmt(o.cost))) : `${LEVEL_ICON[o.level]} ${LEVEL_NAMES[o.level]} — ${nbsp(fmt(o.cost))}`,
-      sub: o.ok
-        ? Lang.human.rentLeft(fmt(this.rentAt(c.tile, c.player, o.level)), fmt(c.money - o.cost))
-        : Lang.human.moneyShort(fmt(o.cost - c.money)),
-      value: o.level,
-      class: o.level === 5 ? "pink" : "green",
-      disabled: !o.ok,
-    }));
+    const buttons = all.map((o) => {
+      const name = isResort ? "🌴 Wisata" : `${LEVEL_ICON[o.level]} ${LEVEL_NAMES[o.level]}`;
+      const cost = nbsp(fmt(o.cost));
+      return {
+        label: o.ok
+          ? Lang.human.buyOptLabel(name, cost, nbsp(fmt(c.money - o.cost)))
+          : Lang.human.buyOptLabelShort(name, cost) + `<span class="bo-left">${Lang.human.moneyShort(fmt(o.cost - c.money))}</span>`,
+        sub: Lang.human.buyOptRent(nbsp(fmt(this.rentAt(c.tile, c.player, o.level)))),
+        value: o.level,
+        class: `${o.level === 5 ? "pink" : "green"} buy-opt`,
+        disabled: !o.ok,
+        html: true,
+      };
+    });
     const noneAffordable = c.options.length === 0;
-    buttons.push({ label: noneAffordable ? Lang.human.skipOk : Lang.human.skip, sub: "", value: c.currentLevel, class: "white", disabled: false });
+    buttons.push({ label: noneAffordable ? Lang.human.skipOk : Lang.human.skip, sub: "", value: c.currentLevel, class: "white", disabled: false, html: false });
     const levelText = c.currentLevel > 0 ? Lang.human.currentLevel(LEVEL_NAMES[c.currentLevel]) : "";
     const lapNote = c.firstLap ? Lang.human.lapNote : "";
     return modal({
