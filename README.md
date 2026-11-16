@@ -61,7 +61,9 @@ Beranda → **Main Online** → **Buat Room** memberi kode 5 huruf (mis. `BHDVS`
 src/
   core/      # logic murni (tanpa 3D) — bisa dites di Node
     types.ts, rules.ts, game.ts (turn state machine), bot.ts (AI), rng.ts, interfaces.ts
-  data/      # definisi papan & kartu
+  data/      # definisi papan & kartu (angka & efek; teksnya dari lang/)
+  lang/      # SEMUA teks untuk pemain (id.ts): pesan, label UI, kartu, nama petak
+
   scene/     # Babylon.js: GameScene, BoardView, Pawn, Dice, Effects, toon material, tween, sfx
   ui/        # HTML overlay: Menu, Hud, HumanDecider, ScenePresenter, QaPanel
   net/       # online P2P: Room (PeerJS, room code, lobi), NetDecider (kirim/terima keputusan)
@@ -69,3 +71,7 @@ tests/       # vitest
 ```
 
 Logic (`core/`) tidak tahu apa pun soal 3D: ia berbicara lewat interface `Decider` (keputusan manusia/bot) dan `Presenter` (animasi). Karena itu seluruh aturan bisa dites tanpa browser.
+
+## Teks / bahasa
+
+Semua teks yang tampil ke pemain ada di satu file: [`src/lang/id.ts`](src/lang/id.ts), diekspor sebagai `Lang` dan dikelompokkan per bagian (`Lang.game`, `Lang.menu`, `Lang.hud`, `Lang.cards`, `Lang.tiles`, ...). Kode tidak menulis teks langsung. Teks yang butuh data berbentuk fungsi, mis. `Lang.game.bayarSewa(pemain, sewa, pemilik)`; nilai uang diformat oleh pemanggil (`rp()`), format Rupiah-nya sendiri ada di `Lang.money`. Untuk menambah bahasa, salin `id.ts` menjadi file baru dengan bentuk yang sama (tipe `Lang`) lalu ganti impor `Lang`.

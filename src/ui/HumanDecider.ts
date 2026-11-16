@@ -22,6 +22,7 @@ import type { GameScene } from "../scene/GameScene";
 import { fmt, h, modal } from "./dom";
 import type { Hud } from "./Hud";
 import { editOffer, focusMap, mapForButtons, marketMenu, offerView, pickTradeTarget } from "./TradeUi";
+import { Lang } from "../lang/id";
 
 const LEVEL_ICON = ["", "🚩", "🏠", "🏠🏠", "🏡", "🗼"];
 
@@ -56,7 +57,7 @@ export class HumanDecider implements Decider {
       const action = await this.hud.waitTurnMenu({
         items: c.hasItems ? this.state.players[c.player].items.length : 0,
         tradesLeft: c.tradesLeft,
-        rollLabel: c.inIsland ? "⛓️ LANJUT" : "🎲 LEMPAR DADU",
+        rollLabel: c.inIsland ? Lang.human.continue : Lang.hud.roll,
       });
       if (action === "roll") {
         this.rollAlreadyClicked = true;
@@ -75,7 +76,7 @@ export class HumanDecider implements Decider {
       const target = await pickTradeTarget(this.state, c.player);
       if (target === null) continue;
       const draft: TradeOffer = { from: c.player, to: target, giveTiles: [], giveMoney: 0, takeTiles: [], takeMoney: 0 };
-      const offer = await editOffer(this.state, draft, `🤝 Tawaran ke ${this.state.players[target].name}`);
+      const offer = await editOffer(this.state, draft, Lang.human.offerTo(this.state.players[target].name));
       if (offer) return { type: "trade", offer };
     }
   }
@@ -88,18 +89,18 @@ export class HumanDecider implements Decider {
     const hotseat = this.hotseat;
     for (;;) {
       const v = await modal<"accept" | "counter" | "reject">({
-        title: `🤝 ${c.round === 0 ? "Tawaran" : "Tawar balik"} dari ${from.name}`,
+        title: Lang.human.offerFrom(c.round === 0, from.name),
         className: "trade-modal",
-        body: h("div", {}, hotseat ? h("p", { class: "for-who" }, `Untuk ${me.name} 👀`) : null, offerView(this.state, o)),
+        body: h("div", {}, hotseat ? h("p", { class: "for-who" }, Lang.human.forWho(me.name)) : null, offerView(this.state, o)),
         row: true,
         buttons: [
-          { label: "✅ Terima", value: "accept", class: "green" },
-          ...(c.canCounter ? [{ label: "🔁 Tawar Balik", value: "counter" as const, class: "blue" }] : []),
-          { label: "❌ Tolak", value: "reject", class: "white" },
+          { label: Lang.human.accept, value: "accept", class: "green" },
+          ...(c.canCounter ? [{ label: Lang.human.counterBtn, value: "counter" as const, class: "blue" }] : []),
+          { label: Lang.human.reject, value: "reject", class: "white" },
         ],
       });
       if (v !== "counter") return { type: v };
-      const counter = await editOffer(this.state, flipOffer(o), `🔁 Tawar balik ke ${from.name}`);
+      const counter = await editOffer(this.state, flipOffer(o), Lang.human.counterTo(from.name));
       if (!counter) continue;
       // Tawar balik yang isinya sama persis = menerima
       if (sameOffer(counter, flipOffer(o))) return { type: "accept" };
@@ -131,11 +132,11 @@ export class HumanDecider implements Decider {
         return null;
       }
       const picked = await modal<ItemChoice["usable"][number] | null>({
-        title: "🎒 Kantong Ajaib",
-        body: "<p>Pakai satu kartu sebelum lempar dadu.</p>",
+        title: Lang.human.bag,
+        body: Lang.human.bagHint,
         buttons: [
           ...c.usable.map((u) => ({ label: `${ITEMS[u.item].icon} ${ITEMS[u.item].name}`, sub: ITEMS[u.item].text, value: u, class: "pink" })),
-          { label: "Batal", value: null, class: "white" },
+          { label: Lang.common.cancel, value: null, class: "white" },
         ],
       });
       if (!picked) continue;
@@ -143,20 +144,20 @@ export class HumanDecider implements Decider {
       if (def.target === null) return { item: picked.item, target: null };
       if (def.target === "player") {
         const target = await modal<number | null>({
-          title: `${def.icon} Sasaran ${def.name}`,
+          title: Lang.human.target(def.icon, def.name),
           body: `<p>${def.text}</p>`,
           buttons: [
             ...picked.targets.map((pid) => {
               const p = this.state.players[pid];
               return { label: p.name, sub: `${fmt(p.money)}`, value: pid as number | null, class: "blue" };
             }),
-            { label: "Batal", value: null, class: "white" },
+            { label: Lang.common.cancel, value: null, class: "white" },
           ],
         });
         if (target === null) continue;
         return { item: picked.item, target };
       }
-      this.hud.showPickBanner(`Klik bangunan lawan yang karyawannya mau dibikin resign ${def.icon}`);
+      this.hud.showPickBanner(Lang.human.pickResign(def.icon));
       try {
         const tile = await this.scene.pickTile(picked.targets);
         return { item: picked.item, target: tile };
@@ -176,26 +177,26 @@ export class HumanDecider implements Decider {
   async chooseBuild(c: BuildChoice): Promise<number> {
     const def = BOARD[c.tile];
     const isResort = def.kind === "resort";
-    const title = c.currentLevel === 0 ? `Beli ${def.name}?` : `Bangun di ${def.name}?`;
+    const title = c.currentLevel === 0 ? Lang.human.buyQ(def.name) : Lang.human.buildQ(def.name);
     const all = [
       ...c.options.map((o) => ({ ...o, ok: true })),
       ...(c.unaffordable ?? []).map((o) => ({ ...o, ok: false })),
     ].sort((a, b) => a.level - b.level);
     const buttons = all.map((o) => ({
-      label: isResort ? `🌴 Beli Wisata — ${fmt(o.cost)}` : `${LEVEL_ICON[o.level]} ${LEVEL_NAMES[o.level]} — ${fmt(o.cost)}`,
-      sub: o.ok ? `sewa ${fmt(this.rentAt(c.tile, c.player, o.level))}` : `💸 uang kurang ${fmt(o.cost - c.money)}`,
+      label: isResort ? Lang.human.buyResort(fmt(o.cost)) : `${LEVEL_ICON[o.level]} ${LEVEL_NAMES[o.level]} — ${fmt(o.cost)}`,
+      sub: o.ok ? Lang.human.rent(fmt(this.rentAt(c.tile, c.player, o.level))) : Lang.human.moneyShort(fmt(o.cost - c.money)),
       value: o.level,
       class: o.level === 5 ? "pink" : "green",
       disabled: !o.ok,
     }));
     const noneAffordable = c.options.length === 0;
-    buttons.push({ label: noneAffordable ? "Oke, lewati" : "Lewati", sub: "", value: c.currentLevel, class: "white", disabled: false });
-    const levelText = c.currentLevel > 0 ? `Saat ini: <b>${LEVEL_NAMES[c.currentLevel]}</b>. ` : "";
-    const lapNote = c.firstLap ? `<p class="lap-note">🚩 Putaran pertama: baru bisa beli tanah. Rumah & vila setelah lewat Mulai.</p>` : "";
+    buttons.push({ label: noneAffordable ? Lang.human.skipOk : Lang.human.skip, sub: "", value: c.currentLevel, class: "white", disabled: false });
+    const levelText = c.currentLevel > 0 ? Lang.human.currentLevel(LEVEL_NAMES[c.currentLevel]) : "";
+    const lapNote = c.firstLap ? Lang.human.lapNote : "";
     return modal({
       title,
       bandColor: def.group !== undefined ? GROUP_COLORS[def.group] : "#36d1c4",
-      body: `<p>${levelText}Uangmu: <b>${fmt(c.money)}</b></p>${lapNote}`,
+      body: Lang.human.buyBody(levelText, fmt(c.money), lapNote),
       buttons,
     });
   }
@@ -212,19 +213,19 @@ export class HumanDecider implements Decider {
     const debtTiles = [...new Set([...(c.downgrades ?? []).map((d) => d.tile), ...c.tiles.map((t) => t.tile)])];
     for (;;) {
       const v = await modal<V>({
-        title: "💸 Uangnya kurang!",
+        title: Lang.human.debtTitle,
         className: "debt-modal",
         ...mapForButtons(this.state, debtTiles, h(
           "div",
           {},
-          hotseat ? h("p", { class: "for-who" }, `Untuk ${me.name} 👀`) : null,
-          h("p", { html: `Harus bayar <b>${fmt(c.amount)}</b> ke <b>${to}</b>. Uangmu <b>${fmt(c.money)}</b>, kurang <b>${fmt(short)}</b>.` }),
+          hotseat ? h("p", { class: "for-who" }, Lang.human.forWho(me.name)) : null,
+          h("p", { html: Lang.human.debtBody(fmt(c.amount), to, fmt(c.money), fmt(short)) }),
           h(
             "p",
             { class: "debt-hint" },
             hopeless
-              ? `⚠️ Walau semua dijual ke bank (+${fmt(totalSell)}) masih kurang. Coba nego jual ke pemain lain, atau menyerah.`
-              : "Turunkan bangunan (wilayah tetap milikmu), jual wilayah ke bank (50% nilai investasi), atau nego jual ke pemain lain.",
+              ? Lang.human.sellAllShort(fmt(totalSell))
+              : Lang.human.debtHelp,
           ),
         )),
         buttons: [
@@ -232,7 +233,7 @@ export class HumanDecider implements Decider {
             const def = BOARD[d.tile];
             const best = d.options[d.options.length - 1];
             return {
-              label: `⬇️ Turunkan ${def.name} — maks +${fmt(best.value)}`,
+              label: Lang.human.downgradeMax(def.name, fmt(best.value)),
               sub: `${LEVEL_NAMES[d.level]} → ?`,
               value: { type: "pickDown", tile: d.tile } as V,
               class: "green",
@@ -241,9 +242,9 @@ export class HumanDecider implements Decider {
           }),
           ...c.tiles.map((t) => {
             const def = BOARD[t.tile];
-            const lvl = def.kind === "resort" ? "Wisata" : LEVEL_NAMES[this.state.tiles[t.tile].level];
+            const lvl = def.kind === "resort" ? Lang.hud.resortWord : LEVEL_NAMES[this.state.tiles[t.tile].level];
             return {
-              label: `🏦 Jual ${def.name} — +${fmt(t.value)}`,
+              label: Lang.human.sellTile(def.name, fmt(t.value)),
               sub: lvl,
               value: { type: "sell", tile: t.tile } as V,
               class: "orange",
@@ -251,36 +252,36 @@ export class HumanDecider implements Decider {
             };
           }),
           {
-            label: canTrade ? `🤝 Nego jual ke pemain (sisa ${c.tradesLeft}x)` : "🤝 Jatah nego habis",
+            label: canTrade ? Lang.human.negoSell(c.tradesLeft) : Lang.human.negoUsed,
             value: "trade" as V,
             class: "blue",
             disabled: !canTrade,
           },
-          { label: "🏳️ Menyerah (bangkrut)", value: { type: "giveUp" } as V, class: "white" },
+          { label: Lang.human.giveUp, value: { type: "giveUp" } as V, class: "white" },
         ],
       });
       if (v !== "trade" && v.type === "pickDown") {
         const d = c.downgrades.find((x) => x.tile === v.tile)!;
         const def = BOARD[d.tile];
         const level = await modal<number | null>({
-          title: `⬇️ Turunkan ${def.name}`,
+          title: Lang.human.downgrade(def.name),
           body: h(
             "div",
             {},
-            hotseat ? h("p", { class: "for-who" }, `Untuk ${me.name} 👀`) : null,
+            hotseat ? h("p", { class: "for-who" }, Lang.human.forWho(me.name)) : null,
             focusMap(this.state, d.tile),
             h("p", {
-              html: `Sekarang <b>${LEVEL_NAMES[d.level]}</b>. Bangunan dijual ke bank 50% harga, wilayah tetap milikmu. Kurang <b>${fmt(short)}</b>.`,
+              html: Lang.human.downgradeBody(LEVEL_NAMES[d.level], fmt(short)),
             }),
           ),
           buttons: [
             ...d.options.map((o) => ({
-              label: `Jadi ${LEVEL_NAMES[o.level]} — +${fmt(o.value)}`,
-              sub: o.value >= short ? "✅ cukup" : "",
+              label: Lang.human.becomes(LEVEL_NAMES[o.level], fmt(o.value)),
+              sub: o.value >= short ? Lang.human.enough : "",
               value: o.level as number | null,
               class: o.value >= short ? "green" : "orange",
             })),
-            { label: "↩️ Kembali", value: null, class: "white" },
+            { label: Lang.human.back, value: null, class: "white" },
           ],
         });
         if (level === null) continue;
@@ -290,18 +291,18 @@ export class HumanDecider implements Decider {
         const target = await pickTradeTarget(this.state, c.player);
         if (target === null) continue;
         const draft: TradeOffer = { from: c.player, to: target, giveTiles: [], giveMoney: 0, takeTiles: [], takeMoney: 0 };
-        const offer = await editOffer(this.state, draft, `🤝 Jual ke ${this.state.players[target].name}`);
+        const offer = await editOffer(this.state, draft, Lang.human.sellTo(this.state.players[target].name));
         if (offer) return { type: "trade", offer };
         continue;
       }
       if (v.type === "giveUp") {
         const sure = await modal({
-          title: "🏳️ Yakin menyerah?",
-          body: `<p>${me.name} akan bangkrut dan semua wilayahnya kembali ke bank.</p>`,
+          title: Lang.human.sure,
+          body: Lang.human.giveUpBody(me.name),
           row: true,
           buttons: [
-            { label: "Batal", value: false, class: "white" },
-            { label: "Ya, bangkrut", value: true, class: "pink" },
+            { label: Lang.human.cancel, value: false, class: "white" },
+            { label: Lang.human.yesBankrupt, value: true, class: "pink" },
           ],
         });
         if (!sure) continue;
@@ -312,17 +313,17 @@ export class HumanDecider implements Decider {
 
   async chooseIslandAction(c: IslandChoice): Promise<"pay" | "roll"> {
     return modal({
-      title: "⛓️ Dipenjara di Nusakambangan",
-      body: `<p>Sisa ${c.turnsLeft} giliran. Dapatkan dadu kembar untuk kabur, atau sogok sipir biar langsung bebas.</p>`,
+      title: Lang.human.jailTitle,
+      body: Lang.human.jailBody(c.turnsLeft),
       buttons: [
-        { label: `💰 Sogok sipir ${fmt(c.bail)}`, value: "pay" as const, class: "blue", disabled: !c.canPay },
-        { label: "🎲 Coba dapat dadu kembar", value: "roll" as const, class: "green" },
+        { label: Lang.human.bribe(fmt(c.bail)), value: "pay" as const, class: "blue", disabled: !c.canPay },
+        { label: Lang.human.tryDouble, value: "roll" as const, class: "green" },
       ],
     });
   }
 
   async chooseTile(c: TileChoice): Promise<number> {
-    this.hud.showPickBanner(c.purpose === "tour" ? "Klik petak tujuan pesawat negara" : "Klik propertimu untuk Pesta Pejabat");
+    this.hud.showPickBanner(c.purpose === "tour" ? Lang.human.pickTour : Lang.human.pickFestival);
     try {
       return await this.scene.pickTile(c.options);
     } finally {

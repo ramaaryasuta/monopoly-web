@@ -3,6 +3,7 @@ import type { GameState } from "../core/types";
 import { BOARD, GROUP_COLORS, GROUP_NAMES, SIDE_LEN } from "../data/board";
 import { gridOf, HALF } from "../scene/layout";
 import { fmt, h } from "./dom";
+import { Lang } from "../lang/id";
 
 /**
  * Peta mini papan (tampilan atas, arah sama dengan kamera awal: Mulai di kanan-bawah).
@@ -36,15 +37,7 @@ const SPECIAL_ICON: Record<string, string> = {
   tax: "💸",
 };
 const LEVEL_GLYPH = ["", "🚩", "🏠", "🏘️", "🏡", "🗼"];
-const KIND_NAME: Record<string, string> = {
-  start: "Petak Mulai",
-  chance: "Kartu Paket",
-  island: "Penjara",
-  festival: "Festival",
-  tour: "Pesawat",
-  tax: "Pajak",
-  resort: "Tempat Wisata",
-};
+const KIND_NAME: Record<string, string> = Lang.boardMap.kindName;
 
 const OPEN_KEY = "pk.boardMapOpen";
 function loadOpen(): boolean {
@@ -111,7 +104,7 @@ export class BoardMap {
     const details = h(
       "details",
       { class: "bm-wrap" },
-      h("summary", {}, "🗺️ Peta papan"),
+      h("summary", {}, Lang.boardMap.title),
       h("div", { class: "bm" }, grid, legend),
     ) as HTMLDetailsElement;
     details.open = loadOpen();
@@ -157,7 +150,7 @@ export class BoardMap {
   private showInfo(t: number | null) {
     this.info.replaceChildren();
     if (t === null) {
-      this.info.append(h("span", { class: "bm-hint" }, "Arahkan / ketuk petak atau daftar untuk melihat lokasinya"));
+      this.info.append(h("span", { class: "bm-hint" }, Lang.boardMap.hint));
       return;
     }
     const def = BOARD[t];
@@ -165,7 +158,7 @@ export class BoardMap {
     const owner = ts.owner !== null ? this.state.players[ts.owner] : null;
     const color = def.group !== undefined ? GROUP_COLORS[def.group] : def.kind === "resort" ? "#36d1c4" : "#ddd";
     let kind = KIND_NAME[def.kind] ?? "";
-    if (def.kind === "property") kind = `Grup ${GROUP_NAMES[def.group!]}${owner ? ` · ${LEVEL_NAMES[ts.level]}` : ""}`;
+    if (def.kind === "property") kind = owner ? Lang.boardMap.groupLevel(GROUP_NAMES[def.group!], LEVEL_NAMES[ts.level]) : Lang.boardMap.group(GROUP_NAMES[def.group!]);
     const value = owner ? investedValue(this.state, t) : (def.price ?? 0);
     this.info.append(
       h("b", { class: "bm-name", style: `--grp:${color}` }, def.name),
@@ -174,12 +167,12 @@ export class BoardMap {
         ? h(
             "small",
             {},
-            owner ? h("span", { class: "player-pill", style: `--c:${owner.color}` }, owner.name) : "Belum dimiliki",
-            ` · ${owner ? "nilai" : "harga"} ${fmt(value)}`,
+            owner ? h("span", { class: "player-pill", style: `--c:${owner.color}` }, owner.name) : Lang.boardMap.unowned,
+            Lang.boardMap.valueLine(!!owner, fmt(value)),
           )
         : "",
     );
-    if (ts.festival) this.info.append(h("small", {}, "🎉 Sedang Pesta Pejabat"));
+    if (ts.festival) this.info.append(h("small", {}, Lang.boardMap.party));
   }
 
   /** Sorot satu petak (null = hapus sorotan). */

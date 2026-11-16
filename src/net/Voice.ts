@@ -1,6 +1,7 @@
 import type { MediaConnection } from "peerjs";
 import type { Room, Seat, VoiceState } from "./Room";
 import { onSoundChange, Sound } from "../scene/sfx";
+import { Lang } from "../lang/id";
 
 /**
  * Voice chat ala Discord untuk room online.
@@ -108,7 +109,7 @@ export class Voice {
       this.localAnalyser.fftSize = 512;
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error(window.isSecureContext ? "Browser tidak mendukung mikrofon." : "Mikrofon butuh HTTPS (atau localhost).");
+          throw new Error(window.isSecureContext ? Lang.net.noMicSupport : Lang.net.needHttps);
         }
         this.mic = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -123,10 +124,10 @@ export class Voice {
         const name = (e as { name?: string }).name;
         this.micError =
           name === "NotAllowedError"
-            ? "Izin mikrofon ditolak — kamu hanya bisa mendengar."
+            ? Lang.net.micDenied
             : name === "NotFoundError"
-              ? "Mikrofon tidak ditemukan — kamu hanya bisa mendengar."
-              : `${(e as Error).message ?? e} Kamu hanya bisa mendengar.`;
+              ? Lang.net.micNotFound
+              : Lang.net.micError((e as Error).message ?? e);
       }
       if (ctx.state === "suspended") await ctx.resume().catch(() => {});
       this.joined = true;

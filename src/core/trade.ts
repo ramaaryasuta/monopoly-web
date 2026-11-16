@@ -3,6 +3,7 @@ import type { TradeOffer } from "./interfaces";
 import { rp } from "./money";
 import { investedValue } from "./rules";
 import type { GameState, MarketListing } from "./types";
+import { Lang } from "../lang/id";
 
 /** Maksimal tawaran yang boleh dikirim satu pemain per giliran. */
 export const MAX_TRADES_PER_TURN = 3;
@@ -22,19 +23,19 @@ export function tradeableTiles(state: GameState, pid: number): number[] {
 /** Kembalikan alasan tawaran tidak sah, atau `null` bila sah. Dipakai di semua peer (deterministik). */
 export function tradeError(state: GameState, o: TradeOffer): string | null {
   const { players, tiles } = state;
-  if (!o || !isInt(o.from) || !isInt(o.to) || !players[o.from] || !players[o.to]) return "pemain tidak dikenal";
-  if (o.from === o.to) return "tidak bisa tawar ke diri sendiri";
-  if (players[o.from].bankrupt || players[o.to].bankrupt) return "pemain sudah bangkrut";
-  if (!Array.isArray(o.giveTiles) || !Array.isArray(o.takeTiles)) return "data tawaran rusak";
-  if (!isInt(o.giveMoney) || !isInt(o.takeMoney) || o.giveMoney < 0 || o.takeMoney < 0) return "jumlah uang tidak sah";
+  if (!o || !isInt(o.from) || !isInt(o.to) || !players[o.from] || !players[o.to]) return Lang.trade.unknownPlayer;
+  if (o.from === o.to) return Lang.trade.selfTrade;
+  if (players[o.from].bankrupt || players[o.to].bankrupt) return Lang.trade.bankruptPlayer;
+  if (!Array.isArray(o.giveTiles) || !Array.isArray(o.takeTiles)) return Lang.trade.brokenData;
+  if (!isInt(o.giveMoney) || !isInt(o.takeMoney) || o.giveMoney < 0 || o.takeMoney < 0) return Lang.trade.badMoney;
   const all = [...o.giveTiles, ...o.takeTiles];
-  if (new Set(all).size !== all.length) return "wilayah dobel";
-  if (o.giveTiles.some((t) => !isInt(t) || !isOwnable(t) || tiles[t].owner !== o.from)) return "wilayah yang ditawarkan bukan milik pengirim";
-  if (o.takeTiles.some((t) => !isInt(t) || !isOwnable(t) || tiles[t].owner !== o.to)) return "wilayah yang diminta bukan milik lawan";
-  if (o.giveMoney > 0 && o.takeMoney > 0) return "uang hanya boleh dari satu pihak";
-  if (all.length === 0) return "tawaran tidak boleh tanpa wilayah";
-  if (players[o.from].money < o.giveMoney) return `uang ${players[o.from].name} tidak cukup`;
-  if (players[o.to].money < o.takeMoney) return `uang ${players[o.to].name} tidak cukup`;
+  if (new Set(all).size !== all.length) return Lang.trade.duplicateTiles;
+  if (o.giveTiles.some((t) => !isInt(t) || !isOwnable(t) || tiles[t].owner !== o.from)) return Lang.trade.giveNotOwned;
+  if (o.takeTiles.some((t) => !isInt(t) || !isOwnable(t) || tiles[t].owner !== o.to)) return Lang.trade.takeNotOwned;
+  if (o.giveMoney > 0 && o.takeMoney > 0) return Lang.trade.moneyOneSide;
+  if (all.length === 0) return Lang.trade.noTiles;
+  if (players[o.from].money < o.giveMoney) return Lang.trade.moneyShort(players[o.from].name);
+  if (players[o.to].money < o.takeMoney) return Lang.trade.moneyShort(players[o.to].name);
   return null;
 }
 
@@ -57,14 +58,14 @@ export function offerGainFor(state: GameState, o: TradeOffer): number {
 const list = (tiles: number[], money: number) => {
   const parts = tiles.map((t) => BOARD[t].name);
   if (money > 0) parts.push(rp(money));
-  return parts.length ? parts.join(", ") : "—";
+  return parts.length ? parts.join(", ") : Lang.trade.nothing;
 };
 
 /** Ringkasan satu baris untuk catatan permainan. */
 export function describeOffer(state: GameState, o: TradeOffer): string {
   const a = state.players[o.from].name;
   const b = state.players[o.to].name;
-  return `${a} beri [${list(o.giveTiles, o.giveMoney)}] ⇄ ${b} beri [${list(o.takeTiles, o.takeMoney)}]`;
+  return Lang.trade.describe(a, list(o.giveTiles, o.giveMoney), b, list(o.takeTiles, o.takeMoney));
 }
 
 /** Listing Pasar Terbuka yang masih sah (pemilik masih penjualnya). */

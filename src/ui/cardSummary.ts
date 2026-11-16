@@ -3,6 +3,7 @@ import type { GameState } from "../core/types";
 import { BOARD } from "../data/board";
 import { ITEMS, MAX_ITEMS, type Card } from "../data/cards";
 import { rp } from "../core/money";
+import { Lang } from "../lang/id";
 
 export type CardTone = "gain" | "loss" | "mixed" | "neutral";
 
@@ -23,9 +24,9 @@ export function cardSummary(state: GameState, pid: number, card: Card): CardSumm
   const others = activePlayers(state).filter((i) => i !== pid);
   switch (e.type) {
     case "gain":
-      return { tone: "gain", main: `💰 ${plus(e.amount)}`, detail: "Uangmu bertambah" };
+      return { tone: "gain", main: `💰 ${plus(e.amount)}`, detail: Lang.cardSummary.gainDetail };
     case "pay":
-      return { tone: "loss", main: `💸 ${minus(e.amount)}`, detail: "Bayar ke bank" };
+      return { tone: "loss", main: `💸 ${minus(e.amount)}`, detail: Lang.cardSummary.payDetail };
     case "repair": {
       const buildings = ownedTiles(state, pid).reduce(
         (s, i) => s + (BOARD[i].kind === "property" ? Math.max(0, state.tiles[i].level - 1) : 0),
@@ -33,47 +34,47 @@ export function cardSummary(state: GameState, pid: number, card: Card): CardSumm
       );
       const cost = buildings * e.perLevel;
       return cost > 0
-        ? { tone: "loss", main: `💸 ${minus(cost)}`, detail: `${buildings} bangunan × ${rp(e.perLevel)}` }
-        : { tone: "neutral", main: "😌 Rp0", detail: "Belum punya bangunan, lolos!" };
+        ? { tone: "loss", main: `💸 ${minus(cost)}`, detail: Lang.cardSummary.repairDetail(buildings, rp(e.perLevel)) }
+        : { tone: "neutral", main: Lang.cardSummary.repairNone, detail: Lang.cardSummary.repairNoneDetail };
     }
     case "shield":
-      return { tone: "gain", main: "🛡️ Bebas sewa 1×", detail: "Dipakai otomatis saat kena sewa berikutnya" };
+      return { tone: "gain", main: Lang.cardSummary.shieldMain, detail: Lang.cardSummary.shieldDetail };
     case "goto": {
       const dest = BOARD[e.tile].name;
-      return { tone: "neutral", main: `✈️ Pindah ke ${dest}`, detail: e.tile === 0 ? "Dapat gaji Mulai" : undefined };
+      return { tone: "neutral", main: Lang.cardSummary.gotoMain(dest), detail: e.tile === 0 ? Lang.cardSummary.gotoDetail : undefined };
     }
     case "island":
-      return { tone: "loss", main: "⛓️ Masuk Nusakambangan", detail: "Terjebak beberapa giliran" };
+      return { tone: "loss", main: Lang.cardSummary.islandMain, detail: Lang.cardSummary.islandDetail };
     case "collectFromAll": {
       const total = e.amount * others.length;
-      return { tone: "gain", main: `💰 ${plus(total)}`, detail: `${rp(e.amount)} × ${others.length} pemain lain` };
+      return { tone: "gain", main: `💰 ${plus(total)}`, detail: Lang.cardSummary.collectDetail(rp(e.amount), others.length) };
     }
     case "payAll": {
       const total = e.amount * others.length;
-      return { tone: "loss", main: `💸 ${minus(total)}`, detail: `${rp(e.amount)} ke ${others.length} pemain lain` };
+      return { tone: "loss", main: `💸 ${minus(total)}`, detail: Lang.cardSummary.payAllDetail(rp(e.amount), others.length) };
     }
     case "stealRichest": {
-      if (others.length === 0) return { tone: "neutral", main: "🤷 Tidak ada yang bisa dipinjami" };
+      if (others.length === 0) return { tone: "neutral", main: Lang.cardSummary.stealNone };
       const victim = others.reduce((a, b) => (state.players[b].money > state.players[a].money ? b : a));
       const amt = Math.min(e.amount, state.players[victim].money);
-      return { tone: "gain", main: `💰 ${plus(amt)}`, detail: `Diambil dari ${state.players[victim].name}` };
+      return { tone: "gain", main: `💰 ${plus(amt)}`, detail: Lang.cardSummary.stealDetail(state.players[victim].name) };
     }
     case "gacha":
-      return { tone: "mixed", main: `🎲 ${minus(-e.min)} s/d ${plus(e.max)}`, detail: "Untung atau rugi, diundi!" };
+      return { tone: "mixed", main: Lang.cardSummary.gachaMain(minus(-e.min), plus(e.max)), detail: Lang.cardSummary.gachaDetail };
     case "back":
-      return { tone: "neutral", main: `⬅️ Mundur ${e.steps} petak` };
+      return { tone: "neutral", main: Lang.cardSummary.backMain(e.steps) };
     case "forward":
-      return { tone: "neutral", main: `➡️ Maju ${e.steps} petak` };
+      return { tone: "neutral", main: Lang.cardSummary.forwardMain(e.steps) };
     case "pushOthers":
-      return { tone: "gain", main: `💨 Lawan mundur ${e.steps} petak`, detail: "Uangmu aman" };
+      return { tone: "gain", main: Lang.cardSummary.pushMain(e.steps), detail: Lang.cardSummary.pushDetail };
     case "swap":
-      return { tone: "neutral", main: "🔄 Tukar posisi", detail: "Dengan pemain acak" };
+      return { tone: "neutral", main: Lang.cardSummary.swapMain, detail: Lang.cardSummary.swapDetail };
     case "randomTile":
-      return { tone: "neutral", main: "🚁 Pindah ke petak acak" };
+      return { tone: "neutral", main: Lang.cardSummary.randomTileMain };
     case "item": {
       const def = ITEMS[e.item];
-      if (state.players[pid].items.length >= MAX_ITEMS) return { tone: "gain", main: `💰 ${plus(50)}`, detail: `Kantong penuh, ${def.name} dijual ke tukang loak` };
-      return { tone: "gain", main: `🎒 Dapat ${def.icon} ${def.name}`, detail: "Disimpan di kantong, pakai nanti" };
+      if (state.players[pid].items.length >= MAX_ITEMS) return { tone: "gain", main: `💰 ${plus(50)}`, detail: Lang.cardSummary.itemFullDetail(def.name) };
+      return { tone: "gain", main: Lang.cardSummary.itemMain(def.icon, def.name), detail: Lang.cardSummary.itemDetail };
     }
   }
 }

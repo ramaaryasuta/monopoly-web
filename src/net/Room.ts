@@ -1,5 +1,6 @@
 import Peer, { type DataConnection, type MediaConnection } from "peerjs";
 import { getIceServers } from "./ice";
+import { Lang } from "../lang/id";
 
 /**
  * Room online peer-to-peer (WebRTC via PeerJS).
@@ -65,7 +66,7 @@ type Msg =
   | { t: "pong" };
 
 /** Satu nama bawaan per karakter (urutannya sama dengan CRITTERS). */
-const BOT_NAMES = ["Kentang", "Om Mata", "Cabai", "Timun", "Paus", "Kucing"];
+const BOT_NAMES = Lang.menu.defaultNames;
 
 const PING_EVERY_MS = 3000;
 const DEAD_AFTER_MS = 10000;
@@ -190,7 +191,7 @@ export function clearSession() {
   }
 }
 
-const cleanName = (n: unknown) => (typeof n === "string" ? n.trim().slice(0, 12) : "") || "Pemain";
+const cleanName = (n: unknown) => (typeof n === "string" ? n.trim().slice(0, 12) : "") || Lang.net.defaultName;
 
 async function openPeer(id?: string): Promise<Peer> {
   const opts = { debug: 1, config: { iceServers: await getIceServers() } };
@@ -198,7 +199,7 @@ async function openPeer(id?: string): Promise<Peer> {
     const peer = id ? new Peer(id, opts) : new Peer(opts);
     const timer = setTimeout(() => {
       peer.destroy();
-      reject(new Error("Server penghubung tidak merespons. Cek koneksi internet."));
+      reject(new Error(Lang.net.serverDown));
     }, 12000);
     const onError = (e: Error) => {
       clearTimeout(timer);
@@ -288,7 +289,7 @@ export class Room {
         throw e;
       }
     }
-    throw new Error("Gagal membuat room. Coba lagi.");
+    throw new Error(Lang.net.createFail);
   }
 
   static async join(code: string, name: string): Promise<Room> {
@@ -301,10 +302,10 @@ export class Room {
         peer.destroy();
         reject(new Error(msg));
       };
-      const timer = setTimeout(() => fail("Tidak bisa tersambung ke host. Mungkin jaringan memblokir koneksi P2P."), 15000);
+      const timer = setTimeout(() => fail(Lang.net.hostUnreachable), 15000);
       const onError = (e: Error) => {
         const t = (e as { type?: string }).type;
-        fail(t === "peer-unavailable" ? `Room ${code} tidak ditemukan. Cek kodenya ya!` : String(e.message ?? e));
+        fail(t === "peer-unavailable" ? Lang.net.roomNotFound(code) : String(e.message ?? e));
       };
       peer.once("error", onError);
       const conn = peer.connect(PREFIX + code, { reliable: true, serialization: "json" });
@@ -314,7 +315,7 @@ export class Room {
         conn.send({ t: "hello", v: PROTOCOL, name: cleanName(name), token } satisfies Msg);
         heartbeat = watchConn(conn, () => {
           conn.close();
-          room.close("Koneksi ke host terputus 📡");
+          room.close(Lang.net.hostLost);
         });
       });
       // Tunggu daftar lobi pertama sebagai tanda diterima (atau ditolak)
@@ -335,8 +336,8 @@ export class Room {
         room.handleFromHost(m);
       });
       conn.on("close", () => {
-        fail("Koneksi ke host terputus.");
-        room.close("Koneksi ke host terputus 😢");
+        fail(Lang.net.hostLostShort);
+        room.close(Lang.net.hostLostSad);
       });
     });
     return room;
@@ -359,16 +360,16 @@ export class Room {
           conn.send({ t: "reject", reason } satisfies Msg);
           setTimeout(() => conn.close(), 300);
         };
-        if (m.v !== PROTOCOL) return reject("Versi game berbeda. Muat ulang halaman (Ctrl+F5).");
+        if (m.v !== PROTOCOL) return reject(Lang.net.versionMismatch);
         const token = typeof m.token === "string" && m.token ? m.token.slice(0, 64) : undefined;
         if (this.started) {
           const idx = token ? this.seatTokens.indexOf(token) : -1;
-          if (idx < 0) return reject("Permainan di room ini sudah dimulai.");
+          if (idx < 0) return reject(Lang.net.alreadyStarted);
           return this.rejoin(conn, idx);
         }
         // Tamu yang memuat ulang halaman di lobi: buang kursi lamanya dulu
         if (token) for (const [id, t] of [...this.tokenOf]) if (t === token && id !== conn.peer) this.dropGuest(id);
-        if (this.seats.length >= MAX_SEATS) return reject("Room sudah penuh (maks 4).");
+        if (this.seats.length >= MAX_SEATS) return reject(Lang.net.roomFull);
         if (token) this.tokenOf.set(conn.peer, token);
         this.conns.set(conn.peer, conn);
         this.seats.push({ id: conn.peer, name: cleanName(m.name), char: this.freeChar(), kind: "guest" });
@@ -485,7 +486,7 @@ export class Room {
     if (!s || s.kind === "host") return;
     if (s.kind === "guest") {
       const c = this.conns.get(s.id);
-      c?.send({ t: "reject", reason: "Kamu dikeluarkan dari room oleh host." } satisfies Msg);
+      c?.send({ t: "reject", reason: Lang.net.kicked } satisfies Msg);
       this.conns.delete(s.id);
       this.dropVoice(s.id);
       setTimeout(() => c?.close(), 300);

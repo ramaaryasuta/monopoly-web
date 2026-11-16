@@ -1,5 +1,6 @@
 import { BOARD, PROPERTY_GROUPS, RESORTS, SIDE_PROPERTIES } from "../data/board";
 import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
+import { Lang } from "../lang/id";
 
 const ROUND_LIMIT = 62;
 
@@ -30,10 +31,10 @@ export const CONFIG = {
 /** Biaya untuk naik KE level tertentu, sebagai pengali harga tanah. */
 const LEVEL_COST_FACTOR = [0, 1, 0.5, 0.5, 0.75, 1.0];
 
-export const LEVEL_NAMES = ["Kosong", "Tanah", "Rumah 1", "Rumah 2", "Vila", "Landmark"];
+export const LEVEL_NAMES = Lang.rules.levelNames;
 
 export function createGame(setups: PlayerSetup[]): GameState {
-  if (setups.length < 2 || setups.length > 4) throw new Error("Jumlah pemain harus 2-4");
+  if (setups.length < 2 || setups.length > 4) throw new Error(Lang.rules.playerCount);
   return {
     tiles: BOARD.map(() => ({ owner: null, level: 0, festival: false })),
     players: setups.map((s, id) => ({
@@ -191,9 +192,9 @@ export function richestPlayer(state: GameState): number {
 }
 
 export const WIN_TEXT: Record<WinReason, string> = {
-  lastStanding: "Pemain terakhir yang bertahan!",
-  tripleMonopoly: "Monopoli 3 grup warna!",
-  lineMonopoly: "Menguasai satu sisi papan penuh!",
-  resortMonopoly: "Menguasai semua tempat wisata + 1 grup warna!",
-  roundLimit: "Batas ronde tercapai — kekayaan terbesar!",
+  lastStanding: Lang.rules.lastStanding,
+  tripleMonopoly: Lang.rules.tripleMonopoly,
+  lineMonopoly: Lang.rules.lineMonopoly,
+  resortMonopoly: Lang.rules.resortMonopoly,
+  roundLimit: Lang.rules.roundLimit,
 };

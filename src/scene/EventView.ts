@@ -17,6 +17,7 @@ import { FONT } from "./tileArt";
 import { toon } from "./toon";
 import { tvSfx } from "./sfx";
 import { Ease, lerp, Speed, tween } from "./tween";
+import { Lang } from "../lang/id";
 
 export interface EventScreen {
   icon: string;
@@ -90,7 +91,7 @@ export class EventView {
     ctx.textAlign = "left";
     ctx.font = `bold 58px ${FONT}`;
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(season ? "📅 EVENT MUSIMAN" : "📢 BERITA HEBOH", 40, 82);
+    ctx.fillText(season ? Lang.scene3d.seasonTag : Lang.scene3d.newsTag, 40, 82);
     // Lencana LIVE
     roundRect(ctx, SW - 190, 52, 150, 60, 14);
     ctx.fillStyle = "#ffffff";
@@ -100,7 +101,7 @@ export class EventView {
     ctx.arc(SW - 160, 82, 13, 0, Math.PI * 2);
     ctx.fill();
     ctx.font = `bold 40px ${FONT}`;
-    ctx.fillText("LIVE", SW - 138, 84);
+    ctx.fillText(Lang.scene3d.live, SW - 138, 84);
 
     // Ikon besar di kiri
     ctx.beginPath();
@@ -153,7 +154,7 @@ export class EventView {
     ctx.fillRect(0, SH - 90, SW, 90);
     ctx.fillStyle = "#2b1d3a";
     ctx.font = `bold 40px ${FONT}`;
-    ctx.fillText("WNI TV  •  " + e.headline.toUpperCase() + "  •  JANGAN PANIK  •  ", 30, SH - 44);
+    ctx.fillText(Lang.scene3d.ticker(e.headline.toUpperCase()), 30, SH - 44);
 
     // Garis scanline tipis ala TV jadul
     ctx.fillStyle = "rgba(0,0,0,0.12)";

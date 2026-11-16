@@ -1,16 +1,17 @@
 import { MeshBuilder, TransformNode, Vector3, type Mesh, type Scene, type ShadowGenerator } from "@babylonjs/core";
 import { outline, toon } from "./toon";
 import { Ease, lerp, tween } from "./tween";
+import { Lang } from "../lang/id";
 
 export type CritterKind = "potato" | "cyclops" | "chili" | "cucumber" | "whale" | "cat";
 
 export const CRITTERS: { kind: CritterKind; label: string; color: string }[] = [
-  { kind: "potato", label: "Bang Kentang Kumis", color: "#ff9f1c" },
-  { kind: "cyclops", label: "Om Mata Satu", color: "#a55eea" },
-  { kind: "chili", label: "Cabai Ngamuk", color: "#ef3b36" },
-  { kind: "cucumber", label: "Timun Kalem", color: "#4cbf3f" },
-  { kind: "whale", label: "Paus Biru", color: "#3a86ff" },
-  { kind: "cat", label: "Kucing Garong", color: "#34343f" },
+  { kind: "potato", label: Lang.critters.labels[0], color: "#ff9f1c" },
+  { kind: "cyclops", label: Lang.critters.labels[1], color: "#a55eea" },
+  { kind: "chili", label: Lang.critters.labels[2], color: "#ef3b36" },
+  { kind: "cucumber", label: Lang.critters.labels[3], color: "#4cbf3f" },
+  { kind: "whale", label: Lang.critters.labels[4], color: "#3a86ff" },
+  { kind: "cat", label: Lang.critters.labels[5], color: "#34343f" },
 ];
 
 const INK = "#2b1d3a";

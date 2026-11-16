@@ -1,4 +1,5 @@
 import type { TileDef } from "../core/types";
+import { Lang } from "../lang/id";
 
 /** Warna grup properti (gaya kartun, saturasi tinggi). */
 export const GROUP_COLORS = [
@@ -13,7 +14,7 @@ export const GROUP_COLORS = [
 ];
 
 /** Nama grup warna (sesuai komentar GROUP_COLORS), untuk pengumuman set lengkap. */
-export const GROUP_NAMES = ["Permen", "Jeruk", "Lemon", "Daun", "Langit", "Laut", "Anggur", "Ceri"];
+export const GROUP_NAMES = Lang.board.groupNames;
 
 const P = (index: number, name: string, group: number, price: number): TileDef => ({
   index,
@@ -31,49 +32,49 @@ export const SIDE_LEN = 10;
  * Nama tempat bernuansa Indonesia (plesetan & tempat terkenal).
  */
 export const BOARD: TileDef[] = [
-  { index: 0, kind: "start", name: "Mulai" },
-  P(1, "Burjo SS Tembalang", 0, 50),
-  { index: 2, kind: "resort", name: "Malioboro", price: 200 },
-  P(3, "OTY Fried Chicken", 0, 50),
-  P(4, "RM Pagi Sore", 0, 70),
-  P(5, "Sei Indonesia", 0, 70),
-  { index: 6, kind: "chance", name: "Paket Shopee" },
-  P(7, "Rumah Ratapan Oslo", 1, 90),
-  P(8, "Lawang Rongewu", 1, 110),
-  P(9, "Lembang Park Zoo", 1, 110),
+  { index: 0, kind: "start", name: Lang.tiles[0] },
+  P(1, Lang.tiles[1], 0, 50),
+  { index: 2, kind: "resort", name: Lang.tiles[2], price: 200 },
+  P(3, Lang.tiles[3], 0, 50),
+  P(4, Lang.tiles[4], 0, 70),
+  P(5, Lang.tiles[5], 0, 70),
+  { index: 6, kind: "chance", name: Lang.tiles[6] },
+  P(7, Lang.tiles[7], 1, 90),
+  P(8, Lang.tiles[8], 1, 110),
+  P(9, Lang.tiles[9], 1, 110),
 
-  { index: 10, kind: "island", name: "Nusakambangan" },
-  P(11, "Polri", 2, 130),
-  P(12, "Tugu Jogja", 2, 130),
-  { index: 13, kind: "chance", name: "Paket Tokopedia" },
-  P(14, "Buletan HI", 2, 140),
-  P(15, "Gedung Sate", 2, 140),
-  { index: 16, kind: "resort", name: "Monas", price: 200 },
-  P(17, "Jembatan Mahakam", 3, 160),
-  P(18, "Bank Living by Sendiri", 3, 180),
-  P(19, "Karimun Jawa", 3, 180),
+  { index: 10, kind: "island", name: Lang.tiles[10] },
+  P(11, Lang.tiles[11], 2, 130),
+  P(12, Lang.tiles[12], 2, 130),
+  { index: 13, kind: "chance", name: Lang.tiles[13] },
+  P(14, Lang.tiles[14], 2, 140),
+  P(15, Lang.tiles[15], 2, 140),
+  { index: 16, kind: "resort", name: Lang.tiles[16], price: 200 },
+  P(17, Lang.tiles[17], 3, 160),
+  P(18, Lang.tiles[18], 3, 180),
+  P(19, Lang.tiles[19], 3, 180),
 
-  { index: 20, kind: "festival", name: "Pesta Pejabat" },
-  P(21, "Kopi Kenangan", 4, 200),
-  { index: 22, kind: "chance", name: "Paket Blibli" },
-  P(23, "Telkom", 4, 200),
-  P(24, "Pakuwon Mall", 4, 220),
-  P(25, "Sam Poo Kong", 4, 220),
-  { index: 26, kind: "resort", name: "Wakatobi", price: 200 },
-  P(27, "Tambang Nikel", 5, 230),
-  P(28, "IKN", 5, 250),
-  P(29, "Candi Prambanan", 5, 250),
+  { index: 20, kind: "festival", name: Lang.tiles[20] },
+  P(21, Lang.tiles[21], 4, 200),
+  { index: 22, kind: "chance", name: Lang.tiles[22] },
+  P(23, Lang.tiles[23], 4, 200),
+  P(24, Lang.tiles[24], 4, 220),
+  P(25, Lang.tiles[25], 4, 220),
+  { index: 26, kind: "resort", name: Lang.tiles[26], price: 200 },
+  P(27, Lang.tiles[27], 5, 230),
+  P(28, Lang.tiles[28], 5, 250),
+  P(29, Lang.tiles[29], 5, 250),
 
-  { index: 30, kind: "tour", name: "Naik Pesawat Negara" },
-  { index: 31, kind: "resort", name: "Raja Ampat", price: 200 },
-  P(32, "Jam Gadang", 6, 270),
-  P(33, "Kantor KPK", 6, 290),
-  P(34, "Candi Borobudur", 6, 290),
-  { index: 35, kind: "chance", name: "Paket Lazada" },
-  { index: 36, kind: "tax", name: "Uang Ormas" },
-  P(37, "Gedung DPR", 7, 320),
-  P(38, "Masjid Istiqlal", 7, 340),
-  P(39, "Istana Presiden", 7, 360),
+  { index: 30, kind: "tour", name: Lang.tiles[30] },
+  { index: 31, kind: "resort", name: Lang.tiles[31], price: 200 },
+  P(32, Lang.tiles[32], 6, 270),
+  P(33, Lang.tiles[33], 6, 290),
+  P(34, Lang.tiles[34], 6, 290),
+  { index: 35, kind: "chance", name: Lang.tiles[35] },
+  { index: 36, kind: "tax", name: Lang.tiles[36] },
+  P(37, Lang.tiles[37], 7, 320),
+  P(38, Lang.tiles[38], 7, 340),
+  P(39, Lang.tiles[39], 7, 360),
 ];
 
 export const BOARD_SIZE = BOARD.length;
@@ -84,7 +85,7 @@ export const TOUR_INDEX = SIDE_LEN * 3;
 /** Indeks petak berdasarkan nama (untuk kartu "pergi ke ..."). */
 export function tileIndexByName(name: string): number {
   const t = BOARD.find((b) => b.name === name);
-  if (!t) throw new Error(`Petak tidak ada: ${name}`);
+  if (!t) throw new Error(Lang.board.tileNotFound(name));
   return t.index;
 }
 
