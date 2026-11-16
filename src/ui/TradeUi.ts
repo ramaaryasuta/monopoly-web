@@ -17,7 +17,7 @@ import { BoardMap, linkMap, type MapMark } from "./BoardMap";
 import { fmt, h, modal } from "./dom";
 import { Lang } from "../lang/id";
 
-const tileColor = (t: number) => (BOARD[t].kind === "resort" ? "#36d1c4" : GROUP_COLORS[BOARD[t].group!]);
+export const tileColor = (t: number) => (BOARD[t].kind === "resort" ? "#36d1c4" : GROUP_COLORS[BOARD[t].group!]);
 const levelText = (state: GameState, t: number) => (BOARD[t].kind === "resort" ? Lang.hud.resortWord : LEVEL_NAMES[state.tiles[t].level]);
 
 /** Satu wilayah sebagai "chip" kecil: warna grup, nama, level, nilai. */
@@ -105,7 +105,8 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
   const column = (mine: boolean) => {
     const owner = mine ? draft.from : draft.to;
     const selected = mine ? draft.giveTiles : draft.takeTiles;
-    const col = h("div", { class: "trade-col" }, h("h3", {}, mine ? Lang.tradeUi.youGive : Lang.tradeUi.youAsk(them.name)));
+    const count = h("span", { class: "count" });
+    const col = h("div", { class: "trade-col" }, h("h3", {}, h("span", {}, mine ? Lang.tradeUi.youGive : Lang.tradeUi.youAsk(them.name)), count));
     const list = h("div", { class: "chips pick" });
     const tiles = tradeableTiles(state, owner);
     for (const t of tiles) {
@@ -124,7 +125,7 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
       h("label", { class: "money-in" }, h("span", {}, mine ? Lang.tradeUi.plusMoney : Lang.tradeUi.plusAskMoney), money, h("span", { class: "unit" }, Lang.money.million.trim()), preview),
       h("small", { class: "have" }, Lang.tradeUi.moneyOf(mine ? Lang.tradeUi.you : them.name, fmt((mine ? me : them).money))),
     );
-    return { col, money, preview };
+    return { col, money, preview, count };
   };
   const mine = column(true);
   const theirs = column(false);
@@ -144,7 +145,8 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
       { mark: "gain", text: Lang.tradeUi.legendAsk },
     ],
   });
-  const body = h("div", { class: "trade-editor" }, map.el, h("div", { class: "trade-grid" }, mine.col, theirs.col), net, error);
+  const body = h("div", { class: "trade-editor" }, map.el, h("div", { class: "trade-grid" }, mine.col, theirs.col));
+  const footer = h("div", {}, net, error);
   linkMap(body, map);
 
   const read = (): TradeOffer => {
@@ -164,6 +166,7 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
     title,
     className: "trade-modal",
     body,
+    footer,
     row: true,
     buttons: [
       { label: Lang.tradeUi.sendOffer, value: "send", class: "green" },
@@ -178,6 +181,8 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
     for (const t of o.takeTiles) marks.set(t, "gain");
     map.setMarks(marks);
     mine.preview.textContent = o.giveMoney ? `= ${fmt(o.giveMoney)}` : "";
+    mine.count.textContent = o.giveTiles.length ? Lang.tradeUi.picked(o.giveTiles.length) : "";
+    theirs.count.textContent = o.takeTiles.length ? Lang.tradeUi.picked(o.takeTiles.length) : "";
     theirs.preview.textContent = o.takeMoney ? `= ${fmt(o.takeMoney)}` : "";
     const err = tradeError(state, o);
     error.textContent = err ? `⚠️ ${err[0].toUpperCase()}${err.slice(1)}` : "";
@@ -343,8 +348,9 @@ async function pickListing(state: GameState, me: number): Promise<DealAction | n
           label: `${BOARD[t].name}`,
           sub: Lang.tradeUi.levelValue(levelText(state, t), fmt(investedValue(state, t))) + (l ? Lang.tradeUi.nowPrice(fmt(l.price)) : ""),
           value: t as number | null,
-          class: "blue",
+          class: "white",
           tile: t,
+          color: tileColor(t),
         };
       }),
       { label: Lang.common.cancel, value: null, class: "white" },

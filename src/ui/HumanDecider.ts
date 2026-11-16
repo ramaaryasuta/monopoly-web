@@ -22,7 +22,7 @@ import { ITEMS } from "../data/cards";
 import type { GameScene } from "../scene/GameScene";
 import { fmt, h, modal } from "./dom";
 import type { Hud } from "./Hud";
-import { editOffer, focusMap, mapForButtons, marketMenu, offerView, pickTradeTarget } from "./TradeUi";
+import { editOffer, focusMap, mapForButtons, marketMenu, offerView, pickTradeTarget, tileColor } from "./TradeUi";
 import { Lang } from "../lang/id";
 
 const LEVEL_ICON = ["", "🚩", "🏠", "🏠🏠", "🏡", "🗼"];
@@ -221,40 +221,49 @@ export class HumanDecider implements Decider {
       const v = await modal<V>({
         title: Lang.human.debtTitle,
         className: "debt-modal",
+        header: h(
+          "div",
+          {},
+          h("p", { class: "debt-to", html: Lang.human.debtTo(to) }),
+          h(
+            "div",
+            { class: "debt-sum" },
+            h("div", {}, Lang.human.debtNeed, h("b", {}, fmt(c.amount))),
+            h("div", {}, Lang.human.debtHave, h("b", {}, fmt(c.money))),
+            h("div", { class: "short" }, Lang.human.debtShort, h("b", {}, fmt(short))),
+          ),
+        ),
         ...mapForButtons(this.state, debtTiles, h(
           "div",
           {},
           hotseat ? h("p", { class: "for-who" }, Lang.human.forWho(me.name)) : null,
-          h("p", { html: Lang.human.debtBody(fmt(c.amount), to, fmt(c.money), fmt(short)) }),
-          h(
-            "p",
-            { class: "debt-hint" },
-            hopeless
-              ? Lang.human.sellAllShort(fmt(totalSell))
-              : Lang.human.debtHelp,
-          ),
+          h("p", { class: "debt-hint" }, hopeless ? Lang.human.sellAllShort(fmt(totalSell)) : Lang.human.debtHelp),
         )),
         buttons: [
           ...(c.downgrades ?? []).map((d) => {
             const def = BOARD[d.tile];
             const best = d.options[d.options.length - 1];
             return {
-              label: Lang.human.downgradeMax(def.name, fmt(best.value)),
-              sub: `${LEVEL_NAMES[d.level]} → ?`,
+              label: Lang.human.downgradeMax(def.name),
+              sub: Lang.human.downgradeSub(LEVEL_NAMES[d.level], fmt(best.value)),
               value: { type: "pickDown", tile: d.tile } as V,
-              class: "green",
+              class: "white",
               tile: d.tile,
+              color: tileColor(d.tile),
+              group: Lang.human.groupDowngrade,
             };
           }),
           ...c.tiles.map((t) => {
             const def = BOARD[t.tile];
             const lvl = def.kind === "resort" ? Lang.hud.resortWord : LEVEL_NAMES[this.state.tiles[t.tile].level];
             return {
-              label: Lang.human.sellTile(def.name, fmt(t.value)),
-              sub: lvl,
+              label: Lang.human.sellTile(def.name),
+              sub: Lang.human.sellSub(lvl, fmt(t.value)),
               value: { type: "sell", tile: t.tile } as V,
-              class: "orange",
+              class: "white",
               tile: t.tile,
+              color: tileColor(t.tile),
+              group: Lang.human.groupSell,
             };
           }),
           {
@@ -262,8 +271,9 @@ export class HumanDecider implements Decider {
             value: "trade" as V,
             class: "blue",
             disabled: !canTrade,
+            group: Lang.human.groupOther,
           },
-          { label: Lang.human.giveUp, value: { type: "giveUp" } as V, class: "white" },
+          { label: Lang.human.giveUp, value: { type: "giveUp" } as V, class: "white", group: Lang.human.groupOther },
         ],
       });
       if (v !== "trade" && v.type === "pickDown") {

@@ -32,6 +32,10 @@ export interface ModalButton<T> {
   disabled?: boolean;
   /** Wilayah terkait tombol ini (untuk peta mini: hover → petak menyala). */
   tile?: number;
+  /** Warna strip di kiri tombol (mis. warna grup wilayah). */
+  color?: string;
+  /** Judul kelompok; judul ditampilkan tiap kali berganti dari tombol sebelumnya. */
+  group?: string;
 }
 
 export interface ModalOptions<T> {
@@ -45,6 +49,10 @@ export interface ModalOptions<T> {
   className?: string;
   /** Akses ke elemen modal & fungsi tutup (untuk tombol/validasi di dalam body). */
   bind?: (close: (v: T) => void, root: HTMLElement) => void;
+  /** Ringkasan yang selalu terlihat tepat di atas tombol baris (mis. selisih nilai tawaran). */
+  footer?: Node;
+  /** Ringkasan yang menempel di atas saat isi dialog digulir (mis. angka utang). */
+  header?: Node;
 }
 
 /** Modal berbasis Promise: resolve dengan nilai tombol yang diklik. */
@@ -52,18 +60,26 @@ export function modal<T>(o: ModalOptions<T>): Promise<T> {
   return new Promise((resolve) => {
     const body = typeof o.body === "string" ? h("div", { html: o.body }) : (o.body ?? null);
     const btns = h("div", { class: `buttons${o.row ? " row" : ""}` });
-    const backdrop = h(
+    const main = h(
       "div",
-      { class: "modal-backdrop", "data-testid": "modal" },
-      h(
-        "div",
-        { class: `modal panel ${o.className ?? ""}` },
-        o.bandColor ? h("div", { class: "band", style: `background:${o.bandColor}` }) : null,
-        h("h2", {}, o.title),
-        body,
-        btns,
-      ),
+      { class: "modal-main" },
+      o.bandColor ? h("div", { class: "band", style: `background:${o.bandColor}` }) : null,
+      h("h2", {}, o.title),
+      o.header ? h("div", { class: "modal-sticky-head" }, o.header) : null,
+      body,
     );
+    // Tombol baris (Kirim/Batal) menempel di bawah supaya tidak tergulir hilang
+    if (o.row || o.footer) main.append(h("div", { class: "modal-foot" }, o.footer ?? null, btns));
+    else main.append(btns);
+    const box = h("div", { class: `modal panel ${o.className ?? ""}` }, main);
+    // Dialog dengan peta mini: peta dipisah ke kolom sendiri (kiri di layar lebar,
+    // atas di HP) supaya tetap terlihat walau daftar wilayahnya panjang.
+    const map = body instanceof Element ? body.querySelector(".bm-wrap") : null;
+    if (map) {
+      box.classList.add("split");
+      box.prepend(h("div", { class: "modal-aside" }, map));
+    }
+    const backdrop = h("div", { class: "modal-backdrop", "data-testid": "modal" }, box);
     let done = false;
     const close = (v: T) => {
       if (done) return;
@@ -71,10 +87,20 @@ export function modal<T>(o: ModalOptions<T>): Promise<T> {
       backdrop.remove();
       resolve(v);
     };
+    let group: string | undefined;
     for (const b of o.buttons) {
+      if (b.group !== group) {
+        group = b.group;
+        if (group) btns.append(h("div", { class: "btn-group-title" }, group));
+      }
       const btn = h(
         "button",
-        { class: `btn ${b.class ?? ""} ${b.sub ? "opt" : ""}`, disabled: b.disabled, "data-tile": b.tile },
+        {
+          class: `btn ${b.class ?? ""} ${b.sub ? "opt" : ""} ${b.color ? "striped" : ""}`,
+          disabled: b.disabled,
+          "data-tile": b.tile,
+          style: b.color ? `--chip:${b.color}` : undefined,
+        },
         h("span", {}, b.label),
         b.sub ? h("small", {}, b.sub) : null,
       );

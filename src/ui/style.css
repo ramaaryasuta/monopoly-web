@@ -1190,3 +1190,128 @@ body {
 /* Item daftar yang petaknya sedang disorot di peta */
 .map-hover.tile-chip, .map-hover .tile-chip, .market-row.map-hover { box-shadow: 0 0 0 3px var(--ink); }
 .btn.map-hover { outline: 3px dashed var(--ink); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- dialog dengan peta (split) */
+
+.modal-foot {
+  position: sticky;
+  bottom: -20px; /* menutup padding bawah modal saat menempel */
+  margin: 8px -20px -20px;
+  padding: 8px 20px 14px;
+  background: var(--cream);
+  border-top: 2px dashed rgba(43, 29, 58, 0.18);
+  z-index: 3;
+}
+.modal-foot .buttons { margin-top: 6px; }
+.modal-foot .trade-net, .modal-foot .trade-error { margin: 0; }
+
+/* Judul kelompok di antara tombol (mis. "Turunkan bangunan" / "Jual ke bank") */
+.btn-group-title {
+  text-align: left;
+  font-weight: 700;
+  font-size: 13px;
+  opacity: 0.7;
+  margin: 6px 2px -4px;
+  letter-spacing: 0.3px;
+}
+.btn-group-title:first-child { margin-top: 0; }
+/* Tombol wilayah: strip warna grup di kiri, lebih ringkas */
+.btn.striped { border-left: 12px solid var(--chip); padding: 7px 12px; font-size: 15px; border-radius: 14px; box-shadow: 0 3px 0 var(--ink); }
+.btn.striped:active { box-shadow: 0 1px 0 var(--ink); transform: translateY(2px); }
+.btn.striped.map-hover { outline: 3px solid var(--ink); outline-offset: 1px; }
+
+.modal.split {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  width: min(480px, 100%);
+}
+.modal.split .modal-aside {
+  flex: none;
+  padding: 10px 14px 6px;
+  border-bottom: 3px solid var(--ink);
+  background: #f4fbe9;
+}
+.modal.split .modal-aside .bm-wrap { margin: 0; text-align: center; }
+.modal.split .modal-aside .bm-grid { --cell: min(20px, calc((100vw - 90px) / 11)); }
+.modal.split .modal-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 18px 18px;
+  container-type: inline-size;
+}
+.modal.split .modal-foot { bottom: -18px; margin: 8px -18px -18px; padding: 8px 18px 14px; }
+/* Di dalam split, daftar ikut gulir kolom kanan (bukan gulir sendiri) */
+.modal.split .chips { max-height: none; overflow: visible; }
+.modal.split .market-list { max-height: none; overflow: visible; }
+@container (max-width: 470px) {
+  .trade-grid { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 800px) {
+  .modal.split { flex-direction: row; width: min(960px, 100%); }
+  .modal.split.market-modal, .modal.split.debt-modal { width: min(880px, 100%); }
+  .modal.split .modal-aside {
+    width: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 16px;
+    border-bottom: 0;
+    border-right: 3px solid var(--ink);
+  }
+  .modal.split .modal-aside .bm-grid { --cell: clamp(20px, calc((100dvh - 190px) / 11), 30px); }
+  .modal.split .modal-aside .bm-info { font-size: 13px; }
+  .modal.split .modal-aside .bm-info .bm-name { font-size: 17px; }
+  .modal.split .modal-main { padding: 18px 20px 20px; }
+  .modal.split .modal-foot { bottom: -20px; margin: 8px -20px -20px; padding: 8px 20px 16px; }
+}
+
+/* Ringkasan utang: selalu terlihat di atas daftar aset */
+.debt-sum {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.debt-sum div {
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 600;
+}
+.debt-sum b { font-size: 16px; }
+.debt-sum .short { background: #ffe1e6; }
+.debt-sum .short b { color: #c02646; }
+.debt-to { font-size: 14px; margin: 0 0 6px !important; }
+.modal .debt-hint { font-size: 13px; opacity: 0.8; margin: 0 0 4px; }
+
+/* Kolom nego: jumlah terpilih di judul */
+.trade-col h3 { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.trade-col h3 .count {
+  font-size: 11px; background: var(--yellow); border: 2px solid var(--ink); border-radius: 999px; padding: 0 7px; white-space: nowrap; flex: none;
+}
+.trade-col h3 .count:empty { display: none; }
+/* Ringkasan yang menempel di atas saat isi dialog digulir (mis. angka utang) */
+.modal-sticky-head {
+  position: sticky;
+  top: -20px;
+  z-index: 3;
+  background: var(--cream);
+  margin: 0 -4px 4px;
+  padding: 4px 4px 2px;
+}
+.modal.split .modal-sticky-head { top: -14px; }
+@media (min-width: 800px) {
+  .modal.split .modal-sticky-head { top: -18px; }
+}
+/* Dialog biasa (tanpa peta) pendek: footer tidak perlu menempel / berlatar sendiri */
+.modal:not(.split) .modal-foot { position: static; margin: 0; padding: 0; border: 0; background: none; }
+.modal:not(.split) .modal-foot .buttons { margin-top: 12px; }
