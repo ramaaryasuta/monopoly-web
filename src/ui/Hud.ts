@@ -9,27 +9,19 @@ import { activeListings, listingFor } from "../core/trade";
 import { escapeHtml, fmt, h, modal, uiRoot } from "./dom";
 import { settingsButton } from "./SettingsMenu";
 import { viewMarket } from "./TradeUi";
+import { Lang } from "../lang/id";
 
 export const AVATARS = ["🥔", "👾", "🌶️", "🥒", "🐳", "🐱"];
 
-const KIND_LABEL: Record<string, string> = {
-  start: "Petak Mulai",
-  property: "Properti",
-  resort: "Tempat Wisata",
-  chance: "Paket Misterius",
-  tax: "Pajak",
-  island: "Penjara",
-  festival: "Pesta Pejabat",
-  tour: "Naik Pesawat Negara",
-};
+const KIND_LABEL: Record<string, string> = Lang.hud.kindLabel;
 
 const TILE_HELP: Record<string, string> = {
-  start: `Dapat ${fmt(CONFIG.salary)} setiap melewati petak ini.`,
-  chance: "Paket datang tanpa pesan! Buka isinya — bisa duit, bisa kentut nuklir!",
-  tax: `Ormas datang minta "uang keamanan". Bayar ${CONFIG.taxRate * 100}% dari uangmu (minimal ${fmt(50)}).`,
-  island: `Dipenjara ${CONFIG.islandTurns} giliran. Keluar dengan dapat dadu kembar atau sogok sipir ${fmt(CONFIG.islandBail)}.`,
-  festival: `Gelar pesta pejabat di satu propertimu — sewanya jadi x${CONFIG.festivalMultiplier}.`,
-  tour: `Numpang pesawat negara: giliran berikutnya mendarat di petak mana saja (ongkos ${fmt(CONFIG.tourFee)}).`,
+  start: Lang.hud.tileHelp.start(fmt(CONFIG.salary)),
+  chance: Lang.hud.tileHelp.chance,
+  tax: Lang.hud.tileHelp.tax(CONFIG.taxRate * 100, fmt(50)),
+  island: Lang.hud.tileHelp.island(CONFIG.islandTurns, fmt(CONFIG.islandBail)),
+  festival: Lang.hud.tileHelp.festival(CONFIG.festivalMultiplier),
+  tour: Lang.hud.tileHelp.tour(fmt(CONFIG.tourFee)),
 };
 
 export class Hud {
@@ -41,7 +33,7 @@ export class Hud {
   private actionBar = h("div", { class: "action-bar" });
   private pickBanner: HTMLElement | null = null;
   private toolbar = h("div", { class: "toolbar" });
-  private marketBtn = h("button", { class: "btn small white market-btn", title: "Pasar Terbuka", "data-testid": "market" }, "🏪");
+  private marketBtn = h("button", { class: "btn small white market-btn", title: Lang.hud.market, "data-testid": "market" }, "🏪");
   /** Untuk memproyeksikan teks uang melayang di atas pion. */
   screenPosOfPlayer: ((pid: number) => { x: number; y: number } | null) | null = null;
   onResetCamera: (() => void) | null = null;
@@ -62,8 +54,8 @@ export class Hud {
       const card = h(
         "div",
         { class: `player-card panel slot${slot}`, "data-testid": `player-${i}` },
-        h("div", { class: "turn-tag now" }, "🎲 GILIRAN"),
-        h("div", { class: "turn-tag next" }, "⏭️ BERIKUTNYA"),
+        h("div", { class: "turn-tag now" }, Lang.hud.turnNow),
+        h("div", { class: "turn-tag next" }, Lang.hud.turnNext),
         h("div", { class: "avatar", style: `background:${p.color}` }, AVATARS[characterIdx[i]]),
         h(
           "div",
@@ -78,16 +70,16 @@ export class Hud {
       root.append(card);
     });
 
-    const log = h("div", { class: "log panel" }, h("h4", {}, h("span", {}, "📜 Catatan"), h("span", {}, "▾")), this.logBox);
+    const log = h("div", { class: "log panel" }, h("h4", {}, h("span", {}, Lang.hud.log), h("span", {}, "▾")), this.logBox);
     log.querySelector("h4")!.addEventListener("click", () => log.classList.toggle("collapsed"));
 
-    const speedBtn = h("button", { class: "btn small white", title: "Kecepatan animasi" }, `⏩ ${Speed.factor}x`);
+    const speedBtn = h("button", { class: "btn small white", title: Lang.hud.animSpeed }, `⏩ ${Speed.factor}x`);
     speedBtn.addEventListener("click", () => {
       const steps = [1, 2, 3];
       Speed.factor = steps[(steps.indexOf(Speed.factor) + 1) % steps.length] ?? 1;
       speedBtn.textContent = `⏩ ${Speed.factor}x`;
     });
-    const camBtn = h("button", { class: "btn small white", title: "Reset kamera" }, "🎥");
+    const camBtn = h("button", { class: "btn small white", title: Lang.hud.resetCam }, "🎥");
     camBtn.addEventListener("click", () => this.onResetCamera?.());
     this.marketBtn.addEventListener("click", () => {
       sfx.click();
@@ -101,7 +93,7 @@ export class Hud {
 
   /** Online: tombol 🤝 di toolbar untuk menawar kapan saja (tidak harus giliran sendiri). */
   enableAnytimeTrade(onClick: () => void) {
-    const btn = h("button", { class: "btn small blue anytime-trade", title: "Negosiasi kapan saja", "data-testid": "anytime-trade" }, "🤝 Nego");
+    const btn = h("button", { class: "btn small blue anytime-trade", title: Lang.hud.tradeAnytime, "data-testid": "anytime-trade" }, Lang.hud.nego);
     btn.addEventListener("click", () => {
       sfx.click();
       onClick();
@@ -120,7 +112,7 @@ export class Hud {
     const s = this.state;
     const season = s.season ? SEASONS[s.season.id] : null;
     const left = s.season ? s.season.untilRound - s.round + 1 : 0;
-    this.round.textContent = `Ronde ${s.round} / ${CONFIG.roundLimit}` + (season ? `  ·  ${season.icon} ${season.badge} (${left} ronde)` : "");
+    this.round.textContent = Lang.hud.roundLabel(s.round, CONFIG.roundLimit) + (season ? Lang.hud.seasonLabel(season.icon, season.badge, left) : "");
     this.round.classList.toggle("season", !!season);
     const listed = activeListings(s).length;
     this.marketBtn.replaceChildren("🏪", listed ? h("span", { class: "badge" }, String(listed)) : "");
@@ -142,7 +134,7 @@ export class Hud {
       if (p.items.length) meta.push(`🎒${p.items.map((it) => ITEMS[it].icon).join("")}`);
       if (p.islandTurns) meta.push(`🏝️${p.islandTurns}`);
       if (p.pendingTour) meta.push("✈️");
-      if (p.bankrupt) meta.splice(0, meta.length, "💀 Bangkrut");
+      if (p.bankrupt) meta.splice(0, meta.length, Lang.hud.bankruptTag);
       card.querySelector(".meta")!.textContent = meta.join("  ");
     });
   }
@@ -242,7 +234,7 @@ export class Hud {
     if (text) this.actionBar.prepend(h("div", { class: "turn-label" }, text));
   }
 
-  waitRollButton(label = "🎲 LEMPAR DADU"): Promise<void> {
+  waitRollButton(label = Lang.hud.roll): Promise<void> {
     return new Promise((resolve) => {
       const btn = h("button", { class: "btn roll-btn", "data-testid": "roll" }, label);
       const go = () => {
@@ -266,8 +258,8 @@ export class Hud {
   /** Tombol lempar dadu + tombol buka kantong kartu simpanan. */
   waitRollOrItem(count: number): Promise<"roll" | "item"> {
     return new Promise((resolve) => {
-      const roll = h("button", { class: "btn roll-btn", "data-testid": "roll" }, "🎲 LEMPAR DADU");
-      const item = h("button", { class: "btn pink item-btn", "data-testid": "use-item" }, `🎒 Pakai Kartu (${count})`);
+      const roll = h("button", { class: "btn roll-btn", "data-testid": "roll" }, Lang.hud.roll);
+      const item = h("button", { class: "btn pink item-btn", "data-testid": "use-item" }, Lang.hud.useCard(count));
       const row = h("div", { class: "roll-row" }, roll, item);
       const done = (v: "roll" | "item") => {
         window.removeEventListener("keydown", onKey);
@@ -306,10 +298,10 @@ export class Hud {
         b.addEventListener("click", () => done(v));
         extras.append(b);
       };
-      if (o.items > 0) add(`🎒 Kartu (${o.items})`, "pink", "item", "use-item");
-      add(o.tradesLeft > 0 ? "🤝 Negosiasi" : "🤝 Jatah habis", "blue", "trade", "trade", o.tradesLeft <= 0);
+      if (o.items > 0) add(Lang.hud.cards(o.items), "pink", "item", "use-item");
+      add(o.tradesLeft > 0 ? Lang.hud.trade : Lang.hud.tradeUsed, "blue", "trade", "trade", o.tradesLeft <= 0);
       const listed = activeListings(this.state).length;
-      add(listed ? `🏪 Pasar · ${listed}` : "🏪 Pasar", "orange", "market", "market-act");
+      add(listed ? Lang.hud.marketCount(listed) : Lang.hud.marketBtn, "orange", "market", "market-act");
       const onKey = (e: KeyboardEvent) => {
         if ((e.code === "Space" || e.code === "Enter") && !document.querySelector(".modal-backdrop")) {
           e.preventDefault();
@@ -346,27 +338,27 @@ export class Hud {
         .map((l) => {
           const fake = structuredClone(s);
           fake.tiles[index] = { owner: ts.owner ?? 0, level: l as 1, festival: ts.festival };
-          return `<tr class="${ts.level === l ? "current" : ""}"><td>${LEVEL_NAMES[l]}</td><td>bangun ${fmt(upgradeCost(index, l - 1, l))}</td><td>sewa ${fmt(rentFor(fake, index))}</td></tr>`;
+          return Lang.hud.levelRow(ts.level === l ? "current" : "", LEVEL_NAMES[l], fmt(upgradeCost(index, l - 1, l)), fmt(rentFor(fake, index)));
         })
         .join("");
       body += `<table>${rows}</table>`;
     } else if (def.kind === "resort") {
-      body += `<p>Harga ${fmt(def.price!)}. Sewa ${fmt(CONFIG.resortBaseRent)} dan berlipat ganda untuk setiap tempat wisata yang dimiliki pemilik yang sama.</p>`;
+      body += Lang.hud.resortInfo(fmt(def.price!), fmt(CONFIG.resortBaseRent));
     } else {
       body += `<p>${TILE_HELP[def.kind] ?? ""}</p>`;
     }
     if (owner) {
-      body += `<p>Pemilik: <b style="color:${owner.color}">${escapeHtml(owner.name)}</b> — ${def.kind === "resort" ? "Wisata" : LEVEL_NAMES[ts.level]}<br/>Sewa saat ini: <b>${fmt(rentFor(s, index))}</b>${ts.festival ? " ⭐ Festival" : ""}<br/>Nilai investasi: ${fmt(investedValue(s, index))}</p>`;
+      body += Lang.hud.ownerInfo(owner.color, escapeHtml(owner.name), def.kind === "resort" ? Lang.hud.resortWord : LEVEL_NAMES[ts.level], fmt(rentFor(s, index)), ts.festival ? Lang.hud.festivalTag : "", fmt(investedValue(s, index)));
     } else if (def.kind === "property" || def.kind === "resort") {
-      body += `<p>Belum dimiliki.</p>`;
+      body += Lang.hud.unowned;
     }
     const listing = listingFor(s, index);
-    if (listing) body += `<p class="listed">🏪 Dijual di Pasar Terbuka: <b>${fmt(listing.price)}</b></p>`;
+    if (listing) body += Lang.hud.listedInMarket(fmt(listing.price));
     await modal({
       title: def.name,
       bandColor: def.kind === "property" ? GROUP_COLORS[def.group!] : undefined,
       body,
-      buttons: [{ label: "Tutup", value: 0, class: "white" }],
+      buttons: [{ label: Lang.common.close, value: 0, class: "white" }],
     });
   }
 
@@ -384,17 +376,17 @@ export class Hud {
           { class: "rank" },
           h("span", {}, ["🥇", "🥈", "🥉", "4️⃣"][i]),
           h("span", {}, AVATARS[this.characterIdx[p.id]]),
-          h("span", { style: "flex:1" }, p.name + (p.bankrupt ? " (bangkrut)" : "")),
+          h("span", { style: "flex:1" }, p.name + (p.bankrupt ? Lang.hud.bankruptSuffix : "")),
           h("span", {}, `💎 ${fmt(netWorth(s, p.id))}`),
         ),
       );
     });
-    const body = h("div", {}, h("p", {}, `${AVATARS[this.characterIdx[winner.id]]} ${winner.name} menang! ${WIN_TEXT[s.winReason!]}`), list);
+    const body = h("div", {}, h("p", {}, Lang.hud.winnerLine(AVATARS[this.characterIdx[winner.id]], winner.name, WIN_TEXT[s.winReason!])), list);
     await modal({
-      title: "🏆 Permainan Selesai!",
+      title: Lang.hud.gameOver,
       body,
       className: "gameover",
-      buttons: [{ label: "🔁 Main Lagi", value: 0, class: "green" }],
+      buttons: [{ label: Lang.hud.playAgain, value: 0, class: "green" }],
     });
   }
 }

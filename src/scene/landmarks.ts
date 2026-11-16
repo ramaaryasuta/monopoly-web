@@ -1,4 +1,5 @@
 import { Mesh, MeshBuilder, Vector3, type Scene } from "@babylonjs/core";
+import { Lang } from "../lang/id";
 
 /**
  * Model landmark (level 5) per petak — dibangun dari primitif 3D bergaya kartun.
@@ -105,7 +106,7 @@ class Kit {
 // ------------------------------------------------------------------ landmark ikonik
 
 const ICONIC: Record<string, (k: Kit) => void> = {
-  "Candi Borobudur": (k) => {
+  [Lang.tiles[34]]: (k) => { // Candi Borobudur
     // Teras persegi bertingkat + teras bundar berstupa + stupa induk
     const terr = [1.6, 1.36, 1.12, 0.9];
     terr.forEach((w, i) => k.box(w, 0.22, w, [0, 0.11 + i * 0.22, 0], i % 2 ? STONE : DARK_STONE));
@@ -127,7 +128,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.pennant(0, 1.88, 0, 0.45);
   },
 
-  "Candi Prambanan": (k) => {
+  [Lang.tiles[29]]: (k) => { // Candi Prambanan
     k.box(1.6, 0.25, 1.1, [0, 0.125, 0], DARK_STONE);
     k.box(1.66, 0.07, 1.16, [0, 0.22, 0], k.color);
     const tower = (x: number, s: number) => {
@@ -149,7 +150,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.pennant(0, top, 0, 0.35);
   },
 
-  "Gedung Sate": (k) => {
+  [Lang.tiles[15]]: (k) => { // Gedung Sate
     k.box(1.7, 0.12, 0.85, [0, 0.06, 0], "#d9d2c3");
     k.box(1.6, 0.6, 0.7, [0, 0.42, 0], WHITE);
     k.box(1.64, 0.08, 0.74, [0, 0.76, 0], k.color);
@@ -163,7 +164,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.box(0.22, 0.32, 0.04, [0, 0.28, -0.36], WOOD, undefined, false);
   },
 
-  "Jam Gadang": (k) => {
+  [Lang.tiles[32]]: (k) => { // Jam Gadang
     k.box(0.95, 0.3, 0.95, [0, 0.15, 0], "#d9d2c3");
     k.box(0.62, 1.8, 0.62, [0, 1.2, 0], WHITE);
     for (let i = 0; i < 3; i++) k.box(0.66, 0.05, 0.66, [0, 0.55 + i * 0.5, 0], "#d9d2c3");
@@ -189,7 +190,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.ball(0.1, [0, 3.05, 0], GOLD);
   },
 
-  "Masjid Istiqlal": (k) => {
+  [Lang.tiles[38]]: (k) => { // Masjid Istiqlal
     k.box(1.3, 0.12, 1.0, [0, 0.06, 0], "#d9d2c3");
     k.box(1.15, 0.55, 0.85, [0, 0.4, 0], WHITE);
     k.windows(5, 1, 0.85, 0.38, 0, -0.43, 0.1, 0.22);
@@ -207,7 +208,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.ball(0.08, [mx, 2.7, -0.25], GOLD);
   },
 
-  "Gedung DPR": (k) => {
+  [Lang.tiles[37]]: (k) => { // Gedung DPR
     k.box(1.7, 0.12, 0.95, [0, 0.06, 0], "#d9d2c3");
     k.box(1.55, 0.4, 0.8, [0, 0.32, 0], WHITE);
     k.windows(8, 1, 1.3, 0.3, 0, -0.41, 0.08, 0.2);
@@ -222,7 +223,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.sultan(0.95, -0.4, 0.9);
   },
 
-  "Istana Presiden": (k) => {
+  [Lang.tiles[39]]: (k) => { // Istana Presiden
     k.box(1.7, 0.1, 1.0, [0, 0.05, 0], "#d9d2c3");
     k.box(1.6, 0.08, 0.9, [0, 0.14, 0.03], "#e9e2d3");
     k.box(1.5, 0.6, 0.65, [0, 0.48, 0.1], WHITE);
@@ -238,7 +239,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.box(0.44, 0.13, 0.03, [0.98, 1.34, -0.55], "#ffffff", undefined, false);
   },
 
-  "Tugu Jogja": (k) => {
+  [Lang.tiles[12]]: (k) => { // Tugu Jogja
     k.box(0.9, 0.25, 0.9, [0, 0.125, 0], "#d9d2c3");
     k.box(0.7, 0.35, 0.7, [0, 0.42, 0], WHITE);
     k.box(0.74, 0.06, 0.74, [0, 0.6, 0], k.color);
@@ -251,7 +252,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.cyl(0, 0.06, 0.35, [0, 3.0, 0], GOLD, 6);
   },
 
-  "Buletan HI": (k) => {
+  [Lang.tiles[14]]: (k) => { // Buletan HI
     // Kolam bundar + air mancur + patung Selamat Datang
     k.cyl(1.55, 1.6, 0.18, [0, 0.09, 0], k.color, 32);
     k.cyl(1.35, 1.35, 0.06, [0, 0.17, 0], "#4dc3ff", 32, undefined, false);
@@ -268,7 +269,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.ball(0.12, [0, 2.15, 0], GOLD); // buket bunga
   },
 
-  "Jembatan Mahakam": (k) => {
+  [Lang.tiles[17]]: (k) => { // Jembatan Mahakam
     // Air sungai + dek + dua lengkung rangka baja (warna pemilik)
     k.box(1.75, 0.08, 0.9, [0, 0.04, 0], "#3fa8e0");
     k.box(1.75, 0.08, 0.5, [0, 0.5, 0], "#7d7d8c");
@@ -290,7 +291,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.box(0.28, 0.14, 0.18, [-0.2, 0.62, -0.08], "#ff5b5b"); // mobil kecil
   },
 
-  "Karimun Jawa": (k) => {
+  [Lang.tiles[19]]: (k) => { // Karimun Jawa
     k.ball(1.7, [0, 0, 0], "#ffe2a1", [1, 0.22, 0.85]);
     k.ball(1.2, [0, -0.05, 0], "#6fdc5b", [1, 0.28, 0.7]);
     // Mercusuar belang (putih / warna pemilik)
@@ -310,7 +311,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.ball(0.12, [top.x + 0.05, top.y - 0.1, top.z], "#7a4a24");
   },
 
-  "Sam Poo Kong": (k) => {
+  [Lang.tiles[25]]: (k) => { // Sam Poo Kong
     k.box(1.5, 0.15, 1.05, [0, 0.075, 0], "#b7b0a5");
     k.box(1.2, 0.55, 0.75, [0, 0.42, 0], "#d6342c");
     for (const x of [-0.5, -0.17, 0.17, 0.5]) k.cyl(0.08, 0.08, 0.55, [x, 0.42, -0.4], "#b8241d", 8);
@@ -347,7 +348,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     k.cyl(0, 0.2, 0.28, [0, 0.92, -0.06], "#c9a227", 3, [Math.PI / 2, 0, 0]); // paruh
   },
 
-  "Lembang Park Zoo": (k) => {
+  [Lang.tiles[9]]: (k) => { // Lembang Park Zoo
     // Gerbang (kiri) + jerapah (kanan) supaya jerapah tidak tertutup gerbang
     const gx = -0.42;
     for (const sx of [-0.33, 0.33]) k.box(0.16, 0.95, 0.16, [gx + sx, 0.475, -0.25], WOOD);
@@ -369,7 +370,7 @@ const ICONIC: Record<string, (k: Kit) => void> = {
     }
   },
 
-  "Lawang Rongewu": (k) => {
+  [Lang.tiles[8]]: (k) => { // Lawang Rongewu
     // Gedung kolonial seribu pintu + dua menara kembar berkubah
     k.box(1.75, 0.1, 0.9, [0, 0.05, 0], "#d9d2c3");
     k.box(1.65, 0.85, 0.7, [0, 0.52, 0.05], WHITE);
@@ -505,18 +506,18 @@ const rumahRatapan: ThemeFn = (k) => {
 };
 
 const THEMED: Record<string, [ThemeFn, string]> = {
-  "Burjo SS Tembalang": [warung, "mie"],
-  "OTY Fried Chicken": [warung, "ayam"],
-  "RM Pagi Sore": [warung, "nasi"],
-  "Sei Indonesia": [warung, "sei"],
-  "Kopi Kenangan": [warung, "kopi"],
-  "Rumah Ratapan Oslo": [rumahRatapan, ""],
-  Polri: [kantor, "polisi"],
-  "Bank Living by Sendiri": [kantor, "bank"],
-  "Kantor KPK": [kantor, "kpk"],
-  Telkom: [kantor, "telkom"],
-  "Pakuwon Mall": [mal, ""],
-  "Tambang Nikel": [tambang, ""],
+  [Lang.tiles[1]]: [warung, "mie"], // Burjo SS Tembalang
+  [Lang.tiles[3]]: [warung, "ayam"], // OTY Fried Chicken
+  [Lang.tiles[4]]: [warung, "nasi"], // RM Pagi Sore
+  [Lang.tiles[5]]: [warung, "sei"], // Sei Indonesia
+  [Lang.tiles[21]]: [warung, "kopi"], // Kopi Kenangan
+  [Lang.tiles[7]]: [rumahRatapan, ""], // Rumah Ratapan Oslo
+  [Lang.tiles[11]]: [kantor, "polisi"], // Polri
+  [Lang.tiles[18]]: [kantor, "bank"], // Bank Living by Sendiri
+  [Lang.tiles[33]]: [kantor, "kpk"], // Kantor KPK
+  [Lang.tiles[23]]: [kantor, "telkom"], // Telkom
+  [Lang.tiles[24]]: [mal, ""], // Pakuwon Mall
+  [Lang.tiles[27]]: [tambang, ""], // Tambang Nikel
 };
 
 /** Menara sultan generik (dipakai bila petak belum punya model khusus). */

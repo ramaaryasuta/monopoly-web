@@ -1,4 +1,5 @@
-import { FESTIVAL_INDEX, tileIndexByName } from "./board";
+import { Lang } from "../lang/id";
+import { FESTIVAL_INDEX } from "./board";
 export type CardEffect =
   | { type: "gain"; amount: number }
   | { type: "pay"; amount: number }
@@ -36,40 +37,40 @@ export interface Card {
 }
 
 export const CARDS: Card[] = [
-  { id: "coinRain", title: "Mendapat Bansos", text: "Namamu masuk daftar penerima bantuan. Terima Rp135 jt.", icon: "💸", effect: { type: "gain", amount: 135 }, fx: "rain" },
-  { id: "harvest", title: "Ada yang Salah Transfer", text: "Saldo tiba-tiba nambah, pengirimnya nggak bisa dihubungi. Terima Rp90 jt.", icon: "🏦", effect: { type: "gain", amount: 90 }, fx: "dance" },
-  { id: "leakyWallet", title: "IHSG Anjlok", text: "Portofolio sahammu merah semua. Rugi Rp100 jt.", icon: "📉", effect: { type: "pay", amount: 100 }, fx: "cry" },
-  { id: "repair", title: "Atap Bocor Semua", text: "Musim hujan! Bayar Rp20 jt untuk setiap rumah, vila, dan landmark-mu.", icon: "🪣", effect: { type: "repair", perLevel: 20 }, fx: "cry" },
-  { id: "shield", title: "Kolor Mas Amba", text: "Penagih ketakutan melihat bekas Mas Amba. Bebas bayar sewa satu kali.", icon: "🩲", effect: { type: "shield" }, fx: "dance" },
-  { id: "toStart", title: "Ketapel Raksasa", text: "Kamu ditembakkan pakai ketapel ke petak Mulai!", icon: "🪃", effect: { type: "goto", tile: 0 }, fx: "dizzy" },
-  { id: "toIsland", title: "Digrebek Polisi", text: "Ketahuan main judi online. Langsung digiring ke Nusakambangan!", icon: "🚓", effect: { type: "island" }, fx: "cry" },
-  { id: "birthday", title: "Ultah Dadakan", text: "Ngaku ulang tahun (padahal bukan). Setiap pemain memberimu Rp45 jt.", icon: "🎂", effect: { type: "collectFromAll", amount: 45 }, fx: "dance" },
-  { id: "back3", title: "Kunci Motor Ketinggalan", text: "Balik lagi! Mundur 3 petak.", icon: "🔑", effect: { type: "back", steps: 3 }, fx: "dizzy" },
-  { id: "toFestival", title: "Dapat Undangan VIP", text: "Namamu nyelip di daftar tamu. Berangkat ke Pesta Pejabat!", icon: "🥂", effect: { type: "goto", tile: FESTIVAL_INDEX }, fx: "party" },
-  { id: "fart", title: "Kentut Nuklir", text: "BRRRT! Semua pemain lain terpental mundur 2 petak.", icon: "💨", effect: { type: "pushOthers", steps: 2 }, fx: "fart" },
-  { id: "heli", title: "Nebeng Heli Pejabat", text: "Disangka ajudan, kamu ikut terbang lalu diturunkan di lokasi acak.", icon: "🚁", effect: { type: "randomTile" }, fx: "heli" },
-  { id: "swap", title: "Tukar Jiwa", text: "Kesamber petir bareng pemain lain (kecuali yang di Nusakambangan). Kalian tukar posisi!", icon: "⚡", effect: { type: "swap" }, fx: "shake" },
-  { id: "treat", title: "Kalah Taruhan Bola", text: "Timmu kalah 7-0. Traktir semua pemain, masing-masing Rp50 jt.", icon: "⚽", effect: { type: "payAll", amount: 50 }, fx: "cry" },
-  { id: "steal", title: "Pinjam Dulu Seratus", text: "Kamu pinjam ke pemain terkaya. Nggak bakal dibalikin. Ambil Rp100 jt.", icon: "🤝", effect: { type: "stealRichest", amount: 100 }, fx: "dance" },
-  { id: "claw", title: "Mesin Capit Warung", text: "Coba peruntungan! Bisa untung, bisa boncos.", icon: "🕹️", effect: { type: "gacha", min: -150, max: 230 }, fx: "shake" },
-  { id: "duck", title: "Bebek Karet Ajaib", text: "Bebek karet raksasa mendorongmu maju 4 petak. Kwek!", icon: "🦆", effect: { type: "forward", steps: 4 }, fx: "duck" },
-  { id: "sandal", title: "Mendapat Dividen", text: "Saham yang kamu lupa pernah beli ternyata bagi dividen. Terima Rp72 jt.", icon: "📈", effect: { type: "gain", amount: 72 }, fx: "dance" },
-  { id: "gorengan", title: "Bayar Karyawan Lembur", text: "Proyek dikejar deadline, semua lembur. Bayar Rp60 jt.", icon: "⏰", effect: { type: "pay", amount: 60 }, fx: "cry" },
-  { id: "mancing", title: "Teman Lama Bayar Hutang", text: "Utang sepuluh tahun lalu akhirnya dilunasi. Terima Rp63 jt.", icon: "💌", effect: { type: "gain", amount: 63 }, fx: "dance" },
-  { id: "cukur", title: "Bayar Pajak PPh 21", text: "Potongan pajak penghasilan datang. Bayar Rp50 jt.", icon: "📑", effect: { type: "pay", amount: 50 }, fx: "dizzy" },
-  { id: "itemSandal", title: "Nemu Sendal Terbang", text: "Sendal jepit bersayap! Simpan di kantong, lempar ke lawan sebelum kamu lempar dadu.", icon: "🩴", effect: { type: "item", item: "sandal" }, fx: "dance" },
-  { id: "itemUtang", title: "Nemu Surat Utang", text: "Surat utang palsu tapi meyakinkan. Simpan, tagih ke lawan nanti!", icon: "📜", effect: { type: "item", item: "utang" }, fx: "dance" },
-  { id: "itemTurbo", title: "Sepatu Roda Turbo", text: "Simpan buat giliran penting: langkahmu +3.", icon: "🛼", effect: { type: "item", item: "turbo" }, fx: "duck" },
-  { id: "itemKecoak", title: "Karyawan Resign", text: "Karyawan sedikit, terjadi efisiensi! Simpan, pakai untuk turunkan 1 level bangunan lawan.", icon: "🏃", effect: { type: "item", item: "kecoak" }, fx: "shake" },
-  { id: "orangDalam", title: "Kartu Orang Dalam", text: "Punya kenalan orang dalam. Bebas bayar sewa satu kali.", icon: "🕴️", effect: { type: "shield" }, fx: "dance" },
-  { id: "tilang", title: "Kartu Kena Tilang", text: "Lupa bawa SIM, helm cuma ditenteng. Bayar denda Rp75 jt.", icon: "👮", effect: { type: "pay", amount: 75 }, fx: "cry" },
-  { id: "pajak", title: "Kartu Bayar PAJAK", text: "Orang bijak taat pajak! Bayar Rp25 jt untuk setiap rumah, vila, dan landmark-mu.", icon: "🧾", effect: { type: "repair", perLevel: 25 }, fx: "cry" },
-  { id: "korupsi", title: "Kartu Korupsi", text: "Main proyek fiktif. Kalau lolos untung besar, kalau ketahuan KPK boncos!", icon: "💼", effect: { type: "gacha", min: -200, max: 270 }, fx: "shake" },
-  { id: "pinjol", title: "Kartu Pinjol", text: "Klik 'cairkan' tanpa baca syarat. Bunganya beranak pinak! Bayar Rp150 jt.", icon: "📱", effect: { type: "pay", amount: 150 }, fx: "cry" },
-  { id: "viral", title: "Kartu Viral", text: "Kontenmu FYP! Setiap pemain kirim saweran Rp36 jt.", icon: "🤳", effect: { type: "collectFromAll", amount: 36 }, fx: "dance" },
-  { id: "gusur", title: "Kartu Kena Gusur", text: "Lahanmu kena proyek strategis. Angkat koper, mundur 4 petak.", icon: "🚜", effect: { type: "back", steps: 4 }, fx: "shake" },
-  { id: "wapres", title: "Kartu Wapres Resign", text: "Kursi kosong mendadak! Kamu langsung meluncur ke Istana Presiden.", icon: "🪑", effect: { type: "goto", tile: tileIndexByName("Istana Presiden") }, fx: "dizzy" },
-  { id: "ronda", title: "Dipanggil Jadi Saksi", text: "Surat panggilan datang. Kamu buru-buru ke Polri.", icon: "⚖️", effect: { type: "goto", tile: tileIndexByName("Polri") }, fx: "dizzy" },
+  { id: "coinRain", title: Lang.cards.coinRain.title, text: Lang.cards.coinRain.text, icon: "💸", effect: { type: "gain", amount: 135 }, fx: "rain" },
+  { id: "harvest", title: Lang.cards.harvest.title, text: Lang.cards.harvest.text, icon: "🏦", effect: { type: "gain", amount: 90 }, fx: "dance" },
+  { id: "leakyWallet", title: Lang.cards.leakyWallet.title, text: Lang.cards.leakyWallet.text, icon: "📉", effect: { type: "pay", amount: 100 }, fx: "cry" },
+  { id: "repair", title: Lang.cards.repair.title, text: Lang.cards.repair.text, icon: "🪣", effect: { type: "repair", perLevel: 20 }, fx: "cry" },
+  { id: "shield", title: Lang.cards.shield.title, text: Lang.cards.shield.text, icon: "🩲", effect: { type: "shield" }, fx: "dance" },
+  { id: "toStart", title: Lang.cards.toStart.title, text: Lang.cards.toStart.text, icon: "🪃", effect: { type: "goto", tile: 0 }, fx: "dizzy" },
+  { id: "toIsland", title: Lang.cards.toIsland.title, text: Lang.cards.toIsland.text, icon: "🚓", effect: { type: "island" }, fx: "cry" },
+  { id: "birthday", title: Lang.cards.birthday.title, text: Lang.cards.birthday.text, icon: "🎂", effect: { type: "collectFromAll", amount: 45 }, fx: "dance" },
+  { id: "back3", title: Lang.cards.back3.title, text: Lang.cards.back3.text, icon: "🔑", effect: { type: "back", steps: 3 }, fx: "dizzy" },
+  { id: "toFestival", title: Lang.cards.toFestival.title, text: Lang.cards.toFestival.text, icon: "🥂", effect: { type: "goto", tile: FESTIVAL_INDEX }, fx: "party" },
+  { id: "fart", title: Lang.cards.fart.title, text: Lang.cards.fart.text, icon: "💨", effect: { type: "pushOthers", steps: 2 }, fx: "fart" },
+  { id: "heli", title: Lang.cards.heli.title, text: Lang.cards.heli.text, icon: "🚁", effect: { type: "randomTile" }, fx: "heli" },
+  { id: "swap", title: Lang.cards.swap.title, text: Lang.cards.swap.text, icon: "⚡", effect: { type: "swap" }, fx: "shake" },
+  { id: "treat", title: Lang.cards.treat.title, text: Lang.cards.treat.text, icon: "⚽", effect: { type: "payAll", amount: 50 }, fx: "cry" },
+  { id: "steal", title: Lang.cards.steal.title, text: Lang.cards.steal.text, icon: "🤝", effect: { type: "stealRichest", amount: 100 }, fx: "dance" },
+  { id: "claw", title: Lang.cards.claw.title, text: Lang.cards.claw.text, icon: "🕹️", effect: { type: "gacha", min: -150, max: 230 }, fx: "shake" },
+  { id: "duck", title: Lang.cards.duck.title, text: Lang.cards.duck.text, icon: "🦆", effect: { type: "forward", steps: 4 }, fx: "duck" },
+  { id: "sandal", title: Lang.cards.sandal.title, text: Lang.cards.sandal.text, icon: "📈", effect: { type: "gain", amount: 72 }, fx: "dance" },
+  { id: "gorengan", title: Lang.cards.gorengan.title, text: Lang.cards.gorengan.text, icon: "⏰", effect: { type: "pay", amount: 60 }, fx: "cry" },
+  { id: "mancing", title: Lang.cards.mancing.title, text: Lang.cards.mancing.text, icon: "💌", effect: { type: "gain", amount: 63 }, fx: "dance" },
+  { id: "cukur", title: Lang.cards.cukur.title, text: Lang.cards.cukur.text, icon: "📑", effect: { type: "pay", amount: 50 }, fx: "dizzy" },
+  { id: "itemSandal", title: Lang.cards.itemSandal.title, text: Lang.cards.itemSandal.text, icon: "🩴", effect: { type: "item", item: "sandal" }, fx: "dance" },
+  { id: "itemUtang", title: Lang.cards.itemUtang.title, text: Lang.cards.itemUtang.text, icon: "📜", effect: { type: "item", item: "utang" }, fx: "dance" },
+  { id: "itemTurbo", title: Lang.cards.itemTurbo.title, text: Lang.cards.itemTurbo.text, icon: "🛼", effect: { type: "item", item: "turbo" }, fx: "duck" },
+  { id: "itemKecoak", title: Lang.cards.itemKecoak.title, text: Lang.cards.itemKecoak.text, icon: "🏃", effect: { type: "item", item: "kecoak" }, fx: "shake" },
+  { id: "orangDalam", title: Lang.cards.orangDalam.title, text: Lang.cards.orangDalam.text, icon: "🕴️", effect: { type: "shield" }, fx: "dance" },
+  { id: "tilang", title: Lang.cards.tilang.title, text: Lang.cards.tilang.text, icon: "👮", effect: { type: "pay", amount: 75 }, fx: "cry" },
+  { id: "pajak", title: Lang.cards.pajak.title, text: Lang.cards.pajak.text, icon: "🧾", effect: { type: "repair", perLevel: 25 }, fx: "cry" },
+  { id: "korupsi", title: Lang.cards.korupsi.title, text: Lang.cards.korupsi.text, icon: "💼", effect: { type: "gacha", min: -200, max: 270 }, fx: "shake" },
+  { id: "pinjol", title: Lang.cards.pinjol.title, text: Lang.cards.pinjol.text, icon: "📱", effect: { type: "pay", amount: 150 }, fx: "cry" },
+  { id: "viral", title: Lang.cards.viral.title, text: Lang.cards.viral.text, icon: "🤳", effect: { type: "collectFromAll", amount: 36 }, fx: "dance" },
+  { id: "gusur", title: Lang.cards.gusur.title, text: Lang.cards.gusur.text, icon: "🚜", effect: { type: "back", steps: 4 }, fx: "shake" },
+  { id: "wapres", title: Lang.cards.wapres.title, text: Lang.cards.wapres.text, icon: "🪑", effect: { type: "goto", tile: 39 /* Istana Presiden */ }, fx: "dizzy" },
+  { id: "ronda", title: Lang.cards.ronda.title, text: Lang.cards.ronda.text, icon: "⚖️", effect: { type: "goto", tile: 11 /* Polri */ }, fx: "dizzy" },
 ];
 
 /** Event konyol sedunia: kadang muncul di awal ronde. */
@@ -98,16 +99,16 @@ export interface ChaosEvent {
 }
 
 export const CHAOS_EVENTS: ChaosEvent[] = [
-  { id: "bansos", headline: "Bansos Kumis Turun!", text: "Pak RT bagi-bagi amplop. Semua pemain +Rp60 jt.", icon: "🧧", effect: { type: "allGain", amount: 60 }, fx: "rain" },
-  { id: "iuran", headline: "Iuran Agustusan", text: "Buat lomba panjat pinang. Semua pemain bayar Rp40 jt.", icon: "🇮🇩", effect: { type: "allPay", amount: 40 }, fx: "shake" },
-  { id: "seagull", headline: "Serangan Burung Camar", text: "Seekor camar mencuri dompet satu pemain! -Rp80 jt.", icon: "🐦", effect: { type: "randomPay", amount: 80 }, fx: "cry" },
-  { id: "lottery", headline: "Nemu Koper Misterius", text: "Isinya duit mainan... eh ternyata asli! Satu pemain +Rp150 jt.", icon: "🧳", effect: { type: "randomGain", amount: 150 }, fx: "dance" },
-  { id: "pity", headline: "Donasi Kasihan", text: "Warga iba. Pemain paling miskin dapat Rp120 jt.", icon: "🥺", effect: { type: "poorestGain", amount: 120 }, fx: "cry" },
-  { id: "robin", headline: "Maling Budiman Beraksi", text: "Pemain terkaya kehilangan Rp150 jt, dibagi ke yang lain.", icon: "🦹", effect: { type: "robinHood", amount: 150 }, fx: "shake" },
-  { id: "heli", headline: "Heli Pejabat Salah Jemput!", text: "Pilot salah orang. Satu pemain diangkut ke lokasi acak.", icon: "🚁", effect: { type: "heliAbduct" }, fx: "heli" },
-  { id: "blackout", headline: "Mati Lampu Se-Pulau", text: "Semua panik lalu joget di kegelapan. Tidak terjadi apa-apa.", icon: "🔦", effect: { type: "nothing" }, fx: "dance" },
-  { id: "fartquake", headline: "Gempa Kentut 6,9 SR", text: "Tanah bergetar dan bau. Semua pemain bayar Rp30 jt buat beli pengharum.", icon: "💨", effect: { type: "allPay", amount: 30 }, fx: "fart" },
-  { id: "giantduck", headline: "Bebek Raksasa Mendarat", text: "Turis datang foto-foto. Satu pemain jualan es dan dapat Rp100 jt.", icon: "🦆", effect: { type: "randomGain", amount: 100 }, fx: "duck" },
+  { id: "bansos", headline: Lang.chaos.bansos.headline, text: Lang.chaos.bansos.text, icon: "🧧", effect: { type: "allGain", amount: 60 }, fx: "rain" },
+  { id: "iuran", headline: Lang.chaos.iuran.headline, text: Lang.chaos.iuran.text, icon: "🇮🇩", effect: { type: "allPay", amount: 40 }, fx: "shake" },
+  { id: "seagull", headline: Lang.chaos.seagull.headline, text: Lang.chaos.seagull.text, icon: "🐦", effect: { type: "randomPay", amount: 80 }, fx: "cry" },
+  { id: "lottery", headline: Lang.chaos.lottery.headline, text: Lang.chaos.lottery.text, icon: "🧳", effect: { type: "randomGain", amount: 150 }, fx: "dance" },
+  { id: "pity", headline: Lang.chaos.pity.headline, text: Lang.chaos.pity.text, icon: "🥺", effect: { type: "poorestGain", amount: 120 }, fx: "cry" },
+  { id: "robin", headline: Lang.chaos.robin.headline, text: Lang.chaos.robin.text, icon: "🦹", effect: { type: "robinHood", amount: 150 }, fx: "shake" },
+  { id: "heli", headline: Lang.chaos.heli.headline, text: Lang.chaos.heli.text, icon: "🚁", effect: { type: "heliAbduct" }, fx: "heli" },
+  { id: "blackout", headline: Lang.chaos.blackout.headline, text: Lang.chaos.blackout.text, icon: "🔦", effect: { type: "nothing" }, fx: "dance" },
+  { id: "fartquake", headline: Lang.chaos.fartquake.headline, text: Lang.chaos.fartquake.text, icon: "💨", effect: { type: "allPay", amount: 30 }, fx: "fart" },
+  { id: "giantduck", headline: Lang.chaos.giantduck.headline, text: Lang.chaos.giantduck.text, icon: "🦆", effect: { type: "randomGain", amount: 100 }, fx: "duck" },
 ];
 
 /** Peluang event konyol muncul di awal setiap ronde baru. */
@@ -128,10 +129,10 @@ export interface ItemDef {
 }
 
 export const ITEMS: Record<ItemId, ItemDef> = {
-  sandal: { id: "sandal", name: "Sendal Terbang", icon: "🩴", text: "Lempar ke satu lawan: dia mundur 3 petak.", target: "player" },
-  utang: { id: "utang", name: "Surat Utang Palsu", icon: "📜", text: "Tagih satu lawan: ambil Rp100 jt darinya.", target: "player" },
-  turbo: { id: "turbo", name: "Sepatu Roda Turbo", icon: "🛼", text: "Lemparan dadu giliran ini +3 langkah.", target: null },
-  kecoak: { id: "kecoak", name: "Karyawan Resign", icon: "🏃", text: "Karyawan lawan resign, terjadi efisiensi: turunkan 1 level bangunannya (tanah tidak bisa).", target: "tile" },
+  sandal: { id: "sandal", name: Lang.items.sandal.name, icon: "🩴", text: Lang.items.sandal.text, target: "player" },
+  utang: { id: "utang", name: Lang.items.utang.name, icon: "📜", text: Lang.items.utang.text, target: "player" },
+  turbo: { id: "turbo", name: Lang.items.turbo.name, icon: "🛼", text: Lang.items.turbo.text, target: null },
+  kecoak: { id: "kecoak", name: Lang.items.kecoak.name, icon: "🏃", text: Lang.items.kecoak.text, target: "tile" },
 };
 
 /** Maksimal kartu simpanan per pemain. Kalau penuh, kartu baru dijual Rp50 jt. */
@@ -155,10 +156,10 @@ export interface SeasonDef {
 }
 
 export const SEASONS: Record<SeasonId, SeasonDef> = {
-  turis: { id: "turis", headline: "Musim Turis Bule!", text: "Turis datang rombongan. Semua sewa x2 selama 2 ronde.", badge: "Sewa x2", icon: "📸", fx: "dance" },
-  banjir: { id: "banjir", headline: "Banjir Kiriman!", text: "Tukang bangunan pada ngungsi. Tidak bisa beli/bangun selama 2 ronde.", badge: "Tidak bisa bangun", icon: "🌊", fx: "rain" },
-  diskon: { id: "diskon", headline: "Harbolnas Semen!", text: "Toko bangunan cuci gudang. Biaya beli/bangun diskon 50% selama 2 ronde.", badge: "Bangun -50%", icon: "🛍️", fx: "dance" },
-  thr: { id: "thr", headline: "Musim THR!", text: "Bos lagi baik. Gaji lewat Mulai jadi x2 selama 2 ronde.", badge: "Gaji x2", icon: "💰", fx: "rain" },
+  turis: { id: "turis", headline: Lang.seasons.turis.headline, text: Lang.seasons.turis.text, badge: Lang.seasons.turis.badge, icon: "📸", fx: "dance" },
+  banjir: { id: "banjir", headline: Lang.seasons.banjir.headline, text: Lang.seasons.banjir.text, badge: Lang.seasons.banjir.badge, icon: "🌊", fx: "rain" },
+  diskon: { id: "diskon", headline: Lang.seasons.diskon.headline, text: Lang.seasons.diskon.text, badge: Lang.seasons.diskon.badge, icon: "🛍️", fx: "dance" },
+  thr: { id: "thr", headline: Lang.seasons.thr.headline, text: Lang.seasons.thr.text, badge: Lang.seasons.thr.badge, icon: "💰", fx: "rain" },
 };
 
 export const SEASON_IDS = Object.keys(SEASONS) as SeasonId[];

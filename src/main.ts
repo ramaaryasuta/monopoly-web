@@ -16,8 +16,11 @@ import { mountQaPanel } from "./ui/QaPanel";
 import { installSettingsHotkey } from "./ui/SettingsMenu";
 import { ScenePresenter } from "./ui/ScenePresenter";
 import { editOffer, pickTradeTarget } from "./ui/TradeUi";
+import { Lang } from "./lang/id";
 
 async function boot() {
+  document.title = Lang.app.title;
+  document.documentElement.lang = Lang.app.htmlLang;
   music.init();
   installSettingsHotkey();
   const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
@@ -67,8 +70,8 @@ async function boot() {
     });
     hud.refresh();
     const cur = st.players[st.current];
-    hud.setTurnLabel(`Giliran ${cur.name}${cur.isBot ? " 🤖" : ""}`);
-    scene.message("🔌 Tersambung kembali! Lanjut main 🎉", "good");
+    hud.setTurnLabel(Lang.scene.turnLabel(cur.name, cur.isBot));
+    scene.message(Lang.main.reconnected, "good");
   };
 
   hud.screenPosOfPlayer = (pid) => view.worldToScreen(view.pawns[pid].worldTop());
@@ -114,16 +117,16 @@ async function boot() {
         if (waiting) goLive(); // riwayat sudah habis diputar
         if (kind === "roll" || kind === "deal" || kind === "sync") return; // label "Giliran X" sudah tampil
         if (kind === "debt") {
-          hud.setTurnLabel(waiting ? `💸 ${game.state.players[pid].name} lagi cari uang...` : null);
+          hud.setTurnLabel(waiting ? Lang.main.findingMoney(game.state.players[pid].name) : null);
           return;
         }
         const name = game.state.players[pid].name;
         if (kind === "trade") {
           const cur = game.state.players[game.state.current];
-          hud.setTurnLabel(waiting ? `🤝 ${name} lagi mikirin tawaran...` : `Giliran ${cur.name}${cur.isBot ? " 🤖" : ""}`);
+          hud.setTurnLabel(waiting ? Lang.main.thinkingOffer(name) : Lang.scene.turnLabel(cur.name, cur.isBot));
           return;
         }
-        hud.setTurnLabel(waiting ? `⏳ ${name} lagi mikir...` : null);
+        hud.setTurnLabel(waiting ? Lang.main.thinking(name) : null);
       });
       // Kursi sendiri setelah reconnect: putar ulang keputusan lama, lalu ambil alih lagi
       if (ownedHere) r.handover(resume!.from, new BroadcastDecider(afterReplay(humanHere), (k, v) => room.sendAct(pid, k, v)));
@@ -159,31 +162,31 @@ async function boot() {
         const st = game.state;
         if (st.winner !== null || st.players[me].bankrupt) return;
         if (pool.has(me)) {
-          hud.toast("Tawaranmu sebelumnya masih antre, tunggu sebentar ya ⏳");
+          hud.toast(Lang.main.offerQueued);
           return;
         }
         const target = await pickTradeTarget(st, me);
         if (target === null) return;
-        const offer = await editOffer(st, { from: me, to: target, giveTiles: [], giveMoney: 0, takeTiles: [], takeMoney: 0 }, `🤝 Tawaran ke ${st.players[target].name}`);
+        const offer = await editOffer(st, { from: me, to: target, giveTiles: [], giveMoney: 0, takeTiles: [], takeMoney: 0 }, Lang.human.offerTo(st.players[target].name));
         if (!offer || st.winner !== null) return;
         const it: Interjection = { id: `${room.me}:${++sent}`, player: me, act: { type: "trade", offer } };
         pool.add(it);
         room.sendAct(me, "offer", it);
-        hud.toast(`🤝 Tawaran ke ${st.players[target].name} terkirim! Diproses sebentar lagi.`, "good");
+        hud.toast(Lang.main.offerSent(st.players[target].name), "good");
       });
     }
     room.onPlayerLeft = (pid) => {
       const p = game.state.players[pid];
       p.isBot = true;
       hud.refreshName(pid);
-      game.presenter.message(`${p.name} terputus — sekarang dimainkan bot 🤖`, "bad");
+      game.presenter.message(Lang.main.disconnected(p.name), "bad");
       if (room.isHost) remotes[pid]?.takeover(broadcastBot(pid));
     };
     room.onPlayerBack = (pid) => {
       const p = game.state.players[pid];
       p.isBot = false;
       hud.refreshName(pid);
-      if (live) game.presenter.message(`🔌 ${p.name} tersambung kembali!`, "good");
+      if (live) game.presenter.message(Lang.main.backOnline(p.name), "good");
       return room.isHost ? (remotes[pid]?.release() ?? 0) : 0;
     };
     room.onClosed = (reason) => {
@@ -192,14 +195,14 @@ async function boot() {
       voicePanel.destroy();
       const canRejoin = !room.isHost && game.state.winner === null && loadSession()?.code === room.code;
       void modal({
-        title: "📡 Koneksi terputus",
-        body: `<p>${reason}</p>` + (canRejoin ? "<p>Tenang, kursimu dimainkan bot sementara. Tekan <b>Sambung ulang</b> untuk kembali ke permainan.</p>" : ""),
+        title: Lang.main.disconnectTitle,
+        body: `<p>${reason}</p>` + (canRejoin ? Lang.main.rejoinHint : ""),
         buttons: canRejoin
           ? [
-              { label: "🔄 Sambung ulang", value: 1, class: "green" },
-              { label: "Ke menu", value: 0, class: "white" },
+              { label: Lang.menu.rejoin, value: 1, class: "green" },
+              { label: Lang.main.toMenu, value: 0, class: "white" },
             ]
-          : [{ label: "Kembali ke menu", value: 0, class: "green" }],
+          : [{ label: Lang.main.backToMenu, value: 0, class: "green" }],
       }).then((v) => {
         if (v === 1) location.href = `${location.pathname}?rejoin=1`;
         else location.href = location.pathname;
@@ -237,5 +240,5 @@ async function boot() {
 
 boot().catch((e) => {
   console.error(e);
-  document.getElementById("ui")!.innerHTML = `<div class="panel" style="margin:20px;padding:20px">Terjadi error: ${String(e)}</div>`;
+  document.getElementById("ui")!.innerHTML = Lang.main.fatal(String(e));
 });

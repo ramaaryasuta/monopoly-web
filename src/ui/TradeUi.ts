@@ -15,9 +15,10 @@ import type { GameState } from "../core/types";
 import { BOARD, GROUP_COLORS } from "../data/board";
 import { BoardMap, linkMap, type MapMark } from "./BoardMap";
 import { fmt, h, modal } from "./dom";
+import { Lang } from "../lang/id";
 
 const tileColor = (t: number) => (BOARD[t].kind === "resort" ? "#36d1c4" : GROUP_COLORS[BOARD[t].group!]);
-const levelText = (state: GameState, t: number) => (BOARD[t].kind === "resort" ? "Wisata" : LEVEL_NAMES[state.tiles[t].level]);
+const levelText = (state: GameState, t: number) => (BOARD[t].kind === "resort" ? Lang.hud.resortWord : LEVEL_NAMES[state.tiles[t].level]);
 
 /** Satu wilayah sebagai "chip" kecil: warna grup, nama, level, nilai. */
 function tileChip(state: GameState, t: number): HTMLElement {
@@ -34,7 +35,7 @@ function sideBox(state: GameState, title: string, tiles: number[], money: number
   const list = h("div", { class: "chips" });
   for (const t of tiles) list.append(tileChip(state, t));
   if (money > 0) list.append(h("span", { class: "tile-chip money" }, h("b", {}, `💰 ${fmt(money)}`)));
-  if (!tiles.length && money <= 0) list.append(h("span", { class: "empty" }, "— tidak ada —"));
+  if (!tiles.length && money <= 0) list.append(h("span", { class: "empty" }, Lang.tradeUi.none));
   box.append(list);
   return box;
 }
@@ -49,8 +50,8 @@ export function offerView(state: GameState, o: TradeOffer): HTMLElement {
   const map = new BoardMap(state, {
     marks,
     legend: [
-      { mark: "gain", text: "Kamu dapat" },
-      { mark: "lose", text: "Kamu berikan" },
+      { mark: "gain", text: Lang.tradeUi.legendGet },
+      { mark: "lose", text: Lang.tradeUi.legendGive },
     ],
   });
   const view = h(
@@ -60,14 +61,14 @@ export function offerView(state: GameState, o: TradeOffer): HTMLElement {
     h(
       "div",
       { class: "trade-grid" },
-      sideBox(state, "✅ Kamu dapat", o.giveTiles, o.giveMoney),
-      sideBox(state, `📤 Kamu berikan ke ${from.name}`, o.takeTiles, o.takeMoney),
+      sideBox(state, Lang.tradeUi.youGet, o.giveTiles, o.giveMoney),
+      sideBox(state, Lang.tradeUi.youGiveTo(from.name), o.takeTiles, o.takeMoney),
     ),
     h(
       "p",
       { class: `trade-net ${gain >= 0 ? "plus" : "minus"}` },
-      `Selisih nilai buatmu: ${gain >= 0 ? "+" : "−"}${fmt(Math.abs(gain))}`,
-      h("small", {}, " (berdasarkan nilai investasi, belum termasuk strategi monopoli)"),
+      Lang.tradeUi.netDiff(gain >= 0 ? "+" : "−", fmt(Math.abs(gain))),
+      h("small", {}, Lang.tradeUi.netNote),
     ),
   );
   linkMap(view, map);
@@ -78,8 +79,8 @@ export function offerView(state: GameState, o: TradeOffer): HTMLElement {
 export function pickTradeTarget(state: GameState, me: number): Promise<number | null> {
   const others = state.players.filter((p) => p.id !== me && !p.bankrupt);
   return modal<number | null>({
-    title: "🤝 Negosiasi dengan siapa?",
-    body: "<p>Tukar atau jual-beli wilayah. Lawan bisa menerima, menolak, atau menawar balik.</p>",
+    title: Lang.tradeUi.pickTitle,
+    body: Lang.tradeUi.pickHint,
     buttons: [
       ...others.map((p) => ({
         label: p.name,
@@ -87,7 +88,7 @@ export function pickTradeTarget(state: GameState, me: number): Promise<number | 
         value: p.id as number | null,
         class: "blue",
       })),
-      { label: "Batal", value: null, class: "white" },
+      { label: Lang.common.cancel, value: null, class: "white" },
     ],
   });
 }
@@ -104,7 +105,7 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
   const column = (mine: boolean) => {
     const owner = mine ? draft.from : draft.to;
     const selected = mine ? draft.giveTiles : draft.takeTiles;
-    const col = h("div", { class: "trade-col" }, h("h3", {}, mine ? "📤 Kamu berikan" : `📥 Kamu minta dari ${them.name}`));
+    const col = h("div", { class: "trade-col" }, h("h3", {}, mine ? Lang.tradeUi.youGive : Lang.tradeUi.youAsk(them.name)));
     const list = h("div", { class: "chips pick" });
     const tiles = tradeableTiles(state, owner);
     for (const t of tiles) {
@@ -115,13 +116,13 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
       chip.prepend(input);
       list.append(h("label", {}, chip));
     }
-    if (!tiles.length) list.append(h("span", { class: "empty" }, "— belum punya wilayah —"));
+    if (!tiles.length) list.append(h("span", { class: "empty" }, Lang.tradeUi.noTiles));
     const money = h("input", { type: "number", min: 0, step: 10, max: (mine ? me : them).money, value: mine ? draft.giveMoney || "" : draft.takeMoney || "", placeholder: "0" }) as HTMLInputElement;
     const preview = h("small", {});
     col.append(
       list,
-      h("label", { class: "money-in" }, h("span", {}, mine ? "💰 + Uang" : "💰 + Minta uang"), money, h("span", { class: "unit" }, "jt"), preview),
-      h("small", { class: "have" }, `Uang ${mine ? "kamu" : them.name}: ${fmt((mine ? me : them).money)}`),
+      h("label", { class: "money-in" }, h("span", {}, mine ? Lang.tradeUi.plusMoney : Lang.tradeUi.plusAskMoney), money, h("span", { class: "unit" }, Lang.money.million.trim()), preview),
+      h("small", { class: "have" }, Lang.tradeUi.moneyOf(mine ? Lang.tradeUi.you : them.name, fmt((mine ? me : them).money))),
     );
     return { col, money, preview };
   };
@@ -139,8 +140,8 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
       c.input.dispatchEvent(new Event("change", { bubbles: true }));
     },
     legend: [
-      { mark: "lose", text: "Kamu berikan" },
-      { mark: "gain", text: "Kamu minta" },
+      { mark: "lose", text: Lang.tradeUi.legendGive },
+      { mark: "gain", text: Lang.tradeUi.legendAsk },
     ],
   });
   const body = h("div", { class: "trade-editor" }, map.el, h("div", { class: "trade-grid" }, mine.col, theirs.col), net, error);
@@ -165,8 +166,8 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
     body,
     row: true,
     buttons: [
-      { label: "📨 Kirim Tawaran", value: "send", class: "green" },
-      { label: "Batal", value: "cancel", class: "white" },
+      { label: Lang.tradeUi.sendOffer, value: "send", class: "green" },
+      { label: Lang.common.cancel, value: "cancel", class: "white" },
     ],
     bind: (_c, root) => (send = root.querySelector<HTMLButtonElement>(".buttons button")),
   });
@@ -182,7 +183,7 @@ export async function editOffer(state: GameState, draft: TradeOffer, title: stri
     error.textContent = err ? `⚠️ ${err[0].toUpperCase()}${err.slice(1)}` : "";
     // Selisih nilai dari sisi pengirim = kebalikan keuntungan penerima
     const gain = -offerGainFor(state, o);
-    net.textContent = err ? "" : `Selisih nilai buatmu: ${gain >= 0 ? "+" : "−"}${fmt(Math.abs(gain))}`;
+    net.textContent = err ? "" : Lang.tradeUi.netDiff(gain >= 0 ? "+" : "−", fmt(Math.abs(gain)));
     net.className = `trade-net ${gain >= 0 ? "plus" : "minus"}`;
     if (send) (send as HTMLButtonElement).disabled = !!err;
   };
@@ -210,13 +211,13 @@ function marketList(state: GameState, viewer: number | null, act?: (a: DealActio
   const listings = activeListings(state);
   const box = h("div", { class: "market-list" });
   if (!listings.length) {
-    box.append(h("div", { class: "market-empty" }, h("span", {}, "🦗"), "Pasar masih sepi. Belum ada wilayah yang dijual."));
+    box.append(h("div", { class: "market-empty" }, h("span", {}, "🦗"), Lang.tradeUi.marketEmpty));
     return box;
   }
   const map = new BoardMap(state, {
     relevant: listings.map((l) => l.tile),
     marks: new Map(listings.map((l) => [l.tile, "focus" as MapMark])),
-    legend: [{ mark: "focus", text: "Dijual di pasar" }],
+    legend: [{ mark: "focus", text: Lang.tradeUi.legendMarket }],
   });
   const wrap = h("div", {}, map.el, box);
   linkMap(wrap, map);
@@ -232,17 +233,17 @@ function marketList(state: GameState, viewer: number | null, act?: (a: DealActio
         "div",
         { class: "mr-info" },
         h("b", {}, BOARD[l.tile].name),
-        h("small", {}, `${levelText(state, l.tile)} · nilai ${fmt(value)}`),
-        h("div", { class: "mr-seller" }, own ? h("span", { class: "player-pill you" }, "Milikmu") : playerPill(state, l.seller)),
+        h("small", {}, Lang.tradeUi.levelValue(levelText(state, l.tile), fmt(value))),
+        h("div", { class: "mr-seller" }, own ? h("span", { class: "player-pill you" }, Lang.tradeUi.yours) : playerPill(state, l.seller)),
       ),
-      h("div", { class: "mr-price" }, h("b", {}, fmt(l.price)), deal ? h("small", { class: deal }, deal === "murah" ? "di bawah nilai" : "kemahalan") : null),
+      h("div", { class: "mr-price" }, h("b", {}, fmt(l.price)), deal ? h("small", { class: deal }, deal === "murah" ? Lang.tradeUi.belowValue : Lang.tradeUi.overpriced) : null),
     );
     if (act) {
       const ok = own || money >= l.price;
       const btn = h(
         "button",
-        { class: `btn small ${own ? "white" : "green"}`, disabled: !ok, title: ok ? "" : `Uang kurang ${fmt(l.price - money)}` },
-        own ? "↩️ Tarik" : "🛒 Beli",
+        { class: `btn small ${own ? "white" : "green"}`, disabled: !ok, title: ok ? "" : Lang.tradeUi.moneyShort(fmt(l.price - money)) },
+        own ? Lang.tradeUi.withdraw : Lang.tradeUi.buy,
       );
       btn.addEventListener("click", () => act(own ? { type: "unlist", tile: l.tile } : { type: "buy", tile: l.tile }));
       row.append(btn);
@@ -255,10 +256,10 @@ function marketList(state: GameState, viewer: number | null, act?: (a: DealActio
 /** Lihat Pasar Terbuka tanpa bisa bertransaksi (bisa dibuka siapa saja kapan saja). */
 export async function viewMarket(state: GameState, viewer: number | null): Promise<void> {
   await modal({
-    title: "🏪 Pasar Terbuka",
+    title: Lang.tradeUi.marketTitle,
     className: "market-modal",
-    body: h("div", {}, marketList(state, viewer), h("p", { class: "hint" }, "Beli atau pajang wilayah saat giliranmu, sebelum lempar dadu.")),
-    buttons: [{ label: "Tutup", value: 0, class: "white" }],
+    body: h("div", {}, marketList(state, viewer), h("p", { class: "hint" }, Lang.tradeUi.marketHint)),
+    buttons: [{ label: Lang.common.close, value: 0, class: "white" }],
   });
 }
 
@@ -269,19 +270,19 @@ export async function marketMenu(state: GameState, me: number): Promise<DealActi
     type V = DealAction | "sell" | null;
     let act: (a: DealAction) => void = () => {};
     const v = await modal<V>({
-      title: "🏪 Pasar Terbuka",
+      title: Lang.tradeUi.marketTitle,
       className: "market-modal",
       body: h(
         "div",
         {},
-        h("div", { class: "market-wallet" }, "Uangmu ", h("b", {}, fmt(state.players[me].money))),
+        h("div", { class: "market-wallet" }, Lang.tradeUi.yourMoney, h("b", {}, fmt(state.players[me].money))),
         marketList(state, me, (a) => act(a)),
-        h("p", { class: "hint" }, "Semua pemain bisa melihat pasar. Wilayah yang dipajang tetap milikmu sampai ada yang membeli."),
+        h("p", { class: "hint" }, Lang.tradeUi.marketNote),
       ),
       row: true,
       buttons: [
-        { label: "➕ Pajang wilayah", value: "sell", class: "pink", disabled: !mine.length },
-        { label: "Tutup", value: null, class: "white" },
+        { label: Lang.tradeUi.listTile, value: "sell", class: "pink", disabled: !mine.length },
+        { label: Lang.common.close, value: null, class: "white" },
       ],
       bind: (close) => (act = close),
     });
@@ -307,48 +308,48 @@ async function confirmBuy(state: GameState, me: number, tile: number): Promise<b
     "div",
     { class: "confirm-buy" },
     focusMap(state, tile),
-    h("p", {}, "Yakin mau membeli wilayah ini?"),
+    h("p", {}, Lang.tradeUi.confirmAsk),
     h(
       "div",
       { class: "cb-table" },
-      row("Wilayah", `${BOARD[tile].name} (${levelText(state, tile)})`),
-      row("Penjual", playerPill(state, l.seller)),
-      row("Nilai investasi", fmt(value)),
-      row("Harga", fmt(l.price), "price"),
-      row("Uangmu setelah beli", fmt(money - l.price), money - l.price < 200 ? "low" : ""),
+      row(Lang.tradeUi.colTile, `${BOARD[tile].name} (${levelText(state, tile)})`),
+      row(Lang.tradeUi.colSeller, playerPill(state, l.seller)),
+      row(Lang.tradeUi.investValue, fmt(value)),
+      row(Lang.tradeUi.colPrice, fmt(l.price), "price"),
+      row(Lang.tradeUi.moneyAfter, fmt(money - l.price), money - l.price < 200 ? "low" : ""),
     ),
-    l.price > value * 1.5 ? h("p", { class: "cb-warn" }, "⚠️ Harga ini jauh di atas nilai investasinya.") : null,
+    l.price > value * 1.5 ? h("p", { class: "cb-warn" }, Lang.tradeUi.overpricedWarn) : null,
   );
   return modal<boolean>({
-    title: "🛒 Konfirmasi Pembelian",
+    title: Lang.tradeUi.confirmBuy,
     bandColor: tileColor(tile),
     body,
     row: true,
     // Tombol aman (Batal) diletakkan pertama
     buttons: [
-      { label: "Batal", value: false, class: "white" },
-      { label: `✅ Beli ${fmt(l.price)}`, value: true, class: "green" },
+      { label: Lang.common.cancel, value: false, class: "white" },
+      { label: Lang.tradeUi.buyPrice(fmt(l.price)), value: true, class: "green" },
     ],
   });
 }
 
 async function pickListing(state: GameState, me: number): Promise<DealAction | null> {
   const tile = await modal<number | null>({
-    title: "➕ Pajang wilayah mana?",
+    title: Lang.tradeUi.listWhich,
     buttons: [
       ...tradeableTiles(state, me).map((t) => {
         const l = listingFor(state, t);
         return {
           label: `${BOARD[t].name}`,
-          sub: `${levelText(state, t)} · nilai ${fmt(investedValue(state, t))}${l ? ` · sekarang ${fmt(l.price)}` : ""}`,
+          sub: Lang.tradeUi.levelValue(levelText(state, t), fmt(investedValue(state, t))) + (l ? Lang.tradeUi.nowPrice(fmt(l.price)) : ""),
           value: t as number | null,
           class: "blue",
           tile: t,
         };
       }),
-      { label: "Batal", value: null, class: "white" },
+      { label: Lang.common.cancel, value: null, class: "white" },
     ],
-    ...mapForButtons(state, tradeableTiles(state, me), "<p>Wilayah tetap milikmu (sewa tetap masuk) sampai ada yang membelinya.</p>"),
+    ...mapForButtons(state, tradeableTiles(state, me), Lang.tradeUi.listWhichHint),
   });
   if (tile === null) return null;
 
@@ -359,25 +360,25 @@ async function pickListing(state: GameState, me: number): Promise<DealAction | n
     "div",
     { class: "trade-editor" },
     focusMap(state, tile),
-    h("p", {}, `Nilai investasi ${BOARD[tile].name}: `, h("b", {}, fmt(investedValue(state, tile)))),
-    h("label", { class: "money-in big" }, h("span", {}, "💰 Harga"), input, h("span", { class: "unit" }, "jt"), preview),
+    h("p", {}, Lang.tradeUi.investOf(BOARD[tile].name), h("b", {}, fmt(investedValue(state, tile)))),
+    h("label", { class: "money-in big" }, h("span", {}, Lang.tradeUi.priceLabel), input, h("span", { class: "unit" }, Lang.money.million.trim()), preview),
   );
   let ok: HTMLButtonElement | null = null;
   const done = modal<boolean>({
-    title: `🏷️ Harga ${BOARD[tile].name}`,
+    title: Lang.tradeUi.priceTitle(BOARD[tile].name),
     bandColor: tileColor(tile),
     body,
     row: true,
     buttons: [
-      { label: "🏪 Pajang", value: true, class: "green" },
-      { label: "Batal", value: false, class: "white" },
+      { label: Lang.tradeUi.list, value: true, class: "green" },
+      { label: Lang.common.cancel, value: false, class: "white" },
     ],
     bind: (_c, root) => (ok = root.querySelector<HTMLButtonElement>(".buttons button")),
   });
   const update = () => {
     const price = Math.floor(Number(input.value));
     const valid = validMarketPrice(price);
-    preview.textContent = valid ? `= ${fmt(price)}` : `min ${fmt(MIN_MARKET_PRICE)}`;
+    preview.textContent = valid ? `= ${fmt(price)}` : Lang.tradeUi.minPlaceholder(fmt(MIN_MARKET_PRICE));
     if (ok) (ok as HTMLButtonElement).disabled = !valid;
   };
   input.addEventListener("input", update);

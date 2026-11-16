@@ -11,6 +11,7 @@ import { wait } from "../scene/tween";
 import { escapeHtml, modal } from "./dom";
 import type { Hud } from "./Hud";
 import { cardSummary } from "./cardSummary";
+import { Lang } from "../lang/id";
 
 /** Menjembatani event game logic → animasi 3D + HUD. */
 export class ScenePresenter implements Presenter {
@@ -56,10 +57,10 @@ export class ScenePresenter implements Presenter {
     const color = GROUP_COLORS[group];
     const center = tiles.reduce((acc, i) => acc.addInPlace(tilePosition(i)), new Vector3()).scaleInPlace(1 / tiles.length);
     const bonus = Math.round(CONFIG.setRentBonus * 100);
-    this.hud.log(`👑 SET LENGKAP! ${p.name} menguasai semua wilayah grup ${GROUP_NAMES[group]} — sewanya +${bonus}%!`, "good");
+    this.hud.log(Lang.scene.setCompleteLog(p.name, GROUP_NAMES[group], bonus), "good");
     await this.view.focus(center.clone(), 22, 0.5);
     sfx.setComplete();
-    this.hud.banner("👑 SET LENGKAP!", `${p.name} menguasai grup ${GROUP_NAMES[group]} · sewa +${bonus}%`, color);
+    this.hud.banner(Lang.scene.setCompleteTitle, Lang.scene.setCompleteBanner(p.name, GROUP_NAMES[group], bonus), color);
     tiles.forEach((i, n) => {
       void wait(this.view.scene, n * 0.18).then(() => this.view.effects.emojiBurst(tilePosition(i).add(new Vector3(0, 1.4, 0)), n % 2 ? "⭐" : "👑", 5));
     });
@@ -73,7 +74,7 @@ export class ScenePresenter implements Presenter {
   async turnStart(state: GameState, player: number) {
     this.hud.refresh();
     const p = state.players[player];
-    this.hud.setTurnLabel(`Giliran ${p.name}${p.isBot ? " 🤖" : ""}`);
+    this.hud.setTurnLabel(Lang.scene.turnLabel(p.name, p.isBot));
     const pawn = this.view.pawns[player];
     await this.view.focus(new Vector3(pawn.root.position.x * 0.5, 0, pawn.root.position.z * 0.5 - 1), 28, 0.6);
     void pawn.cheer();
@@ -146,7 +147,7 @@ export class ScenePresenter implements Presenter {
       body:
         `<div class="comic-pow">${pick(POW)}</div><p>${card.text}</p>` +
         `<div class="card-effect ${sum.tone}"><b>${escapeHtml(sum.main)}</b>${sum.detail ? `<small>${escapeHtml(sum.detail)}</small>` : ""}</div>`,
-      buttons: [{ label: isItem ? "🎒 Simpan!" : pick(OK_LABELS), value: 0, class: "green" }],
+      buttons: [{ label: isItem ? Lang.scene.saveItem : pick(OK_LABELS), value: 0, class: "green" }],
       autoCloseMs: bot ? 2000 : undefined,
     });
     // Kartu simpanan masuk ke pion; kartu biasa terbang menghilang
@@ -161,12 +162,12 @@ export class ScenePresenter implements Presenter {
     const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
     await this.view.goHome(0.5);
     // TV berita 3D jatuh dari langit & menyiarkan berita
-    await this.view.events.show({ icon: ev.icon, headline: ev.headline, text: ev.text, sub: partial ? `Yang kena: ${names}` : undefined, kind: "event" });
+    await this.view.events.show({ icon: ev.icon, headline: ev.headline, text: ev.text, sub: partial ? Lang.scene.victims(names) : undefined, kind: "event" });
     await modal({
       title: ev.headline,
       className: "comic breaking card-reveal",
-      body: `<p>${ev.text}</p>${partial ? `<p class="victim">Yang kena: <b>${escapeHtml(names)}</b></p>` : ""}`,
-      buttons: [{ label: pick(["Astaga!", "Waduh!", "Hah?!", "Ngakak 🤣"]), value: 0, class: "pink" }],
+      body: `<p>${ev.text}</p>${partial ? Lang.scene.victimsHtml(escapeHtml(names)) : ""}`,
+      buttons: [{ label: pick(Lang.scene.eventButtons), value: 0, class: "pink" }],
       autoCloseMs: allBots ? 2200 : 6000,
     });
     await this.view.events.hide();
@@ -177,17 +178,17 @@ export class ScenePresenter implements Presenter {
     this.hud.refresh();
     if (ended) {
       seasonSfx.end();
-      this.message(`${season.icon} ${season.headline.replace(/!$/, "")} sudah selesai. Pulau kembali normal.`);
+      this.message(Lang.scene.seasonEnd(season.icon, season.headline.replace(/!$/, "")));
       return;
     }
     const allBots = this.state.players.every((p) => !this.isLocalHuman(p.id) || p.bankrupt);
     await this.view.goHome(0.5);
-    await this.view.events.show({ icon: season.icon, headline: season.headline, text: season.text, sub: `Berlaku ${SEASON_ROUNDS} ronde: ${season.badge}`, kind: "season", sting: seasonSfx[season.id] });
+    await this.view.events.show({ icon: season.icon, headline: season.headline, text: season.text, sub: Lang.scene.seasonFor(SEASON_ROUNDS, season.badge), kind: "season", sting: seasonSfx[season.id] });
     await modal({
       title: season.headline,
       className: "comic breaking season card-reveal",
       body: `<p>${season.text}</p>`,
-      buttons: [{ label: pick(["Siap!", "Wah!", "Gaskeun!", "Oke deh"]), value: 0, class: "blue" }],
+      buttons: [{ label: pick(Lang.scene.seasonButtons), value: 0, class: "blue" }],
       autoCloseMs: allBots ? 2200 : 6000,
     });
     await this.view.events.hide();
@@ -239,7 +240,7 @@ export class ScenePresenter implements Presenter {
   async playerBankrupt(state: GameState, player: number) {
     sfx.sadTrombone();
     this.hud.refresh();
-    this.hud.speech(player, pick(["Mampus aku...", "Pinjol mana pinjol?!", "Aku pulang kampung aja 😭", "Jual ginjal kah?"]), true);
+    this.hud.speech(player, pick(Lang.scene.bankruptSpeech), true);
     await this.view.pawns[player].faint();
     void state;
   }
@@ -258,13 +259,13 @@ export class ScenePresenter implements Presenter {
 }
 
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-const ITEM_SHOUT = ["Rasakan ini!", "Hiyaaat!", "Kejutan!", "Hehehe...", "Awas ya!"];
-const POW = ["BOOM!", "WADUH!", "PLAK!", "BRRRT!", "GASS!", "ANJAY!", "DUAR!"];
-const OK_LABELS = ["OK deh", "Pasrah 🙏", "Gaskeun!", "Yaudah lah", "Siap bos!"];
-const HAPPY = ["Gaskeun! 🔥", "Rezeki anak soleh!", "Mantap jiwa!", "Sultan mah bebas 😎", "Hahaha kaya!", "Cuan cuan cuan!", "Traktir? Nggak."];
-const SAD = ["Waduh...", "Dompetku menangis 😭", "Kok gitu sih?!", "Asem!", "Astagaa...", "Nangis di pojokan", "Gajian masih lama..."];
-const DEAL_ASK = ["Deal, bos? 🤝", "Ada penawaran menarik nih!", "Bisa nego dong~", "Harga teman!"];
-const DEAL_COUNTER = ["Kurang dikit lagi...", "Gimana kalau segini?", "Naikin dong! 😤", "Nego tipis-tipis"];
-const DEAL_NO = ["Ogah! 🙅", "Mimpi kali!", "Nggak dulu deh", "Harga diri lebih mahal!"];
-const SET_SHOUT = ["Satu komplek punyaku! 👑", "Tuan tanah sejati!", "Sewa naik, bos! 📈", "Komplit kayak nasi padang!", "Lunas semua, hehe"];
-const DEAL_YES = ["Deal! 🤝", "Sepakat!", "Cuan bareng!", "Salaman dulu!"];
+const ITEM_SHOUT = Lang.scene.itemShout;
+const POW = Lang.scene.pow;
+const OK_LABELS = Lang.scene.okLabels;
+const HAPPY = Lang.scene.happy;
+const SAD = Lang.scene.sad;
+const DEAL_ASK = Lang.scene.dealAsk;
+const DEAL_COUNTER = Lang.scene.dealCounter;
+const DEAL_NO = Lang.scene.dealNo;
+const SET_SHOUT = Lang.scene.setShout;
+const DEAL_YES = Lang.scene.dealYes;

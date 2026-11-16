@@ -2,6 +2,7 @@ import { DynamicTexture, type Scene } from "@babylonjs/core";
 import type { TileDef } from "../core/types";
 import { GROUP_COLORS, isCorner as cornerTile } from "../data/board";
 import { rp } from "../core/money";
+import { Lang } from "../lang/id";
 
 const ICONS: Record<string, string> = {
   start: "🏁",
@@ -132,7 +133,7 @@ export function drawTile(tex: DynamicTexture, def: TileDef, st: TileArtState) {
 
   // Harga / sewa
   ctx.font = `bold ${S * 0.12}px ${FONT}`;
-  const label = st.ownerColor ? `Sewa ${rp(st.rent)}` : rp(def.price ?? 0);
+  const label = st.ownerColor ? Lang.scene3d.rentLabel(rp(st.rent)) : rp(def.price ?? 0);
   const w = ctx.measureText(label).width + S * 0.12;
   roundRect(ctx, S / 2 - w / 2, S * 0.755, w, S * 0.16, S * 0.075);
   ctx.fillStyle = st.ownerColor ?? "#ffd23f";

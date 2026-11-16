@@ -48,6 +48,7 @@ import {
   validMarketPrice,
 } from "./trade";
 import type { BuildLevel, GameState, PlayerSetup, WinReason } from "./types";
+import { Lang } from "../lang/id";
 
 export interface GameOptions {
   seed?: number;
@@ -111,7 +112,7 @@ export class Game {
   async run(): Promise<GameState> {
     const max = this.options.maxTurns ?? Infinity;
     if (this.options.randomStart && this.turns === 0) {
-      this.presenter.message(`🎲 Diundi: ${this.currentPlayer.name} jalan duluan!`, "good");
+      this.presenter.message(Lang.game.diundi(this.currentPlayer.name), "good");
     }
     while (this.state.winner === null && !this.stopped && this.turns < max) {
       await this.playTurn();
@@ -174,7 +175,7 @@ export class Game {
       if (isDouble) {
         doubles++;
         if (doubles === 3) {
-          this.presenter.message(`${p.name} melempar dadu kembar 3x — dijebloskan ke Nusakambangan!`, "bad");
+          this.presenter.message(Lang.game.tigaKembarPenjara(p.name), "bad");
           await this.sendToIsland(p.id);
           break;
         }
@@ -188,7 +189,7 @@ export class Game {
       if (!isDouble || p.islandTurns > 0 || p.pendingTour) break;
       await this.checkpoint();
       if (this.state.winner !== null) break;
-      this.presenter.message(`Dadu kembar! ${p.name} melempar lagi.`, "good");
+      this.presenter.message(Lang.game.kembarLagi(p.name), "good");
     }
 
     await this.checkpoint();
@@ -215,7 +216,7 @@ export class Game {
     if (action === "pay" && canPay) {
       this.addMoney(pid, -CONFIG.islandBail);
       p.islandTurns = 0;
-      this.presenter.message(`${p.name} nyogok sipir ${fmt(CONFIG.islandBail)} dan keluar lewat pintu belakang. Bebas!`);
+      this.presenter.message(Lang.game.sogokSipir(p.name, fmt(CONFIG.islandBail)));
       await decider.waitForRoll(pid);
       const [d1, d2] = this.roll();
       await this.presenter.diceRolled(pid, d1, d2);
@@ -229,15 +230,15 @@ export class Game {
     await this.presenter.diceRolled(pid, d1, d2);
     if (d1 === d2) {
       p.islandTurns = 0;
-      this.presenter.message(`${p.name} dapat dadu kembar dan kabur dari Nusakambangan!`, "good");
+      this.presenter.message(Lang.game.kaburKembar(p.name), "good");
       await this.moveSteps(pid, d1 + d2);
       await this.resolveTile(pid);
     } else {
       p.islandTurns--;
       this.presenter.message(
         p.islandTurns > 0
-          ? `${p.name} masih terjebak (${p.islandTurns} giliran lagi).`
-          : `${p.name} akan bebas di giliran berikutnya.`,
+          ? Lang.game.masihTerjebak(p.name, p.islandTurns)
+          : Lang.game.bebasBerikutnya(p.name),
       );
     }
   }
@@ -249,7 +250,7 @@ export class Game {
     if (p.money >= CONFIG.tourFee) {
       this.addMoney(pid, -CONFIG.tourFee);
     }
-    this.presenter.message(`${p.name} terbang ke ${BOARD[dest].name}.`);
+    this.presenter.message(Lang.game.terbangKe(p.name, BOARD[dest].name));
     const steps = (dest - p.position + BOARD_SIZE) % BOARD_SIZE;
     await this.moveSteps(pid, steps, "fly");
     await this.resolveTile(pid);
@@ -275,11 +276,11 @@ export class Game {
         // Ular berakhir begitu ada pemain yang sudah melewati Mulai (dicek hanya di batas ronde)
         if (st.snake && st.players.some((p) => p.laps > 0)) {
           st.snake = false;
-          this.presenter.message("🔁 Urutan giliran kembali normal.", "info");
+          this.presenter.message(Lang.game.urutanNormal, "info");
         }
         order = orderOf(st.round);
         idx = 0;
-        if (st.snake && st.round % 2 === 0) this.presenter.message("🐍 Urutan giliran dibalik ronde ini!", "info");
+        if (st.snake && st.round % 2 === 0) this.presenter.message(Lang.game.urutanDibalik, "info");
       }
       if (!st.players[order[idx]].bankrupt) break;
       idx++;
@@ -310,7 +311,7 @@ export class Game {
     if (passedStart && salary) {
       const amount = salaryFor(this.state);
       this.addMoney(pid, amount);
-      this.presenter.message(`${p.name} melewati Mulai: +${fmt(amount)}`, "good");
+      this.presenter.message(Lang.game.lewatMulai(p.name, fmt(amount)), "good");
     }
   }
 
@@ -346,19 +347,19 @@ export class Game {
         return this.drawCard(pid);
       case "tax": {
         const tax = Math.max(50, Math.round((p.money * CONFIG.taxRate) / 10) * 10);
-        this.presenter.message(`${p.name} membayar uang ormas ${fmt(tax)}.`, "bad");
+        this.presenter.message(Lang.game.bayarOrmas(p.name, fmt(tax)), "bad");
         await this.charge(pid, tax, null);
         return;
       }
       case "island":
-        this.presenter.message(`${p.name} dijebloskan ke Nusakambangan! Kasihan...`, "bad");
+        this.presenter.message(Lang.game.dijebloskan(p.name), "bad");
         await this.sendToIsland(pid);
         return;
       case "festival":
         return this.hostFestival(pid);
       case "tour":
         p.pendingTour = true;
-        this.presenter.message(`${p.name} naik Pesawat Negara! Giliran berikutnya pilih mau mendarat di mana.`);
+        this.presenter.message(Lang.game.naikPesawat(p.name));
         return;
     }
   }
@@ -381,9 +382,9 @@ export class Game {
     const rent = rentFor(this.state, tile);
     if (p.shields > 0) {
       p.shields--;
-      this.presenter.message(`Kartu pelindung menyelamatkan ${p.name} dari sewa ${fmt(rent)}!`, "good");
+      this.presenter.message(Lang.game.perisaiSewa(p.name, fmt(rent)), "good");
     } else {
-      this.presenter.message(`${p.name} membayar sewa ${fmt(rent)} ke ${owner.name}.`, "bad");
+      this.presenter.message(Lang.game.bayarSewa(p.name, fmt(rent), owner.name), "bad");
       await this.charge(pid, rent, owner.id);
     }
   }
@@ -392,7 +393,7 @@ export class Game {
     const ts = this.state.tiles[tile];
     const p = this.state.players[pid];
     if (this.state.season?.id === "banjir") {
-      this.presenter.message(`Lagi banjir! ${p.name} tidak bisa beli/bangun di ${BOARD[tile].name}.`);
+      this.presenter.message(Lang.game.banjirTolakBeli(p.name, BOARD[tile].name));
       return;
     }
     const max = maxTargetLevel(this.state, tile, pid);
@@ -405,7 +406,7 @@ export class Game {
     }
     if (options.length === 0 && unaffordable.length === 0) return;
     if (options.length === 0 && ts.owner === null) {
-      this.presenter.message(`${p.name} tidak punya cukup uang untuk membeli ${BOARD[tile].name}.`);
+      this.presenter.message(Lang.game.uangKurangBeli(p.name, BOARD[tile].name));
     }
     // Tetap tanya walau semua tidak terjangkau: pemain manusia melihat tombol nonaktif.
     const target = await this.deciders[pid].chooseBuild({
@@ -423,11 +424,11 @@ export class Game {
     const wasUnowned = ts.owner === null;
     ts.owner = pid;
     ts.level = chosen.level as BuildLevel;
-    const what = BOARD[tile].kind === "resort" ? "tempat wisata" : LEVEL_NAMES[ts.level];
+    const what = BOARD[tile].kind === "resort" ? Lang.game.tempatWisata : LEVEL_NAMES[ts.level];
     this.presenter.message(
       wasUnowned
-        ? `${p.name} membeli ${BOARD[tile].name} (${what}) seharga ${fmt(chosen.cost)}.`
-        : `${p.name} membangun ${what} di ${BOARD[tile].name} (${fmt(chosen.cost)}).`,
+        ? Lang.game.membeli(p.name, BOARD[tile].name, what, fmt(chosen.cost))
+        : Lang.game.membangun(p.name, what, BOARD[tile].name, fmt(chosen.cost)),
       "good",
     );
     await this.presenter.tileChanged(this.state, tile);
@@ -438,7 +439,7 @@ export class Game {
     const p = this.state.players[pid];
     const options = ownedTiles(this.state, pid);
     if (options.length === 0) {
-      this.presenter.message(`${p.name} datang ke Pesta Pejabat tapi belum punya properti buat dijadikan tempat pesta.`);
+      this.presenter.message(Lang.game.pestaTanpaProperti(p.name));
       return;
     }
     const tile = await this.deciders[pid].chooseTile({ player: pid, purpose: "festival", options });
@@ -449,7 +450,7 @@ export class Game {
     }
     this.state.festivalTile = tile;
     this.state.tiles[tile].festival = true;
-    this.presenter.message(`Pesta Pejabat di ${BOARD[tile].name}! Sewa jadi x${CONFIG.festivalMultiplier}.`, "good");
+    this.presenter.message(Lang.game.pestaDigelar(BOARD[tile].name, CONFIG.festivalMultiplier), "good");
     await this.presenter.tileChanged(this.state, tile);
   }
 
@@ -522,7 +523,7 @@ export class Game {
         const victim = others.reduce((a, b) => (this.state.players[b].money > this.state.players[a].money ? b : a));
         const amt = Math.min(e.amount, this.state.players[victim].money);
         if (amt <= 0) return;
-        this.presenter.message(`${p.name} "pinjam" ${fmt(amt)} dari ${this.state.players[victim].name}.`, "good");
+        this.presenter.message(Lang.game.pinjam(p.name, fmt(amt), this.state.players[victim].name), "good");
         this.addMoney(victim, -amt);
         this.addMoney(pid, amt);
         return;
@@ -531,10 +532,10 @@ export class Game {
         const steps = (e.max - e.min) / 10;
         const amt = e.min + Math.floor(this.rng() * (steps + 1)) * 10;
         if (amt >= 0) {
-          this.presenter.message(`Mesin capit dapat boneka! ${p.name} +${fmt(amt)}`, "good");
+          this.presenter.message(Lang.game.capitUntung(p.name, fmt(amt)), "good");
           this.addMoney(pid, amt);
         } else {
-          this.presenter.message(`Mesin capit makan koin! ${p.name} −${fmt(-amt)}`, "bad");
+          this.presenter.message(Lang.game.capitRugi(p.name, fmt(-amt)), "bad");
           await this.charge(pid, -amt, null);
         }
         return;
@@ -553,7 +554,7 @@ export class Game {
         const o = this.state.players[others[Math.floor(this.rng() * others.length)]];
         const a = p.position;
         const b = o.position;
-        this.presenter.message(`${p.name} dan ${o.name} tukar tempat!`);
+        this.presenter.message(Lang.game.tukarTempat(p.name, o.name));
         if (a === b) return;
         await this.presenter.movePawn(p.id, [b], "fly");
         p.position = b;
@@ -563,7 +564,7 @@ export class Game {
       }
       case "randomTile": {
         const dest = this.heliDestination(p.position);
-        this.presenter.message(`Helikopter menurunkan ${p.name} di ${BOARD[dest].name}.`);
+        this.presenter.message(Lang.game.heliTurun(p.name, BOARD[dest].name));
         if (dest !== p.position) {
           await this.presenter.movePawn(pid, [dest], "fly");
           p.position = dest;
@@ -574,11 +575,11 @@ export class Game {
       case "item": {
         const def = ITEMS[e.item];
         if (p.items.length >= MAX_ITEMS) {
-          this.presenter.message(`Kantong ${p.name} penuh! ${def.name} dijual ke tukang loak: +${fmt(50)}.`);
+          this.presenter.message(Lang.game.kantongPenuh(p.name, def.name, fmt(50)));
           this.addMoney(pid, 50);
         } else {
           p.items.push(e.item);
-          this.presenter.message(`${p.name} menyimpan ${def.icon} ${def.name} di kantong.`, "good");
+          this.presenter.message(Lang.game.simpanItem(p.name, def.icon, def.name), "good");
         }
         return;
       }
@@ -641,20 +642,20 @@ export class Game {
     switch (use.item) {
       case "sandal": {
         const v = this.state.players[use.target!];
-        this.presenter.message(`${p.name} melempar Sendal Terbang ke ${v.name}! Mundur ${SANDAL_STEPS} petak.`, "bad");
+        this.presenter.message(Lang.game.lemparSendal(p.name, v.name, SANDAL_STEPS), "bad");
         await this.moveBack(v.id, SANDAL_STEPS);
         return 0;
       }
       case "utang": {
         const v = this.state.players[use.target!];
         const amt = Math.min(UTANG_AMOUNT, v.money);
-        this.presenter.message(`${p.name} menagih surat utang palsu ke ${v.name}: ${fmt(amt)}!`, "bad");
+        this.presenter.message(Lang.game.tagihUtang(p.name, v.name, fmt(amt)), "bad");
         this.addMoney(v.id, -amt);
         this.addMoney(pid, amt);
         return 0;
       }
       case "turbo":
-        this.presenter.message(`${p.name} pakai Sepatu Roda Turbo: lemparan ini +${TURBO_STEPS} langkah!`, "good");
+        this.presenter.message(Lang.game.pakaiTurbo(p.name, TURBO_STEPS), "good");
         return TURBO_STEPS;
       case "kecoak": {
         const tile = use.target!;
@@ -662,7 +663,7 @@ export class Game {
         const owner = this.state.players[ts.owner!];
         ts.level = (ts.level - 1) as BuildLevel;
         this.presenter.message(
-          `Karyawan ${owner.name} di ${BOARD[tile].name} resign! Terjadi efisiensi, bangunan turun jadi ${LEVEL_NAMES[ts.level]}.`,
+          Lang.game.karyawanResign(owner.name, BOARD[tile].name, LEVEL_NAMES[ts.level]),
           "bad",
         );
         await this.presenter.tileChanged(this.state, tile);
@@ -694,7 +695,7 @@ export class Game {
       }
       if (act.type === "trade") {
         if (trades >= MAX_TRADES_PER_TURN) {
-          this.presenter.message(`${p.name} sudah ${MAX_TRADES_PER_TURN}x menawar di giliran ini.`);
+          this.presenter.message(Lang.game.batasTawar(p.name, MAX_TRADES_PER_TURN));
           continue;
         }
         trades++;
@@ -717,7 +718,7 @@ export class Game {
         if (def.kind !== "property" && def.kind !== "resort") return;
         this.state.market = this.state.market.filter((l) => l.tile !== act.tile);
         this.state.market.push({ tile: act.tile, seller: pid, price: act.price });
-        this.presenter.message(`🏪 ${p.name} memajang ${def.name} di Pasar Terbuka seharga ${fmt(act.price)}.`);
+        this.presenter.message(Lang.game.pasarMemajang(p.name, def.name, fmt(act.price)));
         await this.presenter.marketChanged(this.state);
         return;
       }
@@ -725,7 +726,7 @@ export class Game {
         const before = this.state.market.length;
         this.state.market = this.state.market.filter((l) => !(l.tile === act.tile && l.seller === pid));
         if (this.state.market.length === before) return;
-        this.presenter.message(`🏪 ${p.name} menarik ${BOARD[act.tile].name} dari Pasar Terbuka.`);
+        this.presenter.message(Lang.game.pasarMenarik(p.name, BOARD[act.tile].name));
         await this.presenter.marketChanged(this.state);
         return;
       }
@@ -737,7 +738,7 @@ export class Game {
         this.addMoney(seller.id, l.price);
         this.state.tiles[l.tile].owner = pid;
         this.cleanMarket();
-        this.presenter.message(`🏪 ${p.name} membeli ${BOARD[l.tile].name} dari ${seller.name} di Pasar Terbuka seharga ${fmt(l.price)}!`, "good");
+        this.presenter.message(Lang.game.pasarMembeli(p.name, BOARD[l.tile].name, seller.name, fmt(l.price)), "good");
         await this.presenter.tileChanged(this.state, l.tile);
         await this.presenter.marketChanged(this.state);
         this.checkMonopoly(pid);
@@ -752,12 +753,12 @@ export class Game {
     for (let round = 0; !this.stopped; round++) {
       const err = tradeError(this.state, o);
       if (err) {
-        this.presenter.message(`🤝 Tawaran batal: ${err}.`, "bad");
+        this.presenter.message(Lang.game.tawaranBatal(err), "bad");
         return;
       }
       const from = this.state.players[o.from];
       const to = this.state.players[o.to];
-      this.presenter.message(`🤝 ${from.name} ${round === 0 ? "menawarkan" : "menawar balik"} ke ${to.name}: ${describeOffer(this.state, o)}`);
+      this.presenter.message(Lang.game.tawaranKirim(from.name, round === 0, to.name, describeOffer(this.state, o)));
       const canCounter = round < MAX_COUNTERS;
       await this.presenter.tradeProposed(this.state, o, round);
       const reply = await this.deciders[o.to].respondTrade({ player: o.to, offer: o, round, canCounter });
@@ -769,7 +770,7 @@ export class Game {
         o = reply.offer;
         continue;
       }
-      this.presenter.message(`🙅 ${to.name} menolak tawaran ${from.name}.`, "bad");
+      this.presenter.message(Lang.game.tawaranDitolak(to.name, from.name), "bad");
       await this.presenter.tradeResolved(this.state, o, false);
       return;
     }
@@ -789,7 +790,7 @@ export class Game {
     for (const t of o.giveTiles) this.state.tiles[t].owner = o.to;
     for (const t of o.takeTiles) this.state.tiles[t].owner = o.from;
     this.cleanMarket();
-    this.presenter.message(`🤝 Deal! ${to.name} menerima tawaran ${from.name}.`, "good");
+    this.presenter.message(Lang.game.dealDiterima(to.name, from.name), "good");
     for (const t of [...o.giveTiles, ...o.takeTiles]) await this.presenter.tileChanged(this.state, t);
     await this.presenter.tradeResolved(this.state, o, true);
     // Pemain giliran dicek dulu, lalu lawannya
@@ -817,7 +818,7 @@ export class Game {
     if (it.act.type === "trade") {
       const used = this.interjectTrades.get(it.player) ?? 0;
       if (used >= MAX_TRADES_PER_TURN) {
-        this.presenter.message(`${p.name} sudah ${MAX_TRADES_PER_TURN}x menawar di giliran ini. Tunggu giliran berikutnya ya.`);
+        this.presenter.message(Lang.game.batasTawarTunggu(p.name, MAX_TRADES_PER_TURN));
         return;
       }
       this.interjectTrades.set(it.player, used + 1);
@@ -895,11 +896,11 @@ export class Game {
         return;
       case "randomGain":
       case "poorestGain":
-        this.presenter.message(`${name} kecipratan rezeki +${fmt(e.amount)}!`, "good");
+        this.presenter.message(Lang.game.rezeki(name, fmt(e.amount)), "good");
         this.addMoney(targets[0], e.amount);
         return;
       case "randomPay":
-        this.presenter.message(`${name} apes, −${fmt(e.amount)}.`, "bad");
+        this.presenter.message(Lang.game.apes(name, fmt(e.amount)), "bad");
         await this.charge(targets[0], e.amount, null);
         return;
       case "robinHood": {
@@ -907,7 +908,7 @@ export class Game {
         const others = alive.filter((i) => i !== rich);
         const share = Math.floor(Math.min(e.amount, money(rich)) / Math.max(1, others.length) / 10) * 10;
         if (share <= 0) return;
-        this.presenter.message(`Maling budiman merampok ${name} dan bagi-bagi ${fmt(share)} per orang!`);
+        this.presenter.message(Lang.game.malingBudiman(name, fmt(share)));
         this.addMoney(rich, -share * others.length);
         for (const o of others) this.addMoney(o, share);
         return;
@@ -916,11 +917,11 @@ export class Game {
         const v = this.state.players[targets[0]];
         // Yang sedang di pulau tetap di pulau supaya aturan pulau konsisten
         if (v.islandTurns > 0) {
-          this.presenter.message(`Helikopter mau jemput ${v.name}, tapi penjagaan Nusakambangan terlalu ketat. Batal!`);
+          this.presenter.message(Lang.game.heliBatal(v.name));
           return;
         }
         const dest = this.heliDestination(v.position);
-        this.presenter.message(`${v.name} diangkut helikopter pejabat ke ${BOARD[dest].name}!`);
+        this.presenter.message(Lang.game.heliAngkut(v.name, BOARD[dest].name));
         if (dest !== v.position) {
           await this.presenter.movePawn(v.id, [dest], "fly");
           v.position = dest;
@@ -965,7 +966,7 @@ export class Game {
     this.addMoney(pid, -paid);
     if (creditor !== null) this.addMoney(creditor, paid);
     p.bankrupt = true;
-    this.presenter.message(`${p.name} BANGKRUT!`, "bad");
+    this.presenter.message(Lang.game.bangkrut(p.name), "bad");
     for (const t of ownedTiles(this.state, pid)) await this.releaseTile(t);
     await this.presenter.playerBankrupt(this.state, pid);
 
@@ -988,7 +989,7 @@ export class Game {
         .filter((d) => d.options.length > 0);
       if (!announced) {
         announced = true;
-        this.presenter.message(`💸 Uang ${p.name} kurang ${fmt(needed - p.money)}! Jual aset atau nego dulu...`, "bad");
+        this.presenter.message(Lang.game.uangKurang(p.name, fmt(needed - p.money)), "bad");
       }
       const act = await this.deciders[pid].chooseDebt({
         player: pid,
@@ -1005,7 +1006,7 @@ export class Game {
         if (!opt) continue;
         const ts = this.state.tiles[act.tile];
         this.presenter.message(
-          `${p.name} menurunkan ${BOARD[act.tile].name} jadi ${LEVEL_NAMES[opt.level]}, dapat ${fmt(opt.value)} dari bank.`,
+          Lang.game.turunkanBangunan(p.name, BOARD[act.tile].name, LEVEL_NAMES[opt.level], fmt(opt.value)),
           "bad",
         );
         this.addMoney(pid, opt.value);
@@ -1021,7 +1022,7 @@ export class Game {
       if (act?.type === "sell") {
         const t = tiles.find((x) => x.tile === act.tile);
         if (!t) continue;
-        this.presenter.message(`${p.name} menjual ${BOARD[t.tile].name} ke bank seharga ${fmt(t.value)}.`, "bad");
+        this.presenter.message(Lang.game.jualKeBank(p.name, BOARD[t.tile].name, fmt(t.value)), "bad");
         this.addMoney(pid, t.value);
         await this.releaseTile(t.tile);
         continue;

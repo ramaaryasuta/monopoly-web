@@ -3,6 +3,7 @@ import { CRITTERS } from "../scene/Pawn";
 import { sfx } from "../scene/sfx";
 import { h, uiRoot } from "./dom";
 import { AVATARS } from "./Hud";
+import { Lang } from "../lang/id";
 
 /**
  * Panel voice chat mengambang (kiri tengah layar), tampil di lobi room & saat main.
@@ -31,7 +32,7 @@ export class VoicePanel {
   }
 
   constructor(private voice: Voice) {
-    const head = h("button", { class: "vp-head", title: "Buka/tutup panel suara", "data-testid": "voice-toggle-panel" }, this.title, h("span", { class: "vp-caret" }));
+    const head = h("button", { class: "vp-head", title: Lang.voice.togglePanel, "data-testid": "voice-toggle-panel" }, this.title, h("span", { class: "vp-caret" }));
     head.addEventListener("click", () => {
       this.collapsed = !this.collapsed;
       this.render(true);
@@ -59,7 +60,7 @@ export class VoicePanel {
     this.lastSpeaking = speakingNow;
     this.el.classList.toggle("talking", v.transmitting && speakingNow.has(members.find((m) => m.isMe)?.id ?? ""));
 
-    this.title.textContent = v.joined ? `🔊 Suara · ${inVoice}` : `🎙️ Suara${inVoice ? ` · ${inVoice}` : ""}`;
+    this.title.textContent = v.joined ? Lang.voice.titleJoined(inVoice) : Lang.voice.titleIdle(inVoice);
     this.el.classList.toggle("collapsed", this.collapsed);
     this.el.classList.toggle("joined", v.joined);
 
@@ -96,7 +97,7 @@ export class VoicePanel {
         "button",
         {
           class: `btn small vp-btn ${micOff ? "off" : "white"}`,
-          title: !v.micOk ? "Mikrofon tidak tersedia" : micOff ? "Nyalakan mikrofon" : "Bisukan mikrofon",
+          title: !v.micOk ? Lang.voice.micMissing : micOff ? Lang.voice.micOn : Lang.voice.micOff,
           disabled: !v.micOk,
           "aria-pressed": micOff ? "true" : "false",
           "data-testid": "voice-mute",
@@ -111,7 +112,7 @@ export class VoicePanel {
         "button",
         {
           class: `btn small vp-btn ${v.deaf ? "off" : "white"}`,
-          title: v.deaf ? "Dengarkan lagi" : "Tulikan (tidak dengar siapa pun)",
+          title: v.deaf ? Lang.voice.hearAgain : Lang.voice.deafen,
           "aria-pressed": v.deaf ? "true" : "false",
           "data-testid": "voice-deafen",
         },
@@ -140,8 +141,8 @@ export class VoicePanel {
     if (m.localMuted) icons.push("🚫");
 
     let status = "";
-    if (!on) status = "belum gabung";
-    else if (!m.isMe && v.joined && !m.connected) status = "menyambung...";
+    if (!on) status = Lang.voice.notJoined;
+    else if (!m.isMe && v.joined && !m.connected) status = Lang.voice.connecting;
 
     const canControl = !m.isMe && on && v.joined;
     const row = h(
@@ -150,10 +151,10 @@ export class VoicePanel {
         class: `vp-row${on ? "" : " away"}${m.speaking ? " speaking" : ""}${canControl ? " clickable" : ""}`,
         "data-id": m.id,
         "data-testid": `voice-member-${m.seat.name}`,
-        title: canControl ? "Klik untuk atur suara pemain ini" : undefined,
+        title: canControl ? Lang.voice.controlTitle : undefined,
       },
       h("div", { class: "vp-avatar", style: `background:${CRITTERS[m.seat.char].color}` }, AVATARS[m.seat.char]),
-      h("div", { class: "vp-name" }, h("b", {}, m.seat.name + (m.isMe ? " (kamu)" : "")), status ? h("small", {}, status) : null),
+      h("div", { class: "vp-name" }, h("b", {}, m.seat.name + (m.isMe ? Lang.voice.youSuffix : "")), status ? h("small", {}, status) : null),
       h("span", { class: "vp-icons" }, icons.join(" ")),
     );
     if (!canControl) return row;
@@ -167,7 +168,7 @@ export class VoicePanel {
 
     // Kontrol per pemain: bisukan lokal + volume
     const pct = h("span", { class: "vp-pct" }, `${Math.round(m.volume * 100)}%`);
-    const slider = h("input", { type: "range", min: 0, max: 100, value: Math.round(m.volume * 100), "aria-label": `Volume ${m.seat.name}`, "data-testid": "voice-volume" });
+    const slider = h("input", { type: "range", min: 0, max: 100, value: Math.round(m.volume * 100), "aria-label": Lang.voice.volumeOf(m.seat.name), "data-testid": "voice-volume" });
     slider.addEventListener("input", () => {
       pct.textContent = `${slider.value}%`;
       v.setVolume(m.id, Number(slider.value) / 100);
@@ -175,7 +176,7 @@ export class VoicePanel {
     const muteOther = h(
       "button",
       { class: `btn small ${m.localMuted ? "off" : "white"}`, "data-testid": "voice-mute-other" },
-      m.localMuted ? "🔈 Bunyikan" : "🚫 Bisukan untukku",
+      m.localMuted ? Lang.voice.unmute : Lang.voice.muteForMe,
     );
     muteOther.addEventListener("click", (e) => {
       e.stopPropagation();

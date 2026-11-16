@@ -17,6 +17,7 @@ import { FONT } from "./tileArt";
 import { outline, toon } from "./toon";
 import { cardSfx } from "./sfx";
 import { Ease, lerp, Speed, tween } from "./tween";
+import { Lang } from "../lang/id";
 
 /** Ukuran kartu (unit dunia). Rasio mirip kartu remi. */
 const W = 1.5;
@@ -106,14 +107,14 @@ export class CardView {
     ctx.fillText("?", TW / 2, TH / 2 - 10);
     ctx.font = `bold 44px ${FONT}`;
     ctx.lineWidth = 10;
-    ctx.strokeText("MEMONOPOLI", TW / 2, TH - 110);
+    ctx.strokeText(Lang.scene3d.brandTop, TW / 2, TH - 110);
     ctx.fillStyle = "#ffffff";
-    ctx.fillText("MEMONOPOLI", TW / 2, TH - 110);
+    ctx.fillText(Lang.scene3d.brandTop, TW / 2, TH - 110);
     ctx.font = `bold 30px ${FONT}`;
     ctx.lineWidth = 8;
-    ctx.strokeText("WILAYAH WNI", TW / 2, TH - 66);
+    ctx.strokeText(Lang.scene3d.brandSub, TW / 2, TH - 66);
     ctx.fillStyle = "#ffe14d";
-    ctx.fillText("WILAYAH WNI", TW / 2, TH - 66);
+    ctx.fillText(Lang.scene3d.brandSub, TW / 2, TH - 66);
     tex.update();
     return tex;
   }
@@ -141,7 +142,7 @@ export class CardView {
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#ffffff";
     ctx.font = `bold 34px ${FONT}`;
-    ctx.fillText(item ? "🎒 KARTU SIMPANAN" : `📦 ${(face.header ?? "Paket Misterius").toUpperCase()}`, TW / 2, 82);
+    ctx.fillText(item ? Lang.scene3d.itemHeader : Lang.scene3d.packetHeader((face.header ?? Lang.scene3d.defaultPacket).toUpperCase()), TW / 2, 82);
 
     // Ikon besar di lingkaran
     ctx.beginPath();

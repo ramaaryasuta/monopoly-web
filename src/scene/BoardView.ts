@@ -19,6 +19,7 @@ import { LOW_GFX } from "./quality";
 import { createTileTexture, drawTile, FONT } from "./tileArt";
 import { outline, toon } from "./toon";
 import { Ease, tween, wait } from "./tween";
+import { Lang } from "../lang/id";
 
 interface TileView {
   root: TransformNode;
@@ -224,20 +225,20 @@ export class BoardView {
     ctx.strokeStyle = "#2b1d3a";
     ctx.font = `bold 150px ${FONT}`;
     ctx.lineWidth = 28;
-    ctx.strokeText("MEMONOPOLI", 512, 170, 980);
+    ctx.strokeText(Lang.scene3d.brandTop, 512, 170, 980);
     const g = ctx.createLinearGradient(0, 90, 0, 250);
     g.addColorStop(0, "#ffe14d");
     g.addColorStop(1, "#ff9a3d");
     ctx.fillStyle = g;
-    ctx.fillText("MEMONOPOLI", 512, 170, 980);
+    ctx.fillText(Lang.scene3d.brandTop, 512, 170, 980);
     ctx.font = `bold 110px ${FONT}`;
     ctx.lineWidth = 24;
-    ctx.strokeText("WILAYAH WNI", 512, 350, 900);
+    ctx.strokeText(Lang.scene3d.brandSub, 512, 350, 900);
     const g2 = ctx.createLinearGradient(0, 300, 0, 400);
     g2.addColorStop(0, "#ffffff");
     g2.addColorStop(1, "#ffb3b3");
     ctx.fillStyle = g2;
-    ctx.fillText("WILAYAH WNI", 512, 350, 900);
+    ctx.fillText(Lang.scene3d.brandSub, 512, 350, 900);
     tex.update();
 
     const plane = MeshBuilder.CreatePlane("title", { width: TILE * 4.2, height: TILE * 2.1 }, s);
