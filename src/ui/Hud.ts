@@ -24,6 +24,11 @@ const TILE_HELP: Record<string, string> = {
   tour: Lang.hud.tileHelp.tour(fmt(CONFIG.tourFee)),
 };
 
+/** Isi tombol toolbar: ikon + label pendek (label disembunyikan di layar sempit). */
+function tbContent(icon: string, label: string) {
+  return [h("span", { class: "tb-ico" }, icon), h("span", { class: "tb-label" }, label)];
+}
+
 export class Hud {
   private cards: HTMLElement[] = [];
   private displayedMoney: number[] = [];
@@ -33,7 +38,8 @@ export class Hud {
   private actionBar = h("div", { class: "action-bar" });
   private pickBanner: HTMLElement | null = null;
   private toolbar = h("div", { class: "toolbar" });
-  private marketBtn = h("button", { class: "btn small white market-btn", title: Lang.hud.market, "data-testid": "market" }, "🏪");
+  private marketBtn = h("button", { class: "btn small white tb-btn market-btn", title: Lang.hud.market, "data-testid": "market" });
+  private logLatest = h("div", { class: "latest" }, Lang.hud.logEmpty);
   /** Untuk memproyeksikan teks uang melayang di atas pion. */
   screenPosOfPlayer: ((pid: number) => { x: number; y: number } | null) | null = null;
   onResetCamera: (() => void) | null = null;
@@ -70,22 +76,32 @@ export class Hud {
       root.append(card);
     });
 
-    const log = h("div", { class: "log panel" }, h("h4", {}, h("span", {}, Lang.hud.log), h("span", {}, "▾")), this.logBox);
-    log.querySelector("h4")!.addEventListener("click", () => log.classList.toggle("collapsed"));
+    // Catatan: default ringkas (hanya kejadian terakhir), klik judul untuk riwayat lengkap.
+    const caret = h("span", { class: "caret" }, Lang.hud.logOpen);
+    const log = h("div", { class: "log panel collapsed" }, h("h4", {}, h("span", {}, Lang.hud.log), caret), this.logLatest, this.logBox);
+    log.querySelector("h4")!.addEventListener("click", () => {
+      sfx.click();
+      caret.textContent = log.classList.toggle("collapsed") ? Lang.hud.logOpen : Lang.hud.logClose;
+    });
 
-    const speedBtn = h("button", { class: "btn small white", title: Lang.hud.animSpeed }, `⏩ ${Speed.factor}x`);
+    const speedBtn = h("button", { class: "btn small white tb-btn", title: Lang.hud.animSpeed });
+    const renderSpeed = () => speedBtn.replaceChildren(...tbContent(`⏩${Speed.factor}x`, Lang.hud.tbSpeed));
+    renderSpeed();
     speedBtn.addEventListener("click", () => {
       const steps = [1, 2, 3];
       Speed.factor = steps[(steps.indexOf(Speed.factor) + 1) % steps.length] ?? 1;
-      speedBtn.textContent = `⏩ ${Speed.factor}x`;
+      renderSpeed();
     });
-    const camBtn = h("button", { class: "btn small white", title: Lang.hud.resetCam }, "🎥");
+    const camBtn = h("button", { class: "btn small white tb-btn", title: Lang.hud.resetCam }, ...tbContent("🎥", Lang.hud.tbCam));
     camBtn.addEventListener("click", () => this.onResetCamera?.());
+    const setBtn = settingsButton(h("span", { class: "tb-ico" }, "⚙️"));
+    setBtn.classList.add("tb-btn");
+    setBtn.append(h("span", { class: "tb-label" }, Lang.hud.tbSettings));
     this.marketBtn.addEventListener("click", () => {
       sfx.click();
       void viewMarket(this.state, this.localPlayers?.[0] ?? null);
     });
-    this.toolbar.append(speedBtn, camBtn, this.marketBtn, settingsButton());
+    this.toolbar.append(speedBtn, camBtn, this.marketBtn, setBtn);
 
     root.append(this.round, this.toolbar, log, this.toasts, this.actionBar);
     this.refresh();
@@ -93,7 +109,7 @@ export class Hud {
 
   /** Online: tombol 🤝 di toolbar untuk menawar kapan saja (tidak harus giliran sendiri). */
   enableAnytimeTrade(onClick: () => void) {
-    const btn = h("button", { class: "btn small blue anytime-trade", title: Lang.hud.tradeAnytime, "data-testid": "anytime-trade" }, Lang.hud.nego);
+    const btn = h("button", { class: "btn small blue tb-btn anytime-trade", title: Lang.hud.tradeAnytime, "data-testid": "anytime-trade" }, ...tbContent("🤝", Lang.hud.tbNego));
     btn.addEventListener("click", () => {
       sfx.click();
       onClick();
@@ -115,7 +131,7 @@ export class Hud {
     this.round.textContent = Lang.hud.roundLabel(s.round, CONFIG.roundLimit) + (season ? Lang.hud.seasonLabel(season.icon, season.badge, left) : "");
     this.round.classList.toggle("season", !!season);
     const listed = activeListings(s).length;
-    this.marketBtn.replaceChildren("🏪", listed ? h("span", { class: "badge" }, String(listed)) : "");
+    this.marketBtn.replaceChildren(...tbContent("🏪", Lang.hud.tbMarket), listed ? h("span", { class: "badge" }, String(listed)) : "");
     const playing = s.winner === null;
     let next = -1;
     if (playing) {
@@ -129,13 +145,22 @@ export class Hud {
       card.classList.toggle("active", playing && s.current === i);
       card.classList.toggle("next", playing && next === i && next !== s.current);
       card.classList.toggle("bankrupt", p.bankrupt);
-      const meta: string[] = [`🏠 ${ownedTiles(s, i).length}`, `💎 ${fmt(netWorth(s, i))}`];
-      if (p.shields) meta.push(Lang.hud.shieldTag(p.shields, MAX_SHIELDS));
-      if (p.items.length) meta.push(`🎒${p.items.map((it) => ITEMS[it].icon).join("")}`);
-      if (p.islandTurns) meta.push(`🏝️${p.islandTurns}`);
-      if (p.pendingTour) meta.push("✈️");
-      if (p.bankrupt) meta.splice(0, meta.length, Lang.hud.bankruptTag);
-      card.querySelector(".meta")!.textContent = meta.join("  ");
+      const metaEl = card.querySelector(".meta")!;
+      if (p.bankrupt) {
+        metaEl.replaceChildren(h("span", {}, Lang.hud.bankruptTag));
+        return;
+      }
+      const chips: HTMLElement[] = [
+        h("span", {}, `🏠 ${Lang.hud.tilesOwned(ownedTiles(s, i).length)}`),
+        h("span", { title: Lang.hud.netWorthTitle }, `💎 ${fmt(netWorth(s, i))}`),
+      ];
+      const extra: string[] = [];
+      if (p.shields) extra.push(Lang.hud.shieldTag(p.shields, MAX_SHIELDS));
+      if (p.items.length) extra.push(`🎒${p.items.map((it) => ITEMS[it].icon).join("")}`);
+      if (p.islandTurns) extra.push(`🏝️${p.islandTurns}`);
+      if (p.pendingTour) extra.push("✈️");
+      if (extra.length) chips.push(h("span", { class: "extra" }, extra.join(" ")));
+      metaEl.replaceChildren(...chips);
     });
   }
 
@@ -174,6 +199,8 @@ export class Hud {
   log(text: string, kind: MessageKind = "info") {
     const e = h("div", { class: `entry ${kind}` }, text);
     this.logBox.prepend(e);
+    this.logLatest.className = `latest ${kind}`;
+    this.logLatest.textContent = text;
     while (this.logBox.children.length > 60) this.logBox.lastChild!.remove();
   }
 

@@ -387,6 +387,17 @@ const hud = {
   playAgain: "🔁 Main Lagi",
   animSpeed: "Kecepatan animasi",
   marketBtn: "🏪 Pasar",
+  // label pendek di bawah ikon toolbar
+  tbSpeed: "Cepat",
+  tbCam: "Kamera",
+  tbMarket: "Pasar",
+  tbSettings: "Menu",
+  tbNego: "Nego",
+  tilesOwned: (n: Fmt) => `${n} wilayah`,
+  netWorthTitle: "Total kekayaan (uang + nilai aset)",
+  logEmpty: "Belum ada kejadian.",
+  logOpen: "▸ riwayat",
+  logClose: "▾ tutup",
 };
 
 // ============================================================ dialog keputusan pemain manusia (ui/HumanDecider.ts)
@@ -407,6 +418,7 @@ const human = {
   buildQ: (tile: Fmt) => `Bangun di ${tile}?`,
   buyResort: (cost: Fmt) => `🌴 Beli Wisata — ${cost}`,
   rent: (rent: Fmt) => `sewa ${rent}`,
+  rentLeft: (rent: Fmt, left: Fmt) => `sewa ${rent}\nsisa uang ${left}`,
   moneyShort: (short: Fmt) => `💸 uang kurang ${short}`,
   skipOk: "Oke, lewati",
   skip: "Lewati",

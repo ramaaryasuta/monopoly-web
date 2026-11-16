@@ -39,7 +39,7 @@ export function installSettingsHotkey() {
 }
 
 /** Tombol ⚙️ kecil untuk toolbar / beranda (perangkat sentuh tidak punya Esc). */
-export function settingsButton(label = "⚙️") {
+export function settingsButton(label: string | Node = "⚙️") {
   const b = h("button", { class: "btn small white settings-btn", title: Lang.settings.openTitle, "data-testid": "open-settings" }, label);
   b.addEventListener("click", () => {
     sfx.click();

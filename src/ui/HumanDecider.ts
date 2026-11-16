@@ -27,6 +27,9 @@ import { Lang } from "../lang/id";
 
 const LEVEL_ICON = ["", "🚩", "🏠", "🏠🏠", "🏡", "🗼"];
 
+/** Harga tidak boleh terpotong ganti baris ("Rp200 / jt"). */
+const nbsp = (s: string) => s.replace(/ /g, " ");
+
 /** Keputusan pemain manusia lewat UI (modal, tombol, klik petak 3D). */
 export class HumanDecider implements Decider {
   constructor(
@@ -184,8 +187,10 @@ export class HumanDecider implements Decider {
       ...(c.unaffordable ?? []).map((o) => ({ ...o, ok: false })),
     ].sort((a, b) => a.level - b.level);
     const buttons = all.map((o) => ({
-      label: isResort ? Lang.human.buyResort(fmt(o.cost)) : `${LEVEL_ICON[o.level]} ${LEVEL_NAMES[o.level]} — ${fmt(o.cost)}`,
-      sub: o.ok ? Lang.human.rent(fmt(this.rentAt(c.tile, c.player, o.level))) : Lang.human.moneyShort(fmt(o.cost - c.money)),
+      label: isResort ? Lang.human.buyResort(nbsp(fmt(o.cost))) : `${LEVEL_ICON[o.level]} ${LEVEL_NAMES[o.level]} — ${nbsp(fmt(o.cost))}`,
+      sub: o.ok
+        ? Lang.human.rentLeft(fmt(this.rentAt(c.tile, c.player, o.level)), fmt(c.money - o.cost))
+        : Lang.human.moneyShort(fmt(o.cost - c.money)),
       value: o.level,
       class: o.level === 5 ? "pink" : "green",
       disabled: !o.ok,
